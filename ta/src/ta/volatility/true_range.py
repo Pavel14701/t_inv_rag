@@ -3,15 +3,8 @@ import numpy as np
 import polars as pl
 from numba import jit
 
+from .. import talib, talib_available
 from ..utils import _apply_offset_fillna
-
-try:
-    import talib
-    TA_LIB_AVAILABLE = True
-except ImportError:
-    TA_LIB_AVAILABLE = False
-    import warnings
-    warnings.warn("TA-Lib not installed. Using Numba fallback implementation.")
 
 
 # ----------------------------------------------------------------------
@@ -152,7 +145,7 @@ def true_range_talib(
     np.ndarray
         TR values.
     """
-    if not TA_LIB_AVAILABLE:
+    if not talib_available:
         raise ImportError("TA-Lib is not available")
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -170,7 +163,7 @@ def true_range_talib(
 # ----------------------------------------------------------------------
 # Universal True Range function
 # ----------------------------------------------------------------------
-def true_range(
+def true_range_ind(
     high: np.ndarray | pl.Series,
     low: np.ndarray | pl.Series,
     close: np.ndarray | pl.Series,
@@ -209,7 +202,7 @@ def true_range(
         low = low.to_numpy()
     if isinstance(close, pl.Series):
         close = close.to_numpy()
-    if use_talib and TA_LIB_AVAILABLE:
+    if use_talib and talib_available:
         return true_range_talib(high, low, close, drift, prenan, offset, fillna)
     else:
         return true_range_numba(high, low, close, drift, prenan, offset, fillna)
@@ -260,7 +253,7 @@ def true_range_polars(
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
-    result = true_range(
+    result = true_range_ind(
         high, low, close,
         drift=drift,
         prenan=prenan,

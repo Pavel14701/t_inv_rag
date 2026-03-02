@@ -5,7 +5,7 @@ import polars as pl
 from .. import talib, talib_available
 from ..overlap import ema_ind, rma_ind, sma_ind
 from ..utils import _apply_offset_fillna
-from .true_range import true_range
+from .true_range import true_range_ind
 
 
 # ----------------------------------------------------------------------
@@ -36,7 +36,7 @@ def atr_numba(
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     # True Range
-    tr = true_range(high, low, close, drift)
+    tr = true_range_ind(high, low, close, drift)
     # Smooth TR with selected MA
     mamode = mamode.lower()
     if mamode == "rma":
@@ -90,7 +90,7 @@ def atr_talib(
 # ----------------------------------------------------------------------
 # Universal ATR function
 # ----------------------------------------------------------------------
-def atr(
+def atr_ind(
     high: np.ndarray | pl.Series,
     low: np.ndarray | pl.Series,
     close: np.ndarray | pl.Series,
@@ -145,7 +145,7 @@ def atr_polars(
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
-    result = atr(
+    result = atr_ind(
         high, low, close,
         length=length,
         mamode=mamode,

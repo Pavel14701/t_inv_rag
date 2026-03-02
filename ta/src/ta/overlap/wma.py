@@ -127,7 +127,7 @@ def wma_talib(
 # ----------------------------------------------------------------------
 # Universal WMA function
 # ----------------------------------------------------------------------
-def wma(
+def wma_ind(
     close: np.ndarray | pl.Series,
     length: int = 10,
     asc: bool = True,
@@ -209,7 +209,7 @@ def wma_polars(
         The original DataFrame with added columns.
     """
     close = df[close_col].to_numpy()
-    result = wma(
+    result = wma_ind(
         close,
         length=length,
         asc=asc,
