@@ -53,3 +53,36 @@ def _apply_offset_fillna(
             if np.isnan(out[i]):
                 out[i] = fillna
     return out
+
+
+# ----------------------------------------------------------------------
+# Numba‑accelerated rolling min and max (for %K calculation)
+# ----------------------------------------------------------------------
+@jit(nopython=True, fastmath=True, cache=True)
+def _rolling_min_numba(arr: np.ndarray, window: int) -> np.ndarray:
+    n = len(arr)
+    out = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return out
+    for i in range(window - 1, n):
+        mn = arr[i - window + 1]
+        for j in range(i - window + 2, i + 1):
+            if arr[j] < mn:
+                mn = arr[j]
+        out[i] = mn
+    return out
+
+
+@jit(nopython=True, fastmath=True, cache=True)
+def _rolling_max_numba(arr: np.ndarray, window: int) -> np.ndarray:
+    n = len(arr)
+    out = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return out
+    for i in range(window - 1, n):
+        mx = arr[i - window + 1]
+        for j in range(i - window + 2, i + 1):
+            if arr[j] > mx:
+                mx = arr[j]
+        out[i] = mx
+    return out

@@ -107,27 +107,26 @@ def alligator_ind(
         close = np.ascontiguousarray(close)
     if parallel:
         return _alligator_numba_parallel(close, jaw, teeth, lips, offset, fillna)
-    else:
-        # Sequential mode: compute each line separately
-        jaw_arr = _smma_numba_core(close, jaw)
-        teeth_arr = _smma_numba_core(close, teeth)
-        lips_arr = _smma_numba_core(close, lips)
-        # Apply offset and fillna (same logic as in parallel version)
-        if offset != 0:
-            for arr in (jaw_arr, teeth_arr, lips_arr):
-                if offset > 0:
-                    arr[offset:] = arr[:-offset]
-                    arr[:offset] = np.nan
-                else:
-                    arr[:offset] = arr[-offset:]
-                    arr[offset:] = np.nan
-        if fillna is not None:
-            n = len(close)
-            for arr in (jaw_arr, teeth_arr, lips_arr):
-                for i in range(n):
-                    if np.isnan(arr[i]):
-                        arr[i] = fillna
-        return jaw_arr, teeth_arr, lips_arr
+    # Sequential mode: compute each line separately
+    jaw_arr = _smma_numba_core(close, jaw)
+    teeth_arr = _smma_numba_core(close, teeth)
+    lips_arr = _smma_numba_core(close, lips)
+    # Apply offset and fillna (same logic as in parallel version)
+    if offset != 0:
+        for arr in (jaw_arr, teeth_arr, lips_arr):
+            if offset > 0:
+                arr[offset:] = arr[:-offset]
+                arr[:offset] = np.nan
+            else:
+                arr[:offset] = arr[-offset:]
+                arr[offset:] = np.nan
+    if fillna is not None:
+        n = len(close)
+        for arr in (jaw_arr, teeth_arr, lips_arr):
+            for i in range(n):
+                if np.isnan(arr[i]):
+                    arr[i] = fillna
+    return jaw_arr, teeth_arr, lips_arr
 
 
 # ----------------------------------------------------------------------

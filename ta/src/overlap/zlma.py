@@ -48,7 +48,7 @@ _MA_FUNCS: dict[str, Callable] = {
 }
 
 
-def zlma(
+def zlma_ind(
     close: np.ndarray | pl.Series,
     length: int = 10,
     mamode: str = "ema",
@@ -148,6 +148,6 @@ def zlma_polars(
         The original DataFrame with the added column.
     """
     close = df[close_col].to_numpy()
-    result = zlma(close, length, mamode, offset, fillna, use_talib)
+    result = zlma_ind(close, length, mamode, offset, fillna, use_talib)
     out_name = output_col or f"ZL_{mamode.upper()}_{length}"
     return df.with_columns([pl.Series(out_name, result)])
