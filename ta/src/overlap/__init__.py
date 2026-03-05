@@ -34,8 +34,7 @@ from .trima import trima_ind, trima_polars
 from .vidya import vidya_ind, vidya_polars
 from .wcp import wcp_ind, wcp_polars
 from .wma import wma_ind, wma_polars
-#from .zlma import zlma
-
+from .zlma import zlma_ind, zlma_polars
 
 __all__ = [
     "alligator_ind", "alligator_polars",
@@ -73,5 +72,5 @@ __all__ = [
     "vidya_ind", "vidya_polars",
     "wcp_ind", "wcp_polars",
     "wma_ind", "wma_polars", 
-#    "zlma",
+    "zlma_ind", "zlma_polars"
 ]
