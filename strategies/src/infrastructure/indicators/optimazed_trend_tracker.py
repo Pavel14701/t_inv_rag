@@ -1,158 +1,129 @@
-from typing import Literal
+# -*- coding: utf-8 -*-
+"""
+Optimized Trend Tracker (OTT) – Numba‑accelerated with Polars integration.
+Добавлены функции для генерации сигналов напрямую из Polars DataFrame.
+"""
 
 import numpy as np
-import pandas as pd # type: ignore
-import pandas_ta as ta # type: ignore
-from numba import njit # type: ignore
-
-from infrastructure._types import PriceDataFrame
+import polars as pl
 
 
-class OTTIndicator:
-    def __init__(
-        self,
-        length: int = 2,
-        percent: float = 1.4,
-        ma_type: Literal[
-            "SMA", "EMA", "WMA", "TMA", "VAR", "WWMA", "ZLEMA", "TSF"
-        ] = "VAR"
-    ) -> None:
-        self.length = length
-        self.percent = percent
-        self.ma_type = ma_type
+def ott_signals_polars(
+    df: pl.DataFrame,
+    price_col: str = "close",
+    ott_col: str = "OTT",
+    ma_col: str = "OTT_MA",
+    suffix: str = "",
+) -> pl.DataFrame:
+    """
+    Generate OTT trading signals and add them as columns to the Polars DataFrame.
 
-    def calculate(self, df: PriceDataFrame) -> pd.DataFrame:
-        price = df.close_prices
-        ma = self._get_moving_average(price)
-        long_stop, short_stop = self._compute_stop_levels(ma)
-        direction = self._compute_trend_direction(
-            ma.to_numpy(),
-            long_stop.to_numpy(),
-            short_stop.to_numpy()
-        )
-        base_stop = np.where(direction == 1, long_stop, short_stop)
-        ott = np.where(
-            ma > base_stop,
-            base_stop * (200 + self.percent) / 200,
-            base_stop * (200 - self.percent) / 200
-        )
-        result = pd.DataFrame({
-            "price": price,
-            "ma": ma,
-            "long_stop": long_stop,
-            "short_stop": short_stop,
-            "direction": direction,
-            "ott": ott
-        }, index=df.index)
-        return result
+    Parameters
+    ----------
+    df : pl.DataFrame
+        DataFrame containing price, OTT and MA columns.
+    price_col : str
+        Column name for close prices.
+    ott_col : str
+        Column name for OTT values.
+    ma_col : str
+        Column name for MA values (usually OTT_MA).
+    suffix : str, optional
+        Suffix for output columns (e.g., "_14_1.4_VAR").
 
-    def generate_signals(self, df: pd.DataFrame) -> pd.DataFrame:
-        price = df["price"]
-        ott = df["ott"]
-        ma = df["ma"]
-        signals = pd.DataFrame(index=df.index)
-        signals["buy_price_cross"] = (price > ott) & (price.shift(1) <= ott.shift(1))
-        signals["sell_price_cross"] = (price < ott) & (price.shift(1) >= ott.shift(1))
-        signals["buy_support_cross"] = (ma > ott) & (ma.shift(1) <= ott.shift(1))
-        signals["sell_support_cross"] = (ma < ott) & (ma.shift(1) >= ott.shift(1))
-        signals["buy_color_change"] = ott > ott.shift(1)
-        signals["sell_color_change"] = ott < ott.shift(1)
-        signals["signal"] = np.select(
-            [
-                signals["buy_price_cross"],
-                signals["buy_support_cross"],
-                signals["buy_color_change"],
-                signals["sell_price_cross"],
-                signals["sell_support_cross"],
-                signals["sell_color_change"]
-            ],
-            [
-                "buy_price_cross",
-                "buy_support_cross",
-                "buy_color_change",
-                "sell_price_cross",
-                "sell_support_cross",
-                "sell_color_change"
-            ],
-            default=np.nan
-        )
-        return signals
+    Returns
+    -------
+    pl.DataFrame
+        Original DataFrame with added signal columns.
+    """
+    price = df[price_col].to_numpy()
+    ott = df[ott_col].to_numpy()
+    ma = df[ma_col].to_numpy()
+    # Previous values
+    price_prev = np.roll(price, 1)
+    price_prev[0] = np.nan
+    ott_prev = np.roll(ott, 1)
+    ott_prev[0] = np.nan
+    ma_prev = np.roll(ma, 1)
+    ma_prev[0] = np.nan
+    # Signal conditions
+    buy_price_cross = (price > ott) & (price_prev <= ott_prev)
+    sell_price_cross = (price < ott) & (price_prev >= ott_prev)
+    buy_support_cross = (ma > ott) & (ma_prev <= ott_prev)
+    sell_support_cross = (ma < ott) & (ma_prev >= ott_prev)
+    buy_color_change = ott > ott_prev
+    sell_color_change = ott < ott_prev
+    # Combined signal
+    conditions = [
+        buy_price_cross,
+        buy_support_cross,
+        buy_color_change,
+        sell_price_cross,
+        sell_support_cross,
+        sell_color_change,
+    ]
+    choices = [
+        "buy_price_cross",
+        "buy_support_cross",
+        "buy_color_change",
+        "sell_price_cross",
+        "sell_support_cross",
+        "sell_color_change",
+    ]
+    signal = np.select(conditions, choices, default="")
+    # Add columns
+    suffix_str = f"{suffix}" if suffix else ""
+    return df.with_columns([
+        pl.Series(f"buy_price_cross{suffix_str}", buy_price_cross),
+        pl.Series(f"sell_price_cross{suffix_str}", sell_price_cross),
+        pl.Series(f"buy_support_cross{suffix_str}", buy_support_cross),
+        pl.Series(f"sell_support_cross{suffix_str}", sell_support_cross),
+        pl.Series(f"buy_color_change{suffix_str}", buy_color_change),
+        pl.Series(f"sell_color_change{suffix_str}", sell_color_change),
+        pl.Series(f"signal{suffix_str}", signal),
+    ])
 
-    def get_last_signal(self, signals: pd.DataFrame) -> str | None:
-        last = signals["signal"].dropna()
-        return last.iloc[-1] if not last.empty else None
 
-    def _get_moving_average(self, price: pd.Series) -> pd.Series:
-        if self.ma_type == "SMA":
-            return ta.sma(price, self.length) # type: ignore
-        elif self.ma_type == "EMA":
-            return ta.ema(price, self.length) # type: ignore
-        elif self.ma_type == "WMA":
-            return ta.wma(price, self.length) # type: ignore
-        elif self.ma_type == "TMA":
-            return ta.sma( # type: ignore
-                ta.sma( # type: ignore
-                    price, int(np.ceil(self.length / 2))), int(np.floor(self.length / 2)
-                ) + 1)
-        elif self.ma_type == "VAR":
-            return self._calculate_vidya(price)
-        elif self.ma_type == "WWMA":
-            return self._calculate_wwma(price)
-        elif self.ma_type == "ZLEMA":
-            lag = int(self.length / 2)
-            zlema_data = price + (price - price.shift(lag))
-            return ta.ema(zlema_data, self.length) # type: ignore
-        elif self.ma_type == "TSF":
-            lrc = ta.linreg(price, self.length) # type: ignore
-            lrc1 = lrc.shift(1)
-            return lrc + (lrc - lrc1)
-        else:
-            raise ValueError(f"Unknown MA type: {self.ma_type}")
+def get_last_ott_signal(
+    df: pl.DataFrame,
+    price_col: str = "close",
+    ott_col: str = "OTT",
+    ma_col: str = "OTT_MA",
+) -> str | None:
+    """
+    Quickly get the last trading signal without computing all columns.
 
-    def _calculate_vidya(self, price: pd.Series) -> pd.Series:
-        alpha = 2 / (self.length + 1)
-        up = np.where(price > price.shift(1), price - price.shift(1), 0)
-        down = np.where(price < price.shift(1), price.shift(1) - price, 0)
-        up_sum = pd.Series(up).rolling(9).sum()
-        down_sum = pd.Series(down).rolling(9).sum()
-        cmo = (up_sum - down_sum) / (up_sum + down_sum)
-        vidya = np.zeros(len(price))
-        for i in range(1, len(price)):
-            vidya[i] = alpha * abs(cmo[i]) * price[i] + (
-                1 - alpha * abs(cmo[i])
-            ) * vidya[i - 1]
-        return pd.Series(vidya, index=price.index)
+    Parameters
+    ----------
+    df : pl.DataFrame
+        DataFrame with at least two rows.
+    price_col, ott_col, ma_col : column names.
 
-    def _calculate_wwma(self, price: pd.Series) -> pd.Series:
-        alpha = 1 / self.length
-        wwma = np.zeros(len(price))
-        for i in range(1, len(price)):
-            wwma[i] = alpha * price[i] + (1 - alpha) * wwma[i - 1]
-        return pd.Series(wwma, index=price.index)
+    Returns
+    -------
+    str or None
+        Signal name ('buy_price_cross', etc.) or None.
+    """
+    price = df[price_col].to_numpy()
+    ott = df[ott_col].to_numpy()
+    ma = df[ma_col].to_numpy()
+    n = len(price)
+    if n < 2:
+        return None
+    p2, p1 = price[-2], price[-1]
+    o2, o1 = ott[-2], ott[-1]
+    m2, m1 = ma[-2], ma[-1]
 
-    def _compute_stop_levels(self, ma: pd.Series) -> tuple[pd.Series, pd.Series]:
-        offset = ma * self.percent * 0.01
-        long_stop = np.maximum(ma - offset, (ma - offset).shift(1).fillna(ma - offset))
-        short_stop = np.minimum(ma + offset, (ma + offset).shift(1).fillna(ma + offset))
-        return pd.Series(
-               long_stop, index=ma.index
-            ), pd.Series(
-               short_stop, index=ma.index
-            )
-
-    @staticmethod
-    @njit
-    def _compute_trend_direction(
-        ma: np.ndarray, 
-        long_stop: np.ndarray, 
-        short_stop: np.ndarray
-    ) -> np.ndarray:
-        direction = np.ones(len(ma), dtype=np.int8)
-        for i in range(1, len(ma)):
-            if direction[i - 1] == -1 and ma[i] > short_stop[i - 1]:
-                direction[i] = 1
-            elif direction[i - 1] == 1 and ma[i] < long_stop[i - 1]:
-                direction[i] = -1
-            else:
-                direction[i] = direction[i - 1]
-        return direction
+    if (p1 > o1) and (p2 <= o2):
+        return "buy_price_cross"
+    if (p1 < o1) and (p2 >= o2):
+        return "sell_price_cross"
+    if (m1 > o1) and (m2 <= o2):
+        return "buy_support_cross"
+    if (m1 < o1) and (m2 >= o2):
+        return "sell_support_cross"
+    if o1 > o2:
+        return "buy_color_change"
+    if o1 < o2:
+        return "sell_color_change"
+    return None
