@@ -111,7 +111,7 @@ def _rolling_max_numba(arr: np.ndarray, window: int) -> np.ndarray:
     return out
 
 
-@njit(types.none(types.float64[:], types.unicode_type), cache=True, fastmath=True)
+@njit(types.void(types.float64[:], types.unicode_type), cache=True, fastmath=True)
 def _fill_nan_policy_numba(arr: np.ndarray, nan_policy: str) -> None:
     """
     Modify arr in-place according to nan_policy ('ffill', 'bfill', or 'both').
