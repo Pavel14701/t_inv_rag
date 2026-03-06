@@ -112,6 +112,7 @@ class OrderBlockConfig:
     strength_age_penalty: bool = False
     strength_age_halflife: int = 20
     strength_max_multiplier: float = 10.0
+    strength_reaction_cap: float = 3.0   # maximum allowed reaction factor
 
     # Clustering
     cluster_blocks: bool = False
@@ -150,12 +151,10 @@ def _classify_market_structure_nb(
 ) -> tuple[int, int, int]:
     n_peaks = len(peaks)
     n_valleys = len(valleys)
-
     start_peaks = max(0, n_peaks - lookback)
     start_valleys = max(0, n_valleys - lookback)
     rec_peaks = peaks[start_peaks:]
     rec_valleys = valleys[start_valleys:]
-
     # Peak direction: 1 = HH, 0 = LH, 2 = unknown
     if len(rec_peaks) >= 2:
         last_peak = high[rec_peaks[-1]]
@@ -163,7 +162,6 @@ def _classify_market_structure_nb(
         peak_higher = 1 if last_peak > prev_peak else 0
     else:
         peak_higher = 2
-
     # Valley direction: 1 = HL, 0 = LL, 2 = unknown
     if len(rec_valleys) >= 2:
         last_valley = low[rec_valleys[-1]]
@@ -171,11 +169,9 @@ def _classify_market_structure_nb(
         valley_higher = 1 if last_valley > prev_valley else 0
     else:
         valley_higher = 2
-
     total_len = len(rec_peaks) + len(rec_valleys)
     if total_len == 0:
         return 2, 2, 2
-
     # Merge two sorted lists of types
     combined_types = np.empty(total_len, dtype=int8)
     i = j = k = 0
@@ -195,7 +191,6 @@ def _classify_market_structure_nb(
         combined_types[k] = 0
         j += 1
         k += 1
-
     # Count streak of last min_consecutive types
     start = max(0, total_len - min_consecutive)
     up_streak = 0
@@ -212,14 +207,12 @@ def _classify_market_structure_nb(
                 up_streak += 1
             elif valley_higher == 0:
                 down_streak += 1
-
     if up_streak >= min_consecutive:
         trend_dir = 0   # up
     elif down_streak >= min_consecutive:
         trend_dir = 1   # down
     else:
         trend_dir = 2   # none
-
     return peak_higher, valley_higher, trend_dir
 
 
@@ -274,10 +267,8 @@ def precompute_indicators(
     avg_volume = sma_ind(volume, cfg.volume_window, use_talib=cfg.use_talib)
     local_highs = _rolling_max_numba(high, cfg.liquidity_window)
     local_lows = _rolling_min_numba(low, cfg.liquidity_window)
-
     zone_low = close - cfg.zone_atr_multiplier * atr
     zone_high = close + cfg.zone_atr_multiplier * atr
-
     result = {
         "atr": atr,
         "avg_volume": avg_volume,
@@ -286,7 +277,6 @@ def precompute_indicators(
         "zone_low": zone_low,
         "zone_high": zone_high,
     }
-
     if cfg.use_adx_filter:
         adx, adxr, di_plus, di_minus = adx_ind(
             high, low, close,
@@ -296,10 +286,8 @@ def precompute_indicators(
         result["adx"] = adx
         result["di_plus"] = di_plus
         result["di_minus"] = di_minus
-
     if cfg.use_rsi_confirmation:
         result["rsi"] = rsi_ind(close, length=cfg.rsi_period, use_talib=cfg.use_talib)
-
     if cfg.use_macd_confirmation:
         macd, signal, hist = macd_ind(
             close,
@@ -311,7 +299,6 @@ def precompute_indicators(
         result["macd"] = macd
         result["macd_signal"] = signal
         result["macd_hist"] = hist
-
     return result
 
 
@@ -342,12 +329,10 @@ def _generate_block_candidates_nb(
     idx_list = List.empty_list(int64)
     break_idx_list = List.empty_list(int64)
     strength_list = List.empty_list(float64)
-
     for i in range(lookback, n):
         idx = i - lookback
         if idx < 0:
             continue
-
         if peak_mask[idx]:
             if abs(local_highs[idx] - high[idx]) >= liquidity_tolerance:
                 continue
@@ -398,7 +383,6 @@ def _generate_block_candidates_nb(
                         idx_list.append(idx)
                         break_idx_list.append(i)
                         strength_list.append(1.0)
-
         elif valley_mask[idx]:
             if abs(local_lows[idx] - low[idx]) >= liquidity_tolerance:
                 continue
@@ -447,7 +431,6 @@ def _generate_block_candidates_nb(
                         idx_list.append(idx)
                         break_idx_list.append(i)
                         strength_list.append(1.0)
-
     return block_types, idx_list, break_idx_list, strength_list
 
 
@@ -464,7 +447,6 @@ def generate_block_candidates(
 ) -> list[dict]:
     n = len(high)
     lookback = _compute_lookback(indicators, cfg)
-
     # Masks
     peak_mask = np.zeros(n, dtype=bool)
     valley_mask = np.zeros(n, dtype=bool)
@@ -472,12 +454,10 @@ def generate_block_candidates(
         peak_mask[peak_indices] = True
     if len(valley_indices) > 0:
         valley_mask[valley_indices] = True
-
     avg_volume = indicators["avg_volume"]
     atr = indicators["atr"]
     local_highs = indicators["local_highs"]
     local_lows = indicators["local_lows"]
-
     # ADX arrays (or placeholders)
     if cfg.use_adx_filter and "adx" in indicators:
         adx = indicators["adx"]
@@ -487,7 +467,6 @@ def generate_block_candidates(
         adx = np.full(n, np.nan, dtype=np.float64)
         di_plus = np.full(n, np.nan, dtype=np.float64)
         di_minus = np.full(n, np.nan, dtype=np.float64)
-
     block_types, idx_list, break_idx_list, strength_list = _generate_block_candidates_nb(  # noqa: E501
         high, low, close, volume,
         avg_volume, atr, local_highs, local_lows,
@@ -501,7 +480,6 @@ def generate_block_candidates(
         cfg.adx_threshold,
         cfg.multiple_breakouts,
     )
-
     candidates = []
     for bt, idx, brk, st in zip(block_types, idx_list, break_idx_list, strength_list):
         block_type = "supply" if bt == 0 else "demand"
@@ -562,7 +540,6 @@ def check_fvg(
             fvg_present = True
         else:
             return False, False
-
     if fvg_volume_multiplier > 0:
         avg = avg_vol[break_idx]
         candles_vol = [volume[break_idx - 1], volume[break_idx], volume[break_idx + 1]]
@@ -737,27 +714,21 @@ def check_orderflow_shift(
     shift_require_extremes: bool,
 ) -> bool:
     future_end = j + shift_lookforward
-
     start_peaks = bisect.bisect_right(peak_list, j)
     end_peaks = bisect.bisect_left(peak_list, future_end)
     future_peaks = peak_list[start_peaks:end_peaks]
-
     start_valleys = bisect.bisect_right(valley_list, j)
     end_valleys = bisect.bisect_left(valley_list, future_end)
     future_valleys = valley_list[start_valleys:end_valleys]
-
     if not future_peaks and not future_valleys:
         return not shift_require_extremes
-
     all_future = future_peaks + future_valleys
     first_idx = min(all_future)
     is_peak = first_idx in future_peaks
-
     pos_peak = bisect.bisect_left(peak_list, idx) - 1
     last_peak = peak_list[pos_peak] if pos_peak >= 0 else None
     pos_valley = bisect.bisect_left(valley_list, idx) - 1
     last_valley = valley_list[pos_valley] if pos_valley >= 0 else None
-
     if is_peak:
         if is_supply:
             return last_peak is not None and high[first_idx] < high[last_peak]
@@ -786,23 +757,18 @@ def compute_strength(
         vol_factor = np.log1p(volume_j / max(avg_vol_j, 1e-9))
     else:
         vol_factor = volume_j / max(avg_vol_j, 1e-9)
-
     if cfg.strength_atr_normalize:
         reaction_factor = reaction_abs / max(atr_j, 1e-9)
     else:
         reaction_factor = reaction_pct
-
-    reaction_factor = min(reaction_factor, 3.0)
-
+    # Apply configurable cap
+    reaction_factor = min(reaction_factor, cfg.strength_reaction_cap)
     age_factor = 1.0
     if cfg.strength_age_penalty and cfg.strength_age_halflife > 0:
         age_factor = 0.5 ** (age_candles / cfg.strength_age_halflife)
-
     fvg_bonus = cfg.fvg_bonus_multiplier if fvg_present else 1.0
-
     total_multiplier = vol_factor * reaction_factor * age_factor * fvg_bonus * breaker_bonus  # noqa: E501
     total_multiplier = min(total_multiplier, cfg.strength_max_multiplier)
-
     strength = base_strength * total_multiplier
     return max(0.0, strength)
 
@@ -827,22 +793,17 @@ def validate_block_candidates(
     avg_vol = indicators["avg_volume"]
     zone_low_arr = indicators["zone_low"]
     zone_high_arr = indicators["zone_high"]
-
     peak_list = sorted(peak_indices.tolist())
     valley_list = sorted(valley_indices.tolist())
-
     block_id = len(confirmed)
-
     for cand in candidates:
         idx = cand["idx"]
         break_idx = cand["break_idx"]
         is_supply = cand["block_type"] == "supply"
         base_strength = cand.get("strength", 1.0)
-
         age_candles = break_idx - idx
         if cfg.max_extreme_age > 0 and age_candles > cfg.max_extreme_age:
             continue
-
         # Market structure filter
         if cfg.use_market_structure_filter:
             rel_peaks = [p for p in peak_list if p <= idx]
@@ -857,7 +818,6 @@ def validate_block_candidates(
                 continue
         else:
             struct_label, trend_dir = None, None
-
         # FVG
         fvg_present, cont = check_fvg(
             high, low, volume, avg_vol, break_idx, is_supply,
@@ -866,7 +826,6 @@ def validate_block_candidates(
         )
         if not cont:
             continue
-
         # Breaker bonus
         breaker_bonus = check_breaker(
             confirmed, cfg.breaker_lookback,
@@ -875,14 +834,12 @@ def validate_block_candidates(
             cfg.breaker_require_displacement, cfg.displacement_multiplier,
             cfg.breaker_bonus_multiplier,
         ) if cfg.check_breaker else 1.0
-
         # Retest loop
         end_idx = min(break_idx + cfg.confirmation_window, len(close))
         zone_low = zone_low_arr[idx]
         zone_high = zone_high_arr[idx]
         if not (np.isfinite(zone_low) and np.isfinite(zone_high)):
             continue
-
         for j in range(break_idx + 1, end_idx):
             # Zone entry
             if not check_zone_entry(
@@ -890,11 +847,9 @@ def validate_block_candidates(
                 cfg.max_zone_penetration, cfg.zone_entry_mode,
             ):
                 continue
-
             # Volume at retest
             if volume[j] <= avg_vol[j]:
                 continue
-
             # RSI/MACD
             if not check_rsi_macd(
                 indicators, j, is_supply,
@@ -902,14 +857,12 @@ def validate_block_candidates(
                 cfg.use_macd_confirmation,
             ):
                 continue
-
             # Closure outside
             if cfg.require_closure_outside:
                 if is_supply and close[j] >= zone_low:
                     continue
                 if not is_supply and close[j] <= zone_high:
                     continue
-
             # Reaction
             reaction_abs, reaction_pct = compute_reaction(
                 close[j], 
@@ -917,14 +870,12 @@ def validate_block_candidates(
                 zone_high, 
                 is_supply
             )
-
             # Displacement check
             if not check_displacement(
                 reaction_abs, indicators["atr"][j],
                 cfg.displacement_multiplier, reaction_pct, cfg.min_reaction_size,
             ):
                 continue
-
             # Orderflow shift
             if cfg.check_orderflow_shift:
                 if not check_orderflow_shift(
@@ -932,14 +883,12 @@ def validate_block_candidates(
                     cfg.shift_lookforward, is_supply, cfg.shift_require_extremes,
                 ):
                     continue
-
             # Strength
             strength_val = compute_strength(
                 base_strength, volume[j], avg_vol[j],
                 reaction_abs, indicators["atr"][j], reaction_pct,
                 age_candles, fvg_present, breaker_bonus, cfg,
             )
-
             block = OrderBlock(
                 id=block_id,
                 block_type=cand["block_type"],
@@ -955,7 +904,6 @@ def validate_block_candidates(
             confirmed.append(block)
             block_id += 1
             break  # first retest wins
-
     return confirmed
 
 
@@ -969,14 +917,12 @@ def cluster_order_blocks(
 ) -> list[OrderBlock]:
     if not blocks:
         return blocks
-
     blocks_sorted = sorted(
         blocks,
         key=lambda b: (b.block_type, (b.zone_low + b.zone_high) / 2, b.start),
     )
     merged = []
     current = blocks_sorted[0]
-
     for b in blocks_sorted[1:]:
         if b.block_type == current.block_type:
             mid_b = (b.zone_low + b.zone_high) / 2
@@ -1008,16 +954,13 @@ def identify_order_blocks(
 ) -> pl.DataFrame:
     if cfg is None:
         cfg = OrderBlockConfig()
-
     if cfg.max_history is not None:
         df = df.tail(cfg.max_history)
-
     high = df["high"].to_numpy().astype(np.float64)
     low = df["low"].to_numpy().astype(np.float64)
     close = df["close"].to_numpy().astype(np.float64)
     volume = df["volume"].to_numpy().astype(np.float64)
     dates = df["date"].to_numpy()
-
     peak_indices, valley_indices = zigzag_peaks_valleys(
         high, low,
         prominence_peak=cfg.zigzag_prominence_peak,
@@ -1028,29 +971,23 @@ def identify_order_blocks(
         rel_height=cfg.zigzag_rel_height,
         plateau_size=cfg.zigzag_plateau_size,
     )
-
     indicators = precompute_indicators(high, low, close, volume, cfg)
-
     candidates = generate_block_candidates(
         high, low, close, volume, dates,
         peak_indices, valley_indices, indicators, cfg,
     )
-
     confirmed = validate_block_candidates(
         high, low, close, volume, dates,
         candidates, indicators, cfg,
         peak_indices, valley_indices, [],
     )
-
     if cfg.cluster_blocks and confirmed:
         confirmed = cluster_order_blocks(
             confirmed,
             cfg.cluster_price_tolerance,
             cfg.max_cluster_time_gap,
         )
-
     confirmed.sort(key=lambda b: b.start)
-
     if not confirmed:
         return pl.DataFrame(
             schema={
@@ -1066,7 +1003,6 @@ def identify_order_blocks(
                 "trend_direction": pl.Utf8,
             }
         )
-
     data = {
         "id": [b.id for b in confirmed],
         "block_type": [b.block_type for b in confirmed],
@@ -1079,6 +1015,5 @@ def identify_order_blocks(
         "structure_label": [b.structure_label for b in confirmed],
         "trend_direction": [b.trend_direction for b in confirmed],
     }
-
     out = pl.DataFrame(data).sort("start")
     return out
