@@ -175,16 +175,11 @@ def adx_numpy(
     up[:drift] = np.nan
     dn = np.roll(low, drift) - low
     dn[:drift] = np.nan
-    # 3. Positive and negative directional movement (optimized)
-    # Original: pos = np.where((up > dn) & (up > 0), up, 0.0)
-    #           neg = np.where((dn > up) & (dn > 0), dn, 0.0)
-    # Slightly faster alternative:
-    pos = np.where(up > 0, up, 0.0)
-    neg = np.where(dn > 0, dn, 0.0)
-    pos = np.where(pos > neg, pos, 0.0)
-    neg = np.where(neg > pos, neg, 0.0)
-    pos = pos.astype(np.float64)
-    neg = neg.astype(np.float64)
+    # 3. Positive and negative directional movement
+    up_gt_dn = up > dn
+    dn_gt_up = dn > up
+    pos = np.where(up_gt_dn & (up > 0), up, 0.0).astype(np.float64)
+    neg = np.where(dn_gt_up & (dn > 0), dn, 0.0).astype(np.float64)
     # 4. Compute DMP, DMN, ADX
     if use_talib and talib_available and not tvmode:
         # TA‑Lib does not support tvmode
