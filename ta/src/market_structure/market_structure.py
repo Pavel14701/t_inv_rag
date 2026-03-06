@@ -125,6 +125,19 @@ class OrderBlockConfig:
     # General
     use_talib: bool = True
 
+    def __post_init__(self):
+        if self.strength_reaction_cap <= 0:
+            raise ValueError(
+                f"strength_reaction_cap must be positive; \
+                    got {self.strength_reaction_cap}"
+            )
+        if self.strength_reaction_cap > self.strength_max_multiplier:
+            raise ValueError(
+                "strength_reaction_cap must not exceed strength_max_multiplier; "
+                f"got strength_reaction_cap={self.strength_reaction_cap}, "
+                f"strength_max_multiplier={self.strength_max_multiplier}"
+            )
+
 
 @dataclass
 class OrderBlock:
@@ -950,17 +963,22 @@ def cluster_order_blocks(
 # ----------------------------------------------------------------------
 def identify_order_blocks(
     df: pl.DataFrame,
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    volume_col: str = "volume",
+    date_col: str = "date",
     cfg: OrderBlockConfig | None = None,
 ) -> pl.DataFrame:
     if cfg is None:
         cfg = OrderBlockConfig()
     if cfg.max_history is not None:
         df = df.tail(cfg.max_history)
-    high = df["high"].to_numpy().astype(np.float64)
-    low = df["low"].to_numpy().astype(np.float64)
-    close = df["close"].to_numpy().astype(np.float64)
-    volume = df["volume"].to_numpy().astype(np.float64)
-    dates = df["date"].to_numpy()
+    high = df[high_col].to_numpy().astype(np.float64)
+    low = df[low_col].to_numpy().astype(np.float64)
+    close = df[close_col].to_numpy().astype(np.float64)
+    volume = df[volume_col].to_numpy().astype(np.float64)
+    dates = df[date_col].to_numpy()
     peak_indices, valley_indices = zigzag_peaks_valleys(
         high, low,
         prominence_peak=cfg.zigzag_prominence_peak,
