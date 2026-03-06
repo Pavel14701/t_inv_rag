@@ -31,7 +31,6 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
             peaks.append(i)
             i += 1
             continue
-
         # Plateau: flat region of at least plateau_size
         if plateau_size >= 0 and x[i] == x[i - 1] and x[i] == x[i + 1]:
             left = i
@@ -52,14 +51,12 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
                     i = right  # skip the entire plateau
                     continue
         i += 1
-
     # ---- Step 2: prominence and width filters ----
     if prominence > 0 or width >= 0:
         filtered = List.empty_list(int64)
         for idx in range(len(peaks)):
             p = peaks[idx]
             peak_val = x[p]
-
             # Determine search window (wlen)
             if wlen > 0:
                 half = wlen // 2
@@ -72,23 +69,19 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
             else:
                 left_bound = 0
                 right_bound = n - 1
-
             # Left base – full search to the bound
             left_min = peak_val
             for i in range(p - 1, left_bound - 1, -1):
                 if x[i] < left_min:
                     left_min = x[i]
-
             # Right base
             right_min = peak_val
             for i in range(p + 1, right_bound + 1):
                 if x[i] < right_min:
                     right_min = x[i]
-
             prom = peak_val - max(left_min, right_min)
             if prom < prominence:
                 continue
-
             # Width at rel_height
             if width >= 0:
                 h = peak_val - prom * rel_height
@@ -107,10 +100,8 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
                 w = wr - wl
                 if w < width:
                     continue
-
             filtered.append(p)
         peaks = filtered
-
     # ---- Step 3: distance filter (keep highest peak among those too close) ----
     if distance > 1 and len(peaks) > 1:
         # Build groups of peaks that violate the distance constraint
@@ -135,13 +126,47 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
             new_peaks.append(best_idx)
             i = j  # move to next group
         peaks = new_peaks
-
     # Convert to numpy array and sort (just in case)
     out = np.empty(len(peaks), dtype=np.int64)
     for i in range(len(peaks)):
         out[i] = peaks[i]
     out.sort()
     return out
+
+
+def zigzag_peaks_valleys(
+    high: np.ndarray,
+    low: np.ndarray,
+    prominence_peak: float,
+    prominence_valley: float,
+    distance: int,
+    width: float | None,
+    wlen: int | None,
+    rel_height: float,
+    plateau_size: int | None,
+):
+    plateau = plateau_size if plateau_size is not None else -1
+    width_ = width if width is not None else -1.0
+    wlen_ = wlen if wlen is not None else -1
+    peaks = _find_peaks_nb(
+        high,
+        prominence_peak,
+        distance,
+        plateau,
+        rel_height,
+        width_,
+        wlen_,
+    )
+    valleys = _find_peaks_nb(
+        -low,
+        prominence_valley,
+        distance,
+        plateau,
+        rel_height,
+        width_,
+        wlen_,
+    )
+    return peaks, valleys
 
 
 # ----------------------------------------------------------------------
@@ -190,12 +215,10 @@ def zigzag_numpy(
         raise ValueError("high array contains NaNs")
     if np.any(np.isnan(low)):
         raise ValueError("low array contains NaNs")
-
     # Convert optional parameters to sentinel values expected by Numba
     plateau = plateau_size if plateau_size is not None else -1
     width_ = width if width is not None else -1.0
     wlen_ = wlen if wlen is not None else -1
-
     # Ensure arrays are float64 and contiguous
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
@@ -203,7 +226,6 @@ def zigzag_numpy(
         high = np.ascontiguousarray(high)
     if not low.flags.c_contiguous:
         low = np.ascontiguousarray(low)
-
     peaks = _find_peaks_nb(
         high,
         prominence_peak,
@@ -213,7 +235,6 @@ def zigzag_numpy(
         width_,
         wlen_,
     )
-
     valleys = _find_peaks_nb(
         -low,                      # invert low to find valleys as peaks
         prominence_valley,
@@ -223,7 +244,6 @@ def zigzag_numpy(
         width_,
         wlen_,
     )
-
     return peaks, valleys
 
 
@@ -248,7 +268,6 @@ def zigzag_ind(
         high = high.to_numpy()
     if isinstance(low, pl.Series):
         low = low.to_numpy()
-
     return zigzag_numpy(
         high, low,
         prominence_peak=prominence_peak,
@@ -311,13 +330,11 @@ def zigzag_polars(
         rel_height=rel_height,
         plateau_size=plateau_size,
     )
-
     # Create boolean masks
     is_peak = np.zeros(len(df), dtype=bool)
     is_valley = np.zeros(len(df), dtype=bool)
     is_peak[peak_idx] = True
     is_valley[valley_idx] = True
-
     suffix = suffix or ""
     return pl.DataFrame({
         date_col: df[date_col],

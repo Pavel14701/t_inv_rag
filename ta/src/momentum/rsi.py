@@ -2,12 +2,9 @@
 import numpy as np
 import polars as pl
 
-from .. import talib_available
+from .. import talib, talib_available
 from ..overlap import rma_ind
 from ..utils import _apply_offset_fillna
-
-if talib_available:
-    import talib
 
 
 def rsi_numpy(

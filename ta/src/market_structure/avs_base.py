@@ -2,7 +2,7 @@ import numpy as np
 from numba import jit
 
 from ..overlap import sma_ind
-from . import vwma_ind
+from ..volume import vwma_ind
 
 
 # ----------------------------------------------------------------------

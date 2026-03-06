@@ -8,8 +8,8 @@ from .cci import cci_ind, cci_polars
 from .cfo import cfo_ind, cfo_polars
 from .cg import cg_ind, cg_polars
 from .cmo import cmo_ind, cmo_polars
-from .coppock import coppock
-from .crsi import crsi
+from .coppock import coppock_ind, coppock_polars
+from .crsi import crsi_ind, crsi_polars
 from .cti import cti
 from .dm import dm
 from .er import er
@@ -25,7 +25,7 @@ from .pgo import pgo
 from .ppo import ppo
 from .psl import psl
 from .qqe import qqe
-from .roc import roc
+from .roc import roc_ind, roc_polars
 from .rsi import rsi_ind, rsi_polars
 from .rsx import rsx
 from .rvgi import rvgi
@@ -54,8 +54,8 @@ __all__ = [
     "cfo_ind", "cfo_polars",
     "cg_ind", "cg_polars",
     "cmo_ind", "cmo_polars",
-    "coppock",
-    "crsi",
+    "coppock_ind", "coppock_polars",
+    "crsi_ind", "crsi_polars",
     "cti",
     "dm",
     "er",
@@ -71,7 +71,7 @@ __all__ = [
     "ppo",
     "psl",
     "qqe",
-    "roc",
+    "roc_ind", "roc_polars",
     "rsi_ind", "rsi_polars",
     "rsx",
     "rvgi",
