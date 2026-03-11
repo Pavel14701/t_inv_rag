@@ -9,7 +9,7 @@ from .true_range import true_range_ind
 
 
 # ----------------------------------------------------------------------
-# ATR – Numba implementation (TR + RMA/SMA/EMA) with NaN handling
+# ATR – Numba implementation (TR + RMA/SMA/EMA) with NaN handling and trim
 # ----------------------------------------------------------------------
 def atr_numba(
     high: np.ndarray,
@@ -22,13 +22,30 @@ def atr_numba(
     fillna: float | None = None,
     percent: bool = False,
     nan_policy: str = 'raise',
+    trim: bool = False,
 ) -> np.ndarray:
     """
     Average True Range using Numba for TR and smoothing.
+
+    Parameters
+    ----------
+    high, low, close : np.ndarray
+        Price arrays.
+    length : int
+        ATR period.
+    mamode : str
+        Moving average mode ('rma', 'sma', 'ema').
+    drift : int
+        Lookback period for true range.
+    offset, fillna, percent, nan_policy, trim : as usual.
+
+    Returns
+    -------
+    np.ndarray
+        ATR values.
     """
     if length < 1:
         raise ValueError("length must be >= 1")
-
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
@@ -38,33 +55,37 @@ def atr_numba(
     high = _handle_nan_policy(high, nan_policy, "high")
     low = _handle_nan_policy(low, nan_policy, "low")
     close = _handle_nan_policy(close, nan_policy, "close")
-    if not high.flags.c_contiguous:
-        high = np.ascontiguousarray(high)
-    if not low.flags.c_contiguous:
-        low = np.ascontiguousarray(low)
-    if not close.flags.c_contiguous:
-        close = np.ascontiguousarray(close)
+    # Ensure C-contiguous
+    high = np.ascontiguousarray(high)
+    low = np.ascontiguousarray(low)
+    close = np.ascontiguousarray(close)
     # True Range
     tr = true_range_ind(high, low, close, drift)
     # Smooth TR with selected MA
     mamode = mamode.lower()
     if mamode == "rma":
-        atr = rma_ind(tr, length)
+        atr = rma_ind(tr, length, nan_policy=nan_policy)
     elif mamode == "sma":
-        atr = sma_ind(tr, length)
+        atr = sma_ind(tr, length, nan_policy=nan_policy)
     elif mamode == "ema":
-        atr = ema_ind(tr, length)
+        atr = ema_ind(tr, length, nan_policy=nan_policy)
     else:
         raise ValueError(f"Unsupported mamode: {mamode}")
     # Convert to percent if requested
     if percent:
         atr = atr * 100.0 / close
-    # Apply offset and fillna in one go
+    # Trim if requested
+    if trim:
+        if len(atr) >= length:
+            atr = atr[length - 1:]
+        else:
+            atr = np.array([])
+    # Apply offset and fillna
     return _apply_offset_fillna(atr, offset, fillna)
 
 
 # ----------------------------------------------------------------------
-# ATR – TA-Lib wrapper (when available) with NaN handling
+# ATR – TA-Lib wrapper with NaN handling and trim
 # ----------------------------------------------------------------------
 def atr_talib(
     high: np.ndarray,
@@ -75,32 +96,38 @@ def atr_talib(
     fillna: float | None = None,
     percent: bool = False,
     nan_policy: str = 'raise',
+    trim: bool = False,
 ) -> np.ndarray:
     """
-    ATR using TA-Lib (C implementation).
+    ATR using TA-Lib (C implementation) with pre‑processing.
     """
     if not talib_available:
         raise ImportError("TA-Lib is not available")
     if length < 1:
         raise ValueError("length must be >= 1")
+
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
+
     for name, arr in [("high", high), ("low", low), ("close", close)]:
         if np.isinf(arr).any():
             raise ValueError(f"Input {name} contains non-finite values (inf or -inf).")
     high = _handle_nan_policy(high, nan_policy, "high")
     low = _handle_nan_policy(low, nan_policy, "low")
     close = _handle_nan_policy(close, nan_policy, "close")
-    if not high.flags.c_contiguous:
-        high = np.ascontiguousarray(high)
-    if not low.flags.c_contiguous:
-        low = np.ascontiguousarray(low)
-    if not close.flags.c_contiguous:
-        close = np.ascontiguousarray(close)
+
+    high = np.ascontiguousarray(high)
+    low = np.ascontiguousarray(low)
+    close = np.ascontiguousarray(close)
     atr = talib.ATR(high, low, close, timeperiod=length)
     if percent:
         atr = atr * 100.0 / close
+    if trim:
+        if len(atr) >= length:
+            atr = atr[length - 1:]
+        else:
+            atr = np.array([])
     return _apply_offset_fillna(atr, offset, fillna)
 
 
@@ -119,6 +146,7 @@ def atr_ind(
     percent: bool = False,
     use_talib: bool = True,
     nan_policy: str = 'raise',
+    trim: bool = False,
 ) -> np.ndarray:
     """
     Universal Average True Range with automatic backend selection.
@@ -130,18 +158,33 @@ def atr_ind(
         low = low.to_numpy()
     if isinstance(close, pl.Series):
         close = close.to_numpy()
+
     if use_talib and talib_available:
         return atr_talib(
-            high, low, close, length, offset, fillna, percent, nan_policy
+            high, low, close,
+            length=length,
+            offset=offset,
+            fillna=fillna,
+            percent=percent,
+            nan_policy=nan_policy,
+            trim=trim,
         )
     else:
         return atr_numba(
-            high, low, close, length, mamode, drift, offset, fillna, percent, nan_policy
+            high, low, close,
+            length=length,
+            mamode=mamode,
+            drift=drift,
+            offset=offset,
+            fillna=fillna,
+            percent=percent,
+            nan_policy=nan_policy,
+            trim=trim,
         )
 
 
 # ----------------------------------------------------------------------
-# Polars integration for ATR
+# Polars integration for ATR (always full length)
 # ----------------------------------------------------------------------
 def atr_polars(
     df: pl.DataFrame,
@@ -159,7 +202,7 @@ def atr_polars(
     output_col: str | None = None
 ) -> pl.DataFrame:
     """
-    ATR for Polars DataFrame.
+    ATR for Polars DataFrame (returns same length, no trim).
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -174,6 +217,7 @@ def atr_polars(
         percent=percent,
         use_talib=use_talib,
         nan_policy=nan_policy,
+        trim=False,  # Polars всегда возвращает полную длину
     )
     out_name = output_col or f"ATR_{length}"
     return df.with_columns([pl.Series(out_name, result)])

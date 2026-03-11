@@ -35,13 +35,10 @@ def _apply_offset_fillna(
     """
     n = len(arr)
     out = np.empty(n, dtype=np.float64)
-    # Значение для заполнения позиций, появляющихся при сдвиге
     fill_val = fillna if fillna is not None else np.nan
     if offset > 0:
-        # Заполняем первые offset элементов
         for i in range(offset):
             out[i] = fill_val
-        # Копируем остальные с проверкой NaN
         for i in range(offset, n):
             v = arr[i - offset]
             if fillna is not None and np.isnan(v):
@@ -50,10 +47,8 @@ def _apply_offset_fillna(
                 out[i] = v
     elif offset < 0:
         off = -offset
-        # Заполняем последние off элементов
         for i in range(n - off, n):
             out[i] = fill_val
-        # Копируем первые n-off элементов
         for i in range(n - off):
             v = arr[i + off]
             if fillna is not None and np.isnan(v):
@@ -61,7 +56,6 @@ def _apply_offset_fillna(
             else:
                 out[i] = v
     else:  # offset == 0
-        # Просто копируем с заменой NaN
         for i in range(n):
             v = arr[i]
             if fillna is not None and np.isnan(v):
@@ -71,43 +65,69 @@ def _apply_offset_fillna(
     return out
 
 
-# ----------------------------------------------------------------------
-# Numba‑accelerated rolling min and max (for %K calculation)
-# ----------------------------------------------------------------------
 @njit((types.float64[:], types.int64), fastmath=True, cache=True)
-def _rolling_min_numba(arr: np.ndarray, window: int) -> np.ndarray:
-    """
-    Rolling minimum – naive O(n * window) implementation.
-    For typical window sizes (≤ 30) it's fast enough.
-    """
+def _rolling_min_numba(arr, window):
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return out
-    for i in range(window - 1, n):
-        mn = arr[i - window + 1]
-        for j in range(i - window + 2, i + 1):
-            if arr[j] < mn:
-                mn = arr[j]
-        out[i] = mn
+    dq = np.empty(window, dtype=np.int64)
+    head = 0
+    tail = 0
+    size = 0
+    for i in range(n):
+        while size > 0:
+            last_idx = dq[(tail - 1) % window]
+            if arr[last_idx] >= arr[i]:
+                tail = (tail - 1) % window
+                size -= 1
+            else:
+                break
+        dq[tail] = i
+        tail = (tail + 1) % window
+        size += 1
+        while size > 0:
+            first_idx = dq[head]
+            if first_idx <= i - window:
+                head = (head + 1) % window
+                size -= 1
+            else:
+                break
+        if i >= window - 1:
+            out[i] = arr[dq[head]]
     return out
 
 
 @njit((types.float64[:], types.int64), fastmath=True, cache=True)
-def _rolling_max_numba(arr: np.ndarray, window: int) -> np.ndarray:
-    """
-    Rolling maximum – naive O(n * window) implementation.
-    """
+def _rolling_max_numba(arr, window):
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return out
-    for i in range(window - 1, n):
-        mx = arr[i - window + 1]
-        for j in range(i - window + 2, i + 1):
-            if arr[j] > mx:
-                mx = arr[j]
-        out[i] = mx
+    dq = np.empty(window, dtype=np.int64)
+    head = 0
+    tail = 0
+    size = 0
+    for i in range(n):
+        while size > 0:
+            last_idx = dq[(tail - 1) % window]
+            if arr[last_idx] <= arr[i]:
+                tail = (tail - 1) % window
+                size -= 1
+            else:
+                break
+        dq[tail] = i
+        tail = (tail + 1) % window
+        size += 1
+        while size > 0:
+            first_idx = dq[head]
+            if first_idx <= i - window:
+                head = (head + 1) % window
+                size -= 1
+            else:
+                break
+        if i >= window - 1:
+            out[i] = arr[dq[head]]
     return out
 
 

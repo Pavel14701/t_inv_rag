@@ -3,10 +3,10 @@ from functools import lru_cache
 
 import numpy as np
 import polars as pl
-from numba import jit
+from numba import float64, njit
 
 from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..utils import _apply_offset_fillna, _handle_nan_policy
 
 
 # ----------------------------------------------------------------------
@@ -28,9 +28,9 @@ def _get_wma_weights(length: int, asc: bool) -> np.ndarray:
 
 
 # ----------------------------------------------------------------------
-# WMA core loop (Numba)
+# WMA core loop (Numba) with typed signature
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@njit((float64[:], float64[:]), fastmath=True, cache=True)
 def _wma_numba_core(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """
     Weighted Moving Average core loop.
@@ -38,7 +38,7 @@ def _wma_numba_core(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
     Parameters
     ----------
     arr : np.ndarray
-        1D float64 array.
+        1D float64 array (assumed to have no NaNs).
     weights : np.ndarray
         Normalized weights (length = window size).
 
@@ -62,14 +62,16 @@ def _wma_numba_core(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
 
 
 # ----------------------------------------------------------------------
-# WMA using Numba (with offset and fillna)
+# WMA using Numba (with NaN handling, trim, etc.)
 # ----------------------------------------------------------------------
 def wma_numba(
     close: np.ndarray,
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
+    nan_policy: str = 'raise',
+    trim: bool = False,
 ) -> np.ndarray:
     """
     Weighted Moving Average using Numba.
@@ -77,50 +79,93 @@ def wma_numba(
     Parameters
     ----------
     close : np.ndarray
-        Close prices (float64).
+        Close prices.
     length : int
-        WMA period.
+        WMA period (>= 1).
     asc : bool
         If True, recent values have higher weight (default).
         If False, older values have higher weight.
-    offset : int
-        Shift result.
-    fillna : float, optional
-        Value to fill NaNs.
+    offset, fillna, nan_policy, trim : as usual.
 
     Returns
     -------
     np.ndarray
         WMA values.
     """
-    close = np.asarray(close, dtype=np.float64, copy=False)
+    # ---- Input validation ----
+    if length < 1:
+        raise ValueError("WMA length must be >= 1")
+    close = np.asarray(close, dtype=np.float64)
+    if np.isinf(close).any():
+        raise ValueError("Input contains non-finite values (inf or -inf).")
+    # Apply NaN policy
+    close = _handle_nan_policy(close, nan_policy, "close")
+    # Ensure C-contiguous
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
-
+    # Check length
+    if len(close) < length:
+        raise ValueError(
+            f"Input series too short: need at least \
+                {length} elements, got {len(close)}."
+            )
+    # Get weights and compute WMA
     weights = _get_wma_weights(length, asc)
     wma = _wma_numba_core(close, weights)
+    # Trim if requested
+    if trim:
+        valid_start = length - 1
+        if valid_start < len(wma):
+            wma = wma[valid_start:]
+        else:
+            wma = np.array([])
+    # Apply offset and fillna
     return _apply_offset_fillna(wma, offset, fillna)
 
 
 # ----------------------------------------------------------------------
-# WMA via TA-Lib (only asc=True)
+# WMA via TA-Lib (only asc=True) with NaN handling
 # ----------------------------------------------------------------------
 def wma_talib(
     close: np.ndarray,
     length: int = 10,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
+    nan_policy: str = 'raise',
+    trim: bool = False,
 ) -> np.ndarray:
     """
     Weighted Moving Average via TA-Lib (asc=True only).
+
+    Parameters
+    ----------
+    close : np.ndarray
+        Close prices.
+    length : int
+        WMA period (>= 1).
+    offset, fillna, nan_policy, trim : as usual.
     """
     if not talib_available:
         raise ImportError("TA-Lib is not available")
-    close = np.asarray(close, dtype=np.float64, copy=False)
-    if not close.flags.c_contiguous:
-        close = np.ascontiguousarray(close)
+    if length < 1:
+        raise ValueError("WMA length must be >= 1")
+    close = np.asarray(close, dtype=np.float64)
+    if np.isinf(close).any():
+        raise ValueError("Input contains non-finite values (inf or -inf).")
+    # TA‑Lib doesn't handle NaNs, so pre-process
+    close = _handle_nan_policy(close, nan_policy, "close")
+    if len(close) < length:
+        raise ValueError(
+            f"Input series too short: need at least \
+                {length} elements, got {len(close)}."
+            )
     wma = talib.WMA(close, timeperiod=length)
-    from ..utils import _apply_offset_fillna
+    if trim:
+        valid_start = length - 1
+        if valid_start < len(wma):
+            wma = wma[valid_start:]
+        else:
+            wma = np.array([])
     return _apply_offset_fillna(wma, offset, fillna)
 
 
@@ -133,7 +178,9 @@ def wma_ind(
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
-    use_talib: bool = True
+    use_talib: bool = True,
+    nan_policy: str = 'raise',
+    trim: bool = False,
 ) -> np.ndarray:
     """
     Universal Weighted Moving Average with automatic backend selection.
@@ -147,13 +194,7 @@ def wma_ind(
     asc : bool
         If True, recent values have higher weight (TA-Lib compatible).
         If False, older values have higher weight (Numba only).
-    offset : int
-        Shift result.
-    fillna : float, optional
-        Value to fill NaNs.
-    use_talib : bool
-        If True and TA-Lib is available, use it (only for asc=True).
-        If asc=False, falls back to Numba regardless of this flag.
+    offset, fillna, use_talib, nan_policy, trim : as usual.
 
     Returns
     -------
@@ -163,9 +204,24 @@ def wma_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     if use_talib and talib_available and asc:
-        return wma_talib(close, length, offset, fillna)
+        return wma_talib(
+            close,
+            length=length,
+            offset=offset,
+            fillna=fillna,
+            nan_policy=nan_policy,
+            trim=trim,
+        )
     else:
-        return wma_numba(close, length, asc, offset, fillna)
+        return wma_numba(
+            close,
+            length=length,
+            asc=asc,
+            offset=offset,
+            fillna=fillna,
+            nan_policy=nan_policy,
+            trim=trim,
+        )
 
 
 # ----------------------------------------------------------------------
@@ -179,7 +235,8 @@ def wma_polars(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    output_col: str | None = None
+    nan_policy: str = 'raise',
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """
     WMA for Polars DataFrame.
@@ -190,23 +247,14 @@ def wma_polars(
         Input DataFrame.
     close_col : str
         Name of the column with close prices.
-    length : int
-        WMA period.
-    asc : bool
-        If True, recent values have higher weight.
-    offset : int
-        Shift result.
-    fillna : float, optional
-        Value to fill NaNs.
-    use_talib : bool
-        Use TA-Lib if available and asc=True.
+    length, asc, offset, fillna, use_talib, nan_policy : as in wma_ind.
     output_col : str, optional
         Output column name (default f"WMA_{length}").
 
     Returns
     -------
     pl.DataFrame
-        The original DataFrame with added columns.
+        The original DataFrame with added column (same length).
     """
     close = df[close_col].to_numpy()
     result = wma_ind(
@@ -215,7 +263,9 @@ def wma_polars(
         asc=asc,
         offset=offset,
         fillna=fillna,
-        use_talib=use_talib
+        use_talib=use_talib,
+        nan_policy=nan_policy,
+        trim=False,  # Polars всегда возвращает полную длину
     )
     out_name = output_col or f"WMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

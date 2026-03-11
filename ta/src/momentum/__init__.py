@@ -10,39 +10,39 @@ from .cg import cg_ind, cg_polars
 from .cmo import cmo_ind, cmo_polars
 from .coppock import coppock_ind, coppock_polars
 from .crsi import crsi_ind, crsi_polars
-from .cti import cti
-from .dm import dm
-from .er import er
-from .eri import eri
-from .exhc import exhc
-from .fisher import fisher
-from .inertia import inertia
-from .kdj import kdj
-from .kst import kst
+from .cti import cti_ind, cti_polars
+from .dm import dm_ind, dm_polars
+from .er import er_ind, er_polars
+from .eri import eri_ind, er_polars
+from .exhc import exhc_ind, exhc_polars
+from .fisher import fisher_ind, fisher_polars
+from .inertia import inertia_ind, inertia_polars
+from .kdj import kdj_ind, kdj_polars
+from .kst import kst_ind, kst_polars
 from .macd import macd_ind
-from .mom import mom
-from .pgo import pgo
-from .ppo import ppo
-from .psl import psl
-from .qqe import qqe
+from .mom import mom_ind, mom_polars
+from .pgo import pgo_ind, pgo_polars
+from .ppo import ppo, ppo
+from .psl import psl, psl
+from .qqe import qqe, qqe
 from .roc import roc_ind, roc_polars
 from .rsi import rsi_ind, rsi_polars
-from .rsx import rsx
-from .rvgi import rvgi
-from .slope import slope
-from .smc import smc
-from .smi import smi
-from .squeeze import squeeze
-from .squeeze_pro import squeeze_pro
-from .stc import stc
-from .stoch import stoch
+from .rsx import rsx, rsx
+from .rvgi import rvgi, rvgi
+from .slope import slope, slope
+from .smc import smc, smc
+from .smi import smi, smi
+from .squeeze import squeeze, squeeze
+from .squeeze_pro import squeeze_pro, squeeze_pro
+from .stc import stc, stc
+from .stoch import stoch, stoch
 from .stochf import stochf_ind, stochf_polars
-from .stochrsi import stochrsi
-from .tmo import tmo
-from .trix import trix
-from .tsi import tsi
-from .uo import uo
-from .willr import willr
+from .stochrsi import stochrsi_ind, stochrsi_polars
+from .tmo import tmo, tmo
+from .trix import trix, trix
+from .tsi import tsi, tsi
+from .uo import uo, uo
+from .willr import willr, willr
 
 __all__ = [
     "ao_ind", "ao_polars",
@@ -83,7 +83,7 @@ __all__ = [
     "stc",
     "stoch",
     "stochf_ind", "stochf_polars",
-    "stochrsi",
+    "stochrsi_ind", "stochrsi_polars", 
     "tmo",
     "trix",
     "tsi",
