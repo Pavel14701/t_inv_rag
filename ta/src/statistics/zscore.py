@@ -11,12 +11,13 @@ def zscore_numpy(
     close: np.ndarray,
     length: int = 30,
     multiplier: float = 1.0,
+    ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
     """
-    Rolling Z‑Score using existing SMA and STDEV.
+    Numpy‑based rolling Z‑Score.
 
     Parameters
     ----------
@@ -26,6 +27,8 @@ def zscore_numpy(
         Window length.
     multiplier : float
         Number of standard deviations.
+    ddof : int
+        Delta Degrees of Freedom for standard deviation.
     offset, fillna, use_talib : as usual.
 
     Returns
@@ -36,16 +39,23 @@ def zscore_numpy(
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
-    # Compute SMA and STDEV (they already handle NaNs at the beginning)
     mean = sma_ind(
-        close, length=length, offset=0, fillna=None, use_talib=use_talib
+        close, 
+        length=length, 
+        offset=0, 
+        fillna=None, 
+        use_talib=use_talib
     )
     std = stdev_ind(
-        close, length=length, ddof=1, offset=0, fillna=None, use_talib=use_talib
+        close, 
+        length=length, 
+        ddof=ddof, 
+        offset=0, 
+        fillna=None, 
+        use_talib=use_talib
     )
-    # Z‑score formula
-    zscore = (close - mean) / (multiplier * std)
-    # Apply offset and fillna
+    with np.errstate(divide='ignore', invalid='ignore'):
+        zscore = (close - mean) / (multiplier * std)
     return _apply_offset_fillna(zscore, offset, fillna)
 
 
@@ -53,6 +63,7 @@ def zscore_ind(
     close: np.ndarray | pl.Series,
     length: int = 30,
     multiplier: float = 1.0,
+    ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -62,7 +73,7 @@ def zscore_ind(
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
-    return zscore_numpy(close, length, multiplier, offset, fillna, use_talib)
+    return zscore_numpy(close, length, multiplier, ddof, offset, fillna, use_talib)
 
 
 def zscore_polars(
@@ -70,27 +81,37 @@ def zscore_polars(
     close_col: str = "close",
     length: int = 30,
     multiplier: float = 1.0,
+    ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
     output_col: str | None = None,
-) -> pl.Series:
+) -> pl.DataFrame:
     """
+    Add Z‑Score column to a Polars DataFrame.
+
     Parameters
     ----------
     df : pl.DataFrame
         Input data.
     close_col : str
-        Column with close prices.
-    length, multiplier, offset, fillna, use_talib : as above.
+        Name of the column with close prices.
+    length : int
+        Window length.
+    multiplier : float
+        Number of standard deviations.
+    ddof : int
+        Delta Degrees of Freedom for standard deviation.
+    offset, fillna, use_talib : as usual.
     output_col : str, optional
         Output column name (default f"ZS_{length}").
 
     Returns
     -------
-    pl.Series
+    pl.DataFrame
+        Original DataFrame with a new column containing the Z‑Score.
     """
     close = df[close_col].to_numpy()
-    result = zscore_ind(close, length, multiplier, offset, fillna, use_talib)
+    result = zscore_ind(close, length, multiplier, ddof, offset, fillna, use_talib)
     out_name = output_col or f"ZS_{length}"
-    return pl.Series(out_name, result)
+    return df.with_columns([pl.Series(out_name, result)])
