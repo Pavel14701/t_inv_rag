@@ -43,7 +43,7 @@ url = "https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple"
 default = true
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "N"]
 ignore = ["E203"]
 preview = true
 
