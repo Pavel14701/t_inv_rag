@@ -7,6 +7,7 @@ from .. import talib, talib_available
 from ..utils import _apply_offset_fillna
 
 
+# должно быть float8 для ускорения инференса и экономии памяти
 @njit(
     (float64[:], float64[:], float64[:], float64[:]),
     nopython=True,
