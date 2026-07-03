@@ -66,66 +66,37 @@ def _apply_offset_fillna(
 
 
 @njit((types.float64[:], types.int64), fastmath=True, cache=True)
-def _rolling_min_numba(arr, window):
-    n = len(arr)
-    out = np.full(n, np.nan, dtype=np.float64)
-    if n < window:
-        return out
-    dq = np.empty(window, dtype=np.int64)
-    head = 0
-    tail = 0
-    size = 0
-    for i in range(n):
-        while size > 0:
-            last_idx = dq[(tail - 1) % window]
-            if arr[last_idx] >= arr[i]:
-                tail = (tail - 1) % window
-                size -= 1
-            else:
-                break
-        dq[tail] = i
-        tail = (tail + 1) % window
-        size += 1
-        while size > 0:
-            first_idx = dq[head]
-            if first_idx <= i - window:
-                head = (head + 1) % window
-                size -= 1
-            else:
-                break
-        if i >= window - 1:
-            out[i] = arr[dq[head]]
-    return out
-
-
-@njit((types.float64[:], types.int64), fastmath=True, cache=True)
 def _rolling_max_numba(arr, window):
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
-    if n < window:
+    if n < window or window <= 0:
         return out
     dq = np.empty(window, dtype=np.int64)
     head = 0
     tail = 0
     size = 0
     for i in range(n):
+        # Удаляем из головы элементы, вышедшие за окно
         while size > 0:
-            last_idx = dq[(tail - 1) % window]
-            if arr[last_idx] <= arr[i]:
-                tail = (tail - 1) % window
-                size -= 1
-            else:
-                break
-        dq[tail] = i
-        tail = (tail + 1) % window
-        size += 1
-        while size > 0:
-            first_idx = dq[head]
-            if first_idx <= i - window:
+            idx = dq[head]
+            if idx <= i - window:
                 head = (head + 1) % window
                 size -= 1
             else:
                 break
+        # Удаляем с хвоста элементы, которые не больше текущего (для максимума)
+        while size > 0:
+            idx = dq[(tail - 1) % window]
+            if arr[idx] <= arr[i]:
+                tail = (tail - 1) % window
+                size -= 1
+            else:
+                break
+        # Добавляем текущий индекс
+        dq[tail] = i
+        tail = (tail + 1) % window
+        size += 1
+        # Записываем максимум, если окно заполнено
         if i >= window - 1:
             out[i] = arr[dq[head]]
     return out
