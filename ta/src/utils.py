@@ -129,3 +129,11 @@ def _handle_nan_policy(arr: np.ndarray, nan_policy: str, name: str) -> np.ndarra
     arr = arr.copy()
     _fill_nan_policy_numba(arr, nan_policy)
     return arr
+
+def replace_inf_with_nan(arr: np.ndarray) -> np.ndarray:
+    """
+    Replaces all infinite values (inf, -inf) with NaN.
+    Works in-place, returns the array for convenience.
+    """
+    arr[~np.isfinite(arr)] = np.nan
+    return arr
