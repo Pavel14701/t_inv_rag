@@ -33,7 +33,7 @@ def dema_talib(
 ) -> np.ndarray:
     """DEMA via TA-Lib (primary when available)."""
     if not talib:
-        raise ImportError("TA-Lib is not available")
+        raise ImportError('TA-Lib is not available')
     close = close.astype(np.float64)
     dema = talib.DEMA(close, timeperiod=length)
     if offset != 0:
@@ -66,7 +66,7 @@ def dema_ind(
 
 def dema_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
@@ -82,5 +82,5 @@ def dema_polars(
         fillna=fillna, 
         use_talib=use_talib
     )
-    output_name = output_col or f"DEMA_{length}"
+    output_name = output_col or f'DEMA_{length}'
     return df.with_columns([pl.Series(output_name, result)])

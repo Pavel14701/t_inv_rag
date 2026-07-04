@@ -15,8 +15,7 @@ def _hlc3(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    HLC3 (average of high, low and close) optimized.
+    """HLC3 (average of high, low and close) optimized.
 
     Parameters
     ----------
@@ -31,6 +30,7 @@ def _hlc3(
     -------
     np.ndarray
         HLC3 values with applied offset and fillna.
+
     """
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -55,9 +55,7 @@ def hlc3_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal HLC3.
-    """
+    """Universal HLC3."""
     if isinstance(high, pl.Series):
         high = high.to_numpy()
     if isinstance(low, pl.Series):
@@ -72,15 +70,14 @@ def hlc3_ind(
 # ----------------------------------------------------------------------
 def hlc3_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    HLC3 for Polars DataFrame.
+    """HLC3 for Polars DataFrame.
 
     Parameters
     ----------
@@ -99,10 +96,11 @@ def hlc3_polars(
     -------
     pl.DataFrame
         The original DataFrame with added columns.    
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     result = hlc3_ind(high, low, close, offset, fillna)
-    out_name = output_col or "HLC3"
+    out_name = output_col or 'HLC3'
     return df.with_columns([pl.Series(out_name, result)])

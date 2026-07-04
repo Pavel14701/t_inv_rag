@@ -183,8 +183,7 @@ def zigzag_numpy(
     rel_height: float = 0.5,
     plateau_size: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Detect peaks (in high) and valleys (in low) using custom Numba peak detection.
+    """Detect peaks (in high) and valleys (in low) using custom Numba peak detection.
 
     Parameters
     ----------
@@ -209,12 +208,13 @@ def zigzag_numpy(
         Indices of detected peaks in the high series.
     valley_indices : np.ndarray
         Indices of detected valleys in the low series.
+
     """
     # Input validation: check for NaNs
     if np.any(np.isnan(high)):
-        raise ValueError("high array contains NaNs")
+        raise ValueError('high array contains NaNs')
     if np.any(np.isnan(low)):
-        raise ValueError("low array contains NaNs")
+        raise ValueError('low array contains NaNs')
     # Convert optional parameters to sentinel values expected by Numba
     plateau = plateau_size if plateau_size is not None else -1
     width_ = width if width is not None else -1.0
@@ -261,9 +261,7 @@ def zigzag_ind(
     rel_height: float = 0.5,
     plateau_size: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Universal Zigzag indicator (returns numpy arrays of indices).
-    """
+    """Universal Zigzag indicator (returns numpy arrays of indices)."""
     if isinstance(high, pl.Series):
         high = high.to_numpy()
     if isinstance(low, pl.Series):
@@ -285,9 +283,9 @@ def zigzag_ind(
 # ----------------------------------------------------------------------
 def zigzag_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    date_col: str = "date",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    date_col: str = 'date',
     prominence_peak: float = 0.01,
     prominence_valley: float = 0.01,
     distance: int = 5,
@@ -295,10 +293,9 @@ def zigzag_polars(
     wlen: int | None = None,
     rel_height: float = 0.5,
     plateau_size: int | None = None,
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add boolean columns 'is_peak' and 'is_valley' to the Polars DataFrame.
+    """Add boolean columns 'is_peak' and 'is_valley' to the Polars DataFrame.
 
     Parameters
     ----------
@@ -316,6 +313,7 @@ def zigzag_polars(
     -------
     pl.DataFrame
         Original DataFrame with two new columns: 'is_peak{suffix}', 'is_valley{suffix}'.
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -335,9 +333,9 @@ def zigzag_polars(
     is_valley = np.zeros(len(df), dtype=bool)
     is_peak[peak_idx] = True
     is_valley[valley_idx] = True
-    suffix = suffix or ""
+    suffix = suffix or ''
     return pl.DataFrame({
         date_col: df[date_col],
-        f"is_peak{suffix}": is_peak,
-        f"is_valley{suffix}": is_valley,
+        f'is_peak{suffix}': is_peak,
+        f'is_valley{suffix}': is_valley,
     })

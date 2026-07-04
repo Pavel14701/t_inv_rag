@@ -136,12 +136,12 @@ def _pivot_woodie(
 # Dispatch dictionary mapping method names to functions
 # ----------------------------------------------------------------------
 _PIVOT_FUNCTIONS = {
-    "camarilla": _pivot_camarilla,
-    "classic": _pivot_classic,
-    "demark": _pivot_demark,
-    "fibonacci": _pivot_fibonacci,
-    "traditional": _pivot_traditional,
-    "woodie": _pivot_woodie,
+    'camarilla': _pivot_camarilla,
+    'classic': _pivot_classic,
+    'demark': _pivot_demark,
+    'fibonacci': _pivot_fibonacci,
+    'traditional': _pivot_traditional,
+    'woodie': _pivot_woodie,
 }
 
 
@@ -166,16 +166,15 @@ def _anchor_to_polars_interval(anchor: str) -> str:
 # ----------------------------------------------------------------------
 def pivots_ind(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
-    date_col: str = "date",
-    method: str = "traditional",
-    anchor: str = "D",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    date_col: str = 'date',
+    method: str = 'traditional',
+    anchor: str = 'D',
 ) -> pl.DataFrame:
-    """
-    Calculate Pivot Points (support/resistance levels) for the given price data.
+    """Calculate Pivot Points (support/resistance levels) for the given price data.
 
     Parameters
     ----------
@@ -199,12 +198,13 @@ def pivots_ind(
         A new DataFrame with the same rows as the input, plus columns:
         P (pivot), S1..S4 (support levels), R1..R4 (resistance levels).
         The columns are named e.g. 'PIVOTS_TRAD_D_P', 'PIVOTS_TRAD_D_S1', etc.
+
     """
     # Validate method
     method = method.lower()
     if method not in _PIVOT_FUNCTIONS:
-        raise ValueError(f"Unknown pivot method: {method}. \
-            Choose from {list(_PIVOT_FUNCTIONS.keys())}")
+        raise ValueError(f'Unknown pivot method: {method}. \
+            Choose from {list(_PIVOT_FUNCTIONS.keys())}')
     # Ensure datetime is sorted
     df = df.sort(date_col)
     # Convert anchor to Polars interval
@@ -215,24 +215,24 @@ def pivots_ind(
         df.group_by_dynamic(
             index_column=date_col,
             every=interval,
-            closed="left",
+            closed='left',
             include_boundaries=False,
         )
         .agg([
-            pl.col(open_col).first().alias(f"{open_col}_agg"),
-            pl.col(high_col).max().alias(f"{high_col}_agg"),
-            pl.col(low_col).min().alias(f"{low_col}_agg"),
-            pl.col(close_col).last().alias(f"{close_col}_agg"),
+            pl.col(open_col).first().alias(f'{open_col}_agg'),
+            pl.col(high_col).max().alias(f'{high_col}_agg'),
+            pl.col(low_col).min().alias(f'{low_col}_agg'),
+            pl.col(close_col).last().alias(f'{close_col}_agg'),
         ])
     )
     # Extract aggregated arrays for Numba calculation
-    np_open = resampled[f"{open_col}_agg"].to_numpy().astype(np.float64)
-    np_high = resampled[f"{high_col}_agg"].to_numpy().astype(np.float64)
-    np_low = resampled[f"{low_col}_agg"].to_numpy().astype(np.float64)
-    np_close = resampled[f"{close_col}_agg"].to_numpy().astype(np.float64)
+    np_open = resampled[f'{open_col}_agg'].to_numpy().astype(np.float64)
+    np_high = resampled[f'{high_col}_agg'].to_numpy().astype(np.float64)
+    np_low = resampled[f'{low_col}_agg'].to_numpy().astype(np.float64)
+    np_close = resampled[f'{close_col}_agg'].to_numpy().astype(np.float64)
     # Call the appropriate pivot function
     pivot_func = _PIVOT_FUNCTIONS[method]
-    if method in ("demark", "woodie"):
+    if method in ('demark', 'woodie'):
         # These functions require open_
         results = pivot_func(np_open, np_high, np_low, np_close)
     else:
@@ -241,22 +241,22 @@ def pivots_ind(
     # Unpack results (always 9 arrays)
     tp_arr, s1_arr, s2_arr, s3_arr, s4_arr, r1_arr, r2_arr, r3_arr, r4_arr = results
     # Add computed columns to resampled DataFrame
-    suffix = f"_{method[:4].upper()}_{anchor}"
+    suffix = f'_{method[:4].upper()}_{anchor}'
     resampled = resampled.with_columns([
-        pl.Series(f"PIVOTS{suffix}_P", tp_arr),
-        pl.Series(f"PIVOTS{suffix}_S1", s1_arr),
-        pl.Series(f"PIVOTS{suffix}_S2", s2_arr),
-        pl.Series(f"PIVOTS{suffix}_S3", s3_arr),
-        pl.Series(f"PIVOTS{suffix}_S4", s4_arr),
-        pl.Series(f"PIVOTS{suffix}_R1", r1_arr),
-        pl.Series(f"PIVOTS{suffix}_R2", r2_arr),
-        pl.Series(f"PIVOTS{suffix}_R3", r3_arr),
-        pl.Series(f"PIVOTS{suffix}_R4", r4_arr),
+        pl.Series(f'PIVOTS{suffix}_P', tp_arr),
+        pl.Series(f'PIVOTS{suffix}_S1', s1_arr),
+        pl.Series(f'PIVOTS{suffix}_S2', s2_arr),
+        pl.Series(f'PIVOTS{suffix}_S3', s3_arr),
+        pl.Series(f'PIVOTS{suffix}_S4', s4_arr),
+        pl.Series(f'PIVOTS{suffix}_R1', r1_arr),
+        pl.Series(f'PIVOTS{suffix}_R2', r2_arr),
+        pl.Series(f'PIVOTS{suffix}_R3', r3_arr),
+        pl.Series(f'PIVOTS{suffix}_R4', r4_arr),
     ])
     # Step 2: shift the index forward by one period (as in original)
     # In Polars we can do this by adding the interval to the date column.
     shifted = resampled.with_columns(
-        (pl.col(date_col).dt.offset_by(interval)).alias(f"{date_col}_shifted")
+        (pl.col(date_col).dt.offset_by(interval)).alias(f'{date_col}_shifted')
     )
     # Step 3: forward‑fill the pivot values back to the original dates
     # We need to join the shifted pivot table with the original df on date,
@@ -265,19 +265,19 @@ def pivots_ind(
     # pivot date that is ≤ original date.
     result = df.join_asof(
         shifted.select([
-            pl.col(f"{date_col}_shifted").alias(date_col),
-            pl.col(f"PIVOTS{suffix}_P"),
-            pl.col(f"PIVOTS{suffix}_S1"),
-            pl.col(f"PIVOTS{suffix}_S2"),
-            pl.col(f"PIVOTS{suffix}_S3"),
-            pl.col(f"PIVOTS{suffix}_S4"),
-            pl.col(f"PIVOTS{suffix}_R1"),
-            pl.col(f"PIVOTS{suffix}_R2"),
-            pl.col(f"PIVOTS{suffix}_R3"),
-            pl.col(f"PIVOTS{suffix}_R4"),
+            pl.col(f'{date_col}_shifted').alias(date_col),
+            pl.col(f'PIVOTS{suffix}_P'),
+            pl.col(f'PIVOTS{suffix}_S1'),
+            pl.col(f'PIVOTS{suffix}_S2'),
+            pl.col(f'PIVOTS{suffix}_S3'),
+            pl.col(f'PIVOTS{suffix}_S4'),
+            pl.col(f'PIVOTS{suffix}_R1'),
+            pl.col(f'PIVOTS{suffix}_R2'),
+            pl.col(f'PIVOTS{suffix}_R3'),
+            pl.col(f'PIVOTS{suffix}_R4'),
         ]),
         on=date_col,
-        strategy="forward",
+        strategy='forward',
     )
     # Optionally drop rows where pivot values are all NaN 
     # (original behaviour for some methods)

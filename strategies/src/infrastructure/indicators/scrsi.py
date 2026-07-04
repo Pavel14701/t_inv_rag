@@ -8,8 +8,7 @@ import polars as pl
 def generate_scrsi_signals_numpy(
     crsi: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Generate buy/sell signals based on SCRSI levels.
+    """Generate buy/sell signals based on SCRSI levels.
 
     Parameters
     ----------
@@ -19,6 +18,7 @@ def generate_scrsi_signals_numpy(
     Returns
     -------
     (buy, sell) arrays of int (0/1) with same length as input.
+
     """
     n = len(crsi)
     buy = np.zeros(n, dtype=int)
@@ -46,12 +46,12 @@ def get_last_scrsi_signal(
     offset: int = 0,
     fillna: float | None = None,
 ) -> str | None:
-    """
-    Determine last trading signal (long/short) from SCRSI.
+    """Determine last trading signal (long/short) from SCRSI.
 
     Returns
     -------
     'long', 'short', or None.
+
     """
     # Рассчитываем SCRSI (нам нужен только crsi)
     _, crsi, _, _ = scrsi_ind(

@@ -10,8 +10,7 @@ from ..utils import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _rolling_max_numba(arr: np.ndarray, length: int) -> np.ndarray:
-    """
-    Compute the rolling maximum over a fixed window.
+    """Compute the rolling maximum over a fixed window.
 
     Parameters
     ----------
@@ -25,6 +24,7 @@ def _rolling_max_numba(arr: np.ndarray, length: int) -> np.ndarray:
     np.ndarray
         Array of same length as `arr`. The first `length-1` positions are NaN,
         the rest contain the maximum of the last `length` elements.
+
     """
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -37,8 +37,7 @@ def _rolling_max_numba(arr: np.ndarray, length: int) -> np.ndarray:
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _rolling_min_numba(arr: np.ndarray, length: int) -> np.ndarray:
-    """
-    Compute the rolling minimum over a fixed window.
+    """Compute the rolling minimum over a fixed window.
 
     Parameters
     ----------
@@ -52,6 +51,7 @@ def _rolling_min_numba(arr: np.ndarray, length: int) -> np.ndarray:
     np.ndarray
         Array of same length as `arr`. The first `length-1` positions are NaN,
         the rest contain the minimum of the last `length` elements.
+
     """
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -70,8 +70,7 @@ def _midprice_multi_numba(
     len2: int,
     len3: int
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute three midprices for three different window lengths in a single pass.
+    """Compute three midprices for three different window lengths in a single pass.
 
     This function avoids scanning the input arrays three separate times,
     significantly improving performance for large datasets. The algorithm
@@ -92,6 +91,7 @@ def _midprice_multi_numba(
     Tuple[np.ndarray, np.ndarray, np.ndarray]
         Three arrays of the same length as `high`, containing the midprices for
         each respective window. The first `(len_i - 1)` values of each array are NaN.
+
     """
     n = len(high)
     max_len = max(len1, len2, len3)
@@ -136,8 +136,7 @@ def _midprice_multi_numba(
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _shift_forward(arr: np.ndarray, shift: int) -> np.ndarray:
-    """
-    Shift a 1D array forward by a given number of positions,
+    """Shift a 1D array forward by a given number of positions,
     filling the beginning with NaN.
 
     Parameters
@@ -152,6 +151,7 @@ def _shift_forward(arr: np.ndarray, shift: int) -> np.ndarray:
     np.ndarray
         New array of the same length as `arr`. The first `shift` elements are NaN,
         and the remaining elements come from `arr` truncated at the end.
+
     """
     if shift <= 0:
         return arr.copy()  # return a copy to avoid aliasing
@@ -171,8 +171,7 @@ def ichimoku_core_numba(
     include_chikou: bool = True,
     lookahead: bool = True
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray | None]:
-    """
-    Core Ichimoku calculation returning raw numpy arrays (no offset, no fillna).
+    """Core Ichimoku calculation returning raw numpy arrays (no offset, no fillna).
 
     This function computes all five Ichimoku components:
         - Tenkan‑sen (Conversion Line)
@@ -213,6 +212,7 @@ def ichimoku_core_numba(
         chikou_span : np.ndarray or None
             Chikou Span = `close` shifted backward by `(kijun - 1)` periods,
             or None if not requested.
+
     """
     # Ensure we have enough data; minimal length is max(tenkan, kijun, senkou)
     # The midprice functions already handle short arrays gracefully (return all NaN).
@@ -234,10 +234,10 @@ def ichimoku_core_numba(
 
 def ichimoku_ind(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
-    date_col: str | None = "date",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    date_col: str | None = 'date',
     tenkan: int = 9,
     kijun: int = 26,
     senkou: int = 52,
@@ -246,8 +246,7 @@ def ichimoku_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
-    """
-    Compute Ichimoku Cloud indicator and return two Polars DataFrames.
+    """Compute Ichimoku Cloud indicator and return two Polars DataFrames.
 
     This function is the main entry point for Polars users. It extracts the required
     columns, runs the Numba‑optimised core, applies the necessary forward shifts
@@ -308,6 +307,7 @@ def ichimoku_ind(
     >>> hist, fwd = ichimoku(df, tenkan=9, kijun=26, senkou=52)
     >>> print(hist)
     >>> print(fwd)
+
     """
     # 1. Extract numpy arrays with minimal copying
     high = df[high_col].to_numpy().astype(np.float64, copy=False)
@@ -344,13 +344,13 @@ def ichimoku_ind(
 
     # 5. Build the historical DataFrame
     hist_columns = {
-        f"ITS_{tenkan}": tenkan_final,
-        f"IKS_{kijun}": kijun_final,
-        f"ISA_{tenkan}": span_a_final,
-        f"ISB_{senkou}": span_b_final,
+        f'ITS_{tenkan}': tenkan_final,
+        f'IKS_{kijun}': kijun_final,
+        f'ISA_{tenkan}': span_a_final,
+        f'ISB_{senkou}': span_b_final,
     }
     if chikou_final is not None:
-        hist_columns[f"ICS_{kijun}"] = chikou_final
+        hist_columns[f'ICS_{kijun}'] = chikou_final
     hist_df = pl.DataFrame(hist_columns)
     # 6. Build the forward‑looking DataFrame (future Senkou Spans)
     #    The last `kijun` values of the *unshifted* span_a and span_b
@@ -363,19 +363,19 @@ def ichimoku_ind(
         future_dates = pl.date_range(
             start=last_date + timedelta(days=1),
             end=last_date + timedelta(days=kijun),
-            interval="1d",
+            interval='1d',
             eager=True
         )
         forward_df = pl.DataFrame({
-            "date": future_dates,
-            f"ISA_{tenkan}": last_span_a,
-            f"ISB_{senkou}": last_span_b
+            'date': future_dates,
+            f'ISA_{tenkan}': last_span_a,
+            f'ISB_{senkou}': last_span_b
         })
     else:
         # Use integer index starting from the current length
         start_idx = len(df)
         forward_df = pl.DataFrame({
-            f"ISA_{tenkan}": last_span_a,
-            f"ISB_{senkou}": last_span_b
-        }).with_row_index("index", offset=start_idx)
+            f'ISA_{tenkan}': last_span_a,
+            f'ISB_{senkou}': last_span_b
+        }).with_row_index('index', offset=start_idx)
     return hist_df, forward_df

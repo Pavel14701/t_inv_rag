@@ -18,8 +18,7 @@ def _cdl_homingpigeon_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Homing Pigeon pattern.
+    """Numba‑accelerated Homing Pigeon pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -48,8 +47,7 @@ def cdl_homingpigeon(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Homing Pigeon pattern.
+    """Universal Homing Pigeon pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Convert Polars Series → numpy
@@ -83,17 +81,15 @@ def cdl_homingpigeon(
 
 def cdl_homingpigeon_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_HOMINGPIGEON",
+    output_col: str = 'CDL_HOMINGPIGEON',
 ) -> pl.DataFrame:
-    """
-    Add Homing Pigeon column to Polars DataFrame.
-    """
+    """Add Homing Pigeon column to Polars DataFrame."""
     out = cdl_homingpigeon(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

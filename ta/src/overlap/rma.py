@@ -11,10 +11,9 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @jit((float64[:], int64), nopython=True, fastmath=True, cache=True)
 def _rma_numba_core(arr: np.ndarray, length: int) -> np.ndarray:
-    """
-    Wilder's Moving Average (RMA) using Numba.
+    """Wilder's Moving Average (RMA) using Numba.
     First value (index length-1) is SMA of first `length` points.
-    Then: RMA[i] = RMA[i-1] + (1/length) * (arr[i] - RMA[i-1])
+    Then: RMA[i] = RMA[i-1] + (1/length) * (arr[i] - RMA[i-1]).
     """
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -41,8 +40,7 @@ def rma_numba(
     fillna: float | None = None,
     nan_policy: str = 'raise',   # 'raise', 'ffill', 'bfill', 'both'
 ) -> np.ndarray:
-    """
-    RMA using Numba with offset, fillna, and NaN handling.
+    """RMA using Numba with offset, fillna, and NaN handling.
 
     Parameters
     ----------
@@ -65,10 +63,11 @@ def rma_numba(
     -------
     np.ndarray
         RMA values.
+
     """
     # ---- Input validation ----
     if length < 1:
-        raise ValueError("RMA length must be >= 1")
+        raise ValueError('RMA length must be >= 1')
     arr = np.asarray(arr, dtype=np.float64, copy=False)
     # ---- NaN handling on input ----
     if np.isnan(arr).any():
@@ -112,9 +111,7 @@ def rma_ind(
     fillna: float | None = None,
     nan_policy: str = 'raise',
 ) -> np.ndarray:
-    """
-    Universal RMA (always uses Numba) with NaN handling.
-    """
+    """Universal RMA (always uses Numba) with NaN handling."""
     if isinstance(arr, pl.Series):
         arr = arr.to_numpy()
     return rma_numba(arr, length, offset, fillna, nan_policy)
@@ -129,8 +126,7 @@ def rma_polars(
     nan_policy: str = 'raise',
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    RMA for Polars DataFrame with NaN handling.
+    """RMA for Polars DataFrame with NaN handling.
 
     Parameters
     ----------
@@ -148,10 +144,11 @@ def rma_polars(
     -------
     pl.DataFrame
         DataFrame with added RMA column.
+
     """
     arr = df[col].to_numpy()
     result = rma_ind(
         arr, length=length, offset=offset, fillna=fillna, nan_policy=nan_policy
     )
-    out_name = output_col or f"RMA_{length}"
+    out_name = output_col or f'RMA_{length}'
     return df.with_columns(pl.Series(out_name, result))

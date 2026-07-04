@@ -11,8 +11,7 @@ from ..utils import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _stdev_numba_core(close: np.ndarray, length: int, ddof: int) -> np.ndarray:
-    """
-    Скользящее стандартное отклонение через суммы и суммы квадратов (Numba).
+    """Скользящее стандартное отклонение через суммы и суммы квадратов (Numba).
 
     Параметры
     ---------
@@ -65,9 +64,7 @@ def stdev_numba(
     offset: int = 0,
     fillna: Optional[float] = None,
 ) -> np.ndarray:
-    """
-    Скользящее стандартное отклонение через Numba (чистая версия).
-    """
+    """Скользящее стандартное отклонение через Numba (чистая версия)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -81,11 +78,9 @@ def stdev_talib(
     offset: int = 0,
     fillna: Optional[float] = None,
 ) -> np.ndarray:
-    """
-    Скользящее стандартное отклонение через TA-Lib (ddof=0).
-    """
+    """Скользящее стандартное отклонение через TA-Lib (ddof=0)."""
     if not talib_available:
-        raise ImportError("TA-Lib not available")
+        raise ImportError('TA-Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -101,8 +96,7 @@ def stdev_ind(
     fillna: Optional[float] = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Универсальная функция скользящего стандартного отклонения.
+    """Универсальная функция скользящего стандартного отклонения.
 
     Параметры
     ---------
@@ -134,7 +128,7 @@ def stdev_ind(
 
 def stdev_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 30,
     ddof: int = 1,
     offset: int = 0,
@@ -142,9 +136,7 @@ def stdev_polars(
     use_talib: bool = True,
     output_col: Optional[str] = None,
 ) -> pl.Series:
-    """
-    Добавляет колонку со скользящим стандартным отклонением в Polars DataFrame.
-    """
+    """Добавляет колонку со скользящим стандартным отклонением в Polars DataFrame."""
     close = df[close_col].to_numpy()
     result = stdev_ind(
         close,
@@ -154,7 +146,7 @@ def stdev_polars(
         fillna=fillna,
         use_talib=use_talib,
     )
-    out_name = output_col or f"STDEV_{length}"
+    out_name = output_col or f'STDEV_{length}'
     return pl.Series(out_name, result)
 
 
@@ -165,10 +157,9 @@ def stdev_polars_multi(
     ddof: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
-    suffix: str = "_stdev",
+    suffix: str = '_stdev',
 ) -> pl.DataFrame:
-    """
-    Добавляет колонки со скользящим стандартным отклонением для нескольких колонок,
+    """Добавляет колонки со скользящим стандартным отклонением для нескольких колонок,
     используя параллельные возможности Polars.
 
     Параметры
@@ -195,19 +186,19 @@ def stdev_polars_multi(
         Исходный DataFrame с новыми колонками вида `{col}{suffix}`.
     """
     exprs = [
-        pl.col(col).rolling_std(window_size=length, ddof=ddof).alias(f"{col}{suffix}")
+        pl.col(col).rolling_std(window_size=length, ddof=ddof).alias(f'{col}{suffix}')
         for col in columns
     ]
     df = df.with_columns(exprs)
     if offset != 0:
         shift_exprs = [
-            pl.col(f"{col}{suffix}").shift(offset).alias(f"{col}{suffix}")
+            pl.col(f'{col}{suffix}').shift(offset).alias(f'{col}{suffix}')
             for col in columns
         ]
         df = df.with_columns(shift_exprs)
     if fillna is not None:
         fill_exprs = [
-            pl.col(f"{col}{suffix}").fill_nan(fillna).alias(f"{col}{suffix}")
+            pl.col(f'{col}{suffix}').fill_nan(fillna).alias(f'{col}{suffix}')
             for col in columns
         ]
         df = df.with_columns(fill_exprs)

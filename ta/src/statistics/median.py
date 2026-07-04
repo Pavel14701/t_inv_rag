@@ -36,9 +36,7 @@ def median_numba(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Rolling median using Numba (raw numpy version).
-    """
+    """Rolling median using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -52,8 +50,7 @@ def median_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Universal rolling median (always uses Numba).
+    """Universal rolling median (always uses Numba).
 
     Parameters
     ----------
@@ -70,6 +67,7 @@ def median_ind(
     -------
     np.ndarray
         Median values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -79,14 +77,13 @@ def median_ind(
 
 def median_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 30,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
 ) -> pl.Series:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -104,8 +101,9 @@ def median_polars(
     Returns
     -------
     pl.Series
+
     """
     close = df[close_col].to_numpy()
     result = median_ind(close, length, offset, fillna)
-    out_name = output_col or f"MEDIAN_{length}"
+    out_name = output_col or f'MEDIAN_{length}'
     return pl.Series(out_name, result)

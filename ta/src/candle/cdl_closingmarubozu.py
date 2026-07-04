@@ -21,12 +21,13 @@ def _cdl_closingmarubozu_nb(
     strict,
     symmetric
 ):
-    """
-    Optimized Closing Marubozu pattern.
+    """Optimized Closing Marubozu pattern.
+
     Returns:
         1.0 → bullish closing marubozu
        -1.0 → bearish closing marubozu
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -84,9 +85,7 @@ def cdl_closingmarubozu(
     min_body_factor=0.5,
     max_shadow_factor=0.2,
 ):
-    """
-    Closing Marubozu with strict and symmetric support.
-    """
+    """Closing Marubozu with strict and symmetric support."""
     # Polars → NumPy
     if isinstance(open_, pl.Series): open_ = open_.to_numpy()
     if isinstance(high, pl.Series): high = high.to_numpy()
@@ -115,17 +114,17 @@ def cdl_closingmarubozu(
 
 def cdl_closingmarubozu_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.5,
     max_shadow_factor=0.2,
-    output_col="CDL_CLOSINGMARUBOZU",
+    output_col='CDL_CLOSINGMARUBOZU',
 ):
     out = cdl_closingmarubozu(
         df[open_col].to_numpy(),

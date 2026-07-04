@@ -8,9 +8,7 @@ _cache: dict[str, tuple[ModuleType | None, bool]] = {}
 
 
 def import_lib(name: str, warning_msg: str | None = None) -> Tuple[Any, bool]:
-    """
-    
-    Imports a library by name and returns a tuple (module, available).
+    """Imports a library by name and returns a tuple (module, available).
     If the library is missing, module = None, available = False.
     A warning is only issued the first time a missing library is detected.
     """

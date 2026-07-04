@@ -18,8 +18,7 @@ def _cdl_tasukigap_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Tasuki Gap pattern.
+    """Numba‑accelerated Tasuki Gap pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -82,8 +81,7 @@ def cdl_tasukigap(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Tasuki Gap pattern.
+    """Universal Tasuki Gap pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series): 
@@ -112,17 +110,15 @@ def cdl_tasukigap(
 
 def cdl_tasukigap_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_TASUKIGAP",
+    output_col: str = 'CDL_TASUKIGAP',
 ) -> pl.DataFrame:
-    """
-    Add Tasuki Gap column to Polars DataFrame.
-    """
+    """Add Tasuki Gap column to Polars DataFrame."""
     out = cdl_tasukigap(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

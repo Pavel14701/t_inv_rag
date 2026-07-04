@@ -14,14 +14,13 @@ def accbands_numpy(
     close: np.ndarray,
     length: int = 20,
     c: float = 4.0,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Numpy‑based Acceleration Bands calculation.
+    """Numpy‑based Acceleration Bands calculation.
     Returns (upper, mid, lower) as numpy arrays.
     """
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -58,14 +57,13 @@ def accbands(
     close: np.ndarray | pl.Series,
     length: int = 20,
     c: float = 4.0,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Universal Acceleration Bands (accepts numpy arrays or Polars Series).
+    """Universal Acceleration Bands (accepts numpy arrays or Polars Series).
     Returns (upper, mid, lower) as numpy arrays.
     """
     if isinstance(high, pl.Series):
@@ -81,20 +79,19 @@ def accbands(
 
 def accbands_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     length: int = 20,
     c: float = 4.0,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add Acceleration Bands columns to Polars DataFrame.
+    """Add Acceleration Bands columns to Polars DataFrame.
 
     Columns added:
         ACCBU_{length}   (upper band)
@@ -115,6 +112,7 @@ def accbands_polars(
     -------
     pl.DataFrame
         Original DataFrame with three new columns.
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -122,9 +120,9 @@ def accbands_polars(
     upper, mid, lower = accbands_numpy(
         high, low, close, length, c, mamode, drift, offset, fillna, use_talib
     )
-    suffix = suffix or f"_{length}"
+    suffix = suffix or f'_{length}'
     return df.with_columns([
-        pl.Series(f"ACCBU{suffix}", upper),
-        pl.Series(f"ACCBM{suffix}", mid),
-        pl.Series(f"ACCBL{suffix}", lower),
+        pl.Series(f'ACCBU{suffix}', upper),
+        pl.Series(f'ACCBM{suffix}', mid),
+        pl.Series(f'ACCBL{suffix}', lower),
     ])

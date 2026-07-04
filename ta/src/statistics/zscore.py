@@ -16,8 +16,7 @@ def zscore_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based rolling Z‑Score.
+    """Numpy‑based rolling Z‑Score.
 
     Parameters
     ----------
@@ -35,6 +34,7 @@ def zscore_numpy(
     -------
     np.ndarray
         Z‑score values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -68,9 +68,7 @@ def zscore_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal rolling Z‑Score (accepts numpy array or Polars Series).
-    """
+    """Universal rolling Z‑Score (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return zscore_numpy(close, length, multiplier, ddof, offset, fillna, use_talib)
@@ -78,7 +76,7 @@ def zscore_ind(
 
 def zscore_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 30,
     multiplier: float = 1.0,
     ddof: int = 1,
@@ -87,8 +85,7 @@ def zscore_polars(
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add Z‑Score column to a Polars DataFrame.
+    """Add Z‑Score column to a Polars DataFrame.
 
     Parameters
     ----------
@@ -110,8 +107,9 @@ def zscore_polars(
     -------
     pl.DataFrame
         Original DataFrame with a new column containing the Z‑Score.
+
     """
     close = df[close_col].to_numpy()
     result = zscore_ind(close, length, multiplier, ddof, offset, fillna, use_talib)
-    out_name = output_col or f"ZS_{length}"
+    out_name = output_col or f'ZS_{length}'
     return df.with_columns([pl.Series(out_name, result)])

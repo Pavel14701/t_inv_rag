@@ -19,12 +19,11 @@ def _cdl_3inside_nb(
     low: np.ndarray, 
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Three Inside pattern.
+    """Numba‑accelerated Three Inside pattern.
     Returns float64 array:
         1.0  → bullish Three Inside Up
        -1.0  → bearish Three Inside Down
-        0.0  → no pattern
+        0.0  → no pattern.
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -61,8 +60,7 @@ def cdl_3inside(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Three Inside pattern.
+    """Universal Three Inside pattern.
     Returns numpy array of float64: 1.0 (bullish), -1.0 (bearish), 0.0 (none).
     """
     # Convert Polars Series to numpy
@@ -95,17 +93,15 @@ def cdl_3inside(
 
 def cdl_3inside_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_3INSIDE",
+    output_col: str = 'CDL_3INSIDE',
 ) -> pl.DataFrame:
-    """
-    Add Three Inside column to Polars DataFrame.
-    """
+    """Add Three Inside column to Polars DataFrame."""
     out = cdl_3inside(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

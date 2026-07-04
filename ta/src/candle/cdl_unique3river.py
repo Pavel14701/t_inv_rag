@@ -18,8 +18,7 @@ def _cdl_unique3river_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba-accelerated Unique 3 River pattern.
+    """Numba-accelerated Unique 3 River pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -84,8 +83,7 @@ def cdl_unique3river(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Unique 3 River pattern.
+    """Universal Unique 3 River pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series):
@@ -114,17 +112,15 @@ def cdl_unique3river(
 
 def cdl_unique3river_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_UNIQUE3RIVER",
+    output_col: str = 'CDL_UNIQUE3RIVER',
 ) -> pl.DataFrame:
-    """
-    Add Unique 3 River pattern column to Polars DataFrame.
-    """
+    """Add Unique 3 River pattern column to Polars DataFrame."""
     out = cdl_unique3river(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

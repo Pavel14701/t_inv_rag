@@ -16,8 +16,7 @@ def _jma_numba_core(
     length_param: int,
     phase: float
 ) -> np.ndarray:
-    """
-    Jurik Moving Average core loop – most aggressive Numba implementation.
+    """Jurik Moving Average core loop – most aggressive Numba implementation.
 
     This function performs the entire JMA calculation in a single pass,
     using a circular buffer for the rolling volatility sum to avoid an
@@ -37,6 +36,7 @@ def _jma_numba_core(
     np.ndarray
         JMA values. The first `length_param - 1` elements are set to NaN,
         matching the original pandas_ta behaviour.
+
     """
     n = len(close)
     # Output array and two helper arrays
@@ -150,8 +150,7 @@ def jma_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Jurik Moving Average using the 
+    """Jurik Moving Average using the
     aggressively optimized Numba core (raw numpy version).
 
     Parameters
@@ -172,6 +171,7 @@ def jma_numba(
     np.ndarray
         JMA values with the same length as `close`. The first `length-1`
         values are NaN.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -187,8 +187,7 @@ def jma_ind(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Universal Jurik Moving Average (accepts numpy array or Polars Series).
+    """Universal Jurik Moving Average (accepts numpy array or Polars Series).
 
     Parameters
     ----------
@@ -207,6 +206,7 @@ def jma_ind(
     -------
     np.ndarray
         JMA values as a numpy array.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -215,15 +215,14 @@ def jma_ind(
 
 def jma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 7,
     phase: float = 0.0,
     offset: int = 0,
     fillna: Optional[float] = None,
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
-    """
-    Jurik Moving Average for Polars DataFrames.
+    """Jurik Moving Average for Polars DataFrames.
 
     Parameters
     ----------
@@ -247,8 +246,9 @@ def jma_polars(
     -------
     pl.DataFrame
         Original polars DataFrame with the JMA values.
+
     """
     close = df[close_col].to_numpy()
     result = jma_ind(close, length, phase, offset, fillna)
-    out_name = output_col or f"JMA_{length}_{phase}"
+    out_name = output_col or f'JMA_{length}_{phase}'
     return df.with_columns([pl.Series(out_name, result)])

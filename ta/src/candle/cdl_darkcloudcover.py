@@ -26,12 +26,12 @@ def _cdl_darkcloudcover_nb(
     strict: bool,
     symmetric: bool,  # kept for API consistency, not used for mirroring
 ) -> np.ndarray:
-    """
-    Optimized Dark Cloud Cover pattern.
+    """Optimized Dark Cloud Cover pattern.
 
     Returns:
         -1.0 → bearish dark cloud cover
          0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -110,8 +110,7 @@ def cdl_darkcloudcover(
     min_body_factor: float = 0.5,
     max_shadow_factor: float = 0.5,
 ) -> np.ndarray:
-    """
-    Dark Cloud Cover pattern with strict support.
+    """Dark Cloud Cover pattern with strict support.
 
     If symmetric=False and TA-Lib is available → TA-Lib CDLDARKCLOUDCOVER is used.
     If symmetric=True → TA-Lib is skipped and Numba is always used.
@@ -145,17 +144,17 @@ def cdl_darkcloudcover(
 
 def cdl_darkcloudcover_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.5,
     max_shadow_factor: float = 0.5,
-    output_col: str = "CDL_DARKCLOUDCOVER",
+    output_col: str = 'CDL_DARKCLOUDCOVER',
 ) -> pl.DataFrame:
     out = cdl_darkcloudcover(
         df[open_col].to_numpy(),

@@ -12,8 +12,7 @@ from ..utils import _apply_offset_fillna, _handle_nan_policy
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=True, cache=True, parallel=False)
 def _ema_numba_opt(arr: np.ndarray, window: int) -> np.ndarray:
-    """
-    Exponential Moving Average (optimized Numba version).
+    """Exponential Moving Average (optimized Numba version).
 
     Parameters
     ----------
@@ -26,6 +25,7 @@ def _ema_numba_opt(arr: np.ndarray, window: int) -> np.ndarray:
     -------
     np.ndarray
         EMA array with same length as input; first (window-1) values are NaN.
+
     """
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -52,8 +52,7 @@ def ema_numba(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Exponential Moving Average using Numba.
+    """Exponential Moving Average using Numba.
 
     Parameters
     ----------
@@ -62,18 +61,19 @@ def ema_numba(
     length : int
         EMA period.
     offset, fillna, nan_policy, trim : as usual.
+
     """
     # ---- Input validation ----
     if length < 1:
-        raise ValueError("EMA length must be >= 1")
+        raise ValueError('EMA length must be >= 1')
     close = np.asarray(close, dtype=np.float64)
 
     # Check for infinite values
     if np.isinf(close).any():
-        raise ValueError("Input contains non-finite values (inf or -inf).")
+        raise ValueError('Input contains non-finite values (inf or -inf).')
 
     # Apply NaN policy
-    close = _handle_nan_policy(close, nan_policy, "close")
+    close = _handle_nan_policy(close, nan_policy, 'close')
 
     # Ensure C-contiguous
     if not close.flags.c_contiguous:
@@ -82,8 +82,8 @@ def ema_numba(
     # Check length against required window
     if len(close) < length:
         raise ValueError(
-            f"Input series too short: need at least \
-                {length} elements, got {len(close)}."
+            f'Input series too short: need at least \
+                {length} elements, got {len(close)}.'
         )
     # Calculate EMA
     ema = _ema_numba_opt(close, length)
@@ -111,18 +111,18 @@ def ema_talib(
 ) -> np.ndarray:
     """EMA via TA-Lib, with pre‑processing of NaNs."""
     if not talib_available:
-        raise ImportError("TA-Lib not available")
+        raise ImportError('TA-Lib not available')
     if length < 1:
-        raise ValueError("EMA length must be >= 1")
+        raise ValueError('EMA length must be >= 1')
     close = np.asarray(close, dtype=np.float64)
     if np.isinf(close).any():
-        raise ValueError("Input contains non-finite values (inf or -inf).")
+        raise ValueError('Input contains non-finite values (inf or -inf).')
     # TA‑Lib does not handle NaNs, so we pre‑process
-    close = _handle_nan_policy(close, nan_policy, "close")
+    close = _handle_nan_policy(close, nan_policy, 'close')
     if len(close) < length:
         raise ValueError(
-            f"Input series too short: need at least \
-                {length} elements, got {len(close)}."
+            f'Input series too short: need at least \
+                {length} elements, got {len(close)}.'
         )
     ema = talib.EMA(close, timeperiod=length)
     if trim:
@@ -176,7 +176,7 @@ def ema_ind(
 # ----------------------------------------------------------------------
 def ema_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
@@ -195,5 +195,5 @@ def ema_polars(
         nan_policy=nan_policy,
         trim=False,          # Polars всегда возвращает полную длину
     )
-    out_name = output_col or f"EMA_{length}"
+    out_name = output_col or f'EMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

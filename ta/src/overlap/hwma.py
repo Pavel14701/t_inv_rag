@@ -16,8 +16,7 @@ def _hwma_numba_core(
     nb: float,
     nc: float
 ) -> np.ndarray:
-    """
-    Holt-Winter Moving Average core loop.
+    """Holt-Winter Moving Average core loop.
 
     Parameters
     ----------
@@ -30,6 +29,7 @@ def _hwma_numba_core(
     -------
     np.ndarray
         HWMA values (same length as close).
+
     """
     n = len(close)
     out = np.empty(n, dtype=np.float64)
@@ -56,8 +56,7 @@ def hwma_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Holt-Winter Moving Average using Numba.
+    """Holt-Winter Moving Average using Numba.
 
     Parameters
     ----------
@@ -74,6 +73,7 @@ def hwma_numba(
     -------
     np.ndarray
         HWMA values.
+
     """
     # Validate parameters
     if not (0 < na < 1):
@@ -100,9 +100,7 @@ def hwma_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal Holt-Winter Moving Average (always uses Numba).
-    """
+    """Universal Holt-Winter Moving Average (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return hwma_numba(close, na, nb, nc, offset, fillna)
@@ -113,7 +111,7 @@ def hwma_ind(
 # ----------------------------------------------------------------------
 def hwma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     na: float = 0.2,
     nb: float = 0.1,
     nc: float = 0.1,
@@ -121,8 +119,7 @@ def hwma_polars(
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    HWMA for Polars DataFrame.
+    """HWMA for Polars DataFrame.
 
     Parameters
     ----------
@@ -143,8 +140,9 @@ def hwma_polars(
     -------
     pl.DataFrame
         HWMA series.
+
     """
     close = df[close_col].to_numpy()
     result = hwma_ind(close, na=na, nb=nb, nc=nc, offset=offset, fillna=fillna)
-    out_name = output_col or f"HWMA_{na}_{nb}_{nc}"
+    out_name = output_col or f'HWMA_{na}_{nb}_{nc}'
     return df.with_columns([pl.Series(out_name, result)])

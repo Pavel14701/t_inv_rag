@@ -16,9 +16,7 @@ def tema_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    TEMA using Numba (raw numpy version).
-    """
+    """TEMA using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -38,11 +36,9 @@ def tema_talib(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    TEMA using TA‑Lib (C implementation).
-    """
+    """TEMA using TA‑Lib (C implementation)."""
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -60,8 +56,8 @@ def tema_ind(
     fillna: float | None = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal TEMA with backend selection.
+    """Universal TEMA with backend selection.
+
     Parameters
     ----------
     close : np.ndarray or pl.Series
@@ -74,10 +70,12 @@ def tema_ind(
         Value to fill NaNs.
     use_talib : bool
         If True and TA‑Lib is available, use it; else use Numba.
+
     Returns
     -------
     np.ndarray
         TEMA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -92,15 +90,14 @@ def tema_ind(
 # ----------------------------------------------------------------------
 def tema_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    Add TEMA column to Polars DataFrame.
+    """Add TEMA column to Polars DataFrame.
 
     Parameters
     ----------
@@ -116,8 +113,9 @@ def tema_polars(
     -------
     pl.DataFrame
         Original DataFrame with TEMA column.
+
     """
     close = df[close_col].to_numpy()
     result = tema_ind(close, length, offset, fillna, use_talib)
-    out_name = output_col or f"TEMA_{length}"
+    out_name = output_col or f'TEMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

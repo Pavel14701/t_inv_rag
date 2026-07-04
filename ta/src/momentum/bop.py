@@ -15,8 +15,7 @@ def bop_numpy(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Numpy‑based Balance of Power 
+    """Numpy‑based Balance of Power
     (used when TA‑Lib is not available or disabled).
 
     Parameters
@@ -31,6 +30,7 @@ def bop_numpy(
     -------
     np.ndarray
         BOP values.
+
     """
     # Ensure contiguous
     open_ = np.asarray(open_, dtype=np.float64, copy=False)
@@ -56,11 +56,9 @@ def bop_talib(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    TA‑Lib based Balance of Power (scalar is ignored).
-    """
+    """TA‑Lib based Balance of Power (scalar is ignored)."""
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
     open_ = np.asarray(open_, dtype=np.float64, copy=False)
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -82,8 +80,7 @@ def bop_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Balance of Power.
+    """Universal Balance of Power.
 
     Parameters
     ----------
@@ -99,6 +96,7 @@ def bop_ind(
     -------
     np.ndarray
         BOP values.
+
     """
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
@@ -116,19 +114,18 @@ def bop_ind(
 
 def bop_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
-    date_col: str = "date",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    date_col: str = 'date',
     scalar: float = 1.0,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    output_col: str = "BOP",
+    output_col: str = 'BOP',
 ) -> pl.DataFrame:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -141,6 +138,7 @@ def bop_polars(
     Returns
     -------
     pl.DataFrame
+
     """
     open_arr = df[open_col].to_numpy()
     high_arr = df[high_col].to_numpy()

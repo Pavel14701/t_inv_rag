@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import polars as pl
-from numba import float64, int8, njit
+from numba import float64, njit
 
 from ..utils import _apply_offset_fillna
 
@@ -15,12 +15,11 @@ def _renko_nb(
     prices: np.ndarray,
     box_size: float,
 ) -> np.ndarray:
-    """
-    Numba-accelerated Renko brick stream aligned to bars.
+    """Numba-accelerated Renko brick stream aligned to bars.
     Returns int8 array:
         +1 → up brick
         -1 → down brick
-         0 → no brick
+         0 → no brick.
     """
     n = prices.size
     out = np.zeros(n, dtype=np.int8)
@@ -52,12 +51,11 @@ def renko(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Universal Renko brick stream.
+    """Universal Renko brick stream.
     Returns float64 array aligned to bars:
         +1.0 → up brick
         -1.0 → down brick
-         0.0 → no brick
+         0.0 → no brick.
     """
     if isinstance(prices, pl.Series):
         prices = prices.to_numpy()
@@ -73,15 +71,13 @@ def renko(
 
 def renko_polars(
     df: pl.DataFrame,
-    price_col: str = "close",
+    price_col: str = 'close',
     box_size: float = 1.0,
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "RENKO",
+    output_col: str = 'RENKO',
 ) -> pl.DataFrame:
-    """
-    Add Renko brick stream to Polars DataFrame.
-    """
+    """Add Renko brick stream to Polars DataFrame."""
     out = renko(
         df[price_col].to_numpy(),
         box_size=box_size,

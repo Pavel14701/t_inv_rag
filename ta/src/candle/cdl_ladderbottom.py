@@ -18,8 +18,7 @@ def _cdl_ladderbottom_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Ladder Bottom pattern.
+    """Numba‑accelerated Ladder Bottom pattern.
     Returns boolean mask where pattern completes (True at the 5th candle).
     """
     n = len(open_)
@@ -51,8 +50,8 @@ def _cdl_ladderbottom_nb(
         # --- Candle 5: bullish reversal ---
         o5 = open_[i]
         c5 = close[i]
-        h5 = high[i]
-        l5 = low[i]
+        high[i]
+        low[i]
         if not (c5 > o5):  # must be bullish
             continue
         # must close above body of candle 4
@@ -71,8 +70,7 @@ def cdl_ladderbottom(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Ladder Bottom pattern.
+    """Universal Ladder Bottom pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Polars → numpy
@@ -105,17 +103,15 @@ def cdl_ladderbottom(
 
 def cdl_ladderbottom_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_LADDERBOTTOM",
+    output_col: str = 'CDL_LADDERBOTTOM',
 ) -> pl.DataFrame:
-    """
-    Add Ladder Bottom column to Polars DataFrame.
-    """
+    """Add Ladder Bottom column to Polars DataFrame."""
     out = cdl_ladderbottom(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

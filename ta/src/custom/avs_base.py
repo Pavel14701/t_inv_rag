@@ -12,20 +12,18 @@ from ..volume import vwma_ind
 def _price_v_rolling(
     price: np.ndarray,
     vpr: np.ndarray,
-    lenV: np.ndarray,
-    VPCc: np.ndarray,
+    len_v: np.ndarray,
+    vpc_c: np.ndarray,
 ) -> np.ndarray:
-    """
-    Rolling average of price / (VPCc * vpr) with dynamic window length.
-    """
+    """Rolling average of price / (VPCc * vpr) with dynamic window length."""
     n = price.shape[0]
     out = np.empty(n, dtype=np.float64)
     for i in range(n):
-        L = lenV[i]
+        L = len_v[i]
         if L > 0:
             start = max(0, i - L + 1)
-            denom = VPCc[i] * vpr[start:i + 1]
-            valid = (VPCc[i] != 0) & (vpr[start:i + 1] != 0)
+            denom = vpc_c[i] * vpr[start:i + 1]
+            valid = (vpc_c[i] != 0) & (vpr[start:i + 1] != 0)
             values = np.divide(
                 price[start:i + 1],
                 denom,
@@ -79,10 +77,7 @@ def _avs_base(
     stand_div: float,
     use_talib: bool,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute common series for AVSL/AVSR:
-        vpc, vpr, vm, vpci, deviation_raw
-    """
+    """Compute common series for AVSL/AVSR: vpc, vpr, vm, vpci, deviation_raw."""
     # Volume‑weighted and simple moving averages
     vwma_fast = vwma_ind(close, volume, fast, use_talib=use_talib)
     vwma_slow = vwma_ind(close, volume, slow, use_talib=use_talib)
@@ -97,4 +92,3 @@ def _avs_base(
     vpci = vpc * vpr * vm
     deviation_raw = stand_div * vpci * vm
     return vpc, vpr, vm, vpci, deviation_raw
-

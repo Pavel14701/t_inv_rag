@@ -11,8 +11,7 @@ from .. import talib, talib_available
 # ----------------------------------------------------------------------
 @njit((float64[:], int64), fastmath=True, cache=True)
 def _sma_numba_opt(arr: np.ndarray, length: int) -> np.ndarray:
-    """
-    Simple Moving Average using Numba.
+    """Simple Moving Average using Numba.
 
     Parameters
     ----------
@@ -25,6 +24,7 @@ def _sma_numba_opt(arr: np.ndarray, length: int) -> np.ndarray:
     -------
     np.ndarray
         SMA values; first (length-1) positions are NaN.
+
     """
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -48,8 +48,7 @@ def _sma_numba(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Simple Moving Average using Numba with NaN handling.
+    """Simple Moving Average using Numba with NaN handling.
 
     Parameters
     ----------
@@ -75,14 +74,15 @@ def _sma_numba(
     -------
     np.ndarray
         SMA values.
+
     """
     # ---- Input validation ----
     if length < 1:
-        raise ValueError("SMA length must be >= 1")
+        raise ValueError('SMA length must be >= 1')
     close = np.asarray(close, dtype=np.float64)
     # Check for infinite values (they would break calculations)
     if np.isinf(close).any():
-        raise ValueError("Input contains non-finite values (inf or -inf).")
+        raise ValueError('Input contains non-finite values (inf or -inf).')
     # ---- NaN handling on input ----
     if np.isnan(close).any():
         if nan_policy == 'raise':
@@ -132,8 +132,8 @@ def _sma_numba(
     # and raise error if both used.
     if offset != 0 and trim:
         raise ValueError(
-            "offset and trim cannot be used simultaneously. \
-                Use offset=0 with trim=True."
+            'offset and trim cannot be used simultaneously. \
+                Use offset=0 with trim=True.'
         )
     if offset != 0:
         sma = np.roll(sma, offset)
@@ -155,12 +155,11 @@ def sma_talib(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Simple Moving Average via TA-Lib.
-    (Note: TA-Lib does not handle NaNs; it's assumed input is clean.)
+    """Simple Moving Average via TA-Lib.
+    (Note: TA-Lib does not handle NaNs; it's assumed input is clean.).
     """
     if not talib_available:
-        raise ImportError("TA-Lib is not available")
+        raise ImportError('TA-Lib is not available')
     close = close.astype(np.float64)
     sma = talib.SMA(close, timeperiod=length)
     if offset != 0:
@@ -186,8 +185,7 @@ def sma_ind(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Universal SMA with automatic implementation selection and NaN handling.
+    """Universal SMA with automatic implementation selection and NaN handling.
 
     Parameters
     ----------
@@ -213,6 +211,7 @@ def sma_ind(
     -------
     np.ndarray
         SMA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -221,7 +220,7 @@ def sma_ind(
     if use_talib and talib_available:
         if trim:
             raise ValueError(
-                "trim=True is not supported with TA-Lib backend. Use Numba backend."
+                'trim=True is not supported with TA-Lib backend. Use Numba backend.'
             )
         return sma_talib(close, length, offset, fillna)
     else:
@@ -233,8 +232,8 @@ def sma_ind(
 # ----------------------------------------------------------------------
 def sma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
-    date_col: str = "date",
+    close_col: str = 'close',
+    date_col: str = 'date',
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
@@ -242,8 +241,7 @@ def sma_polars(
     nan_policy: str = 'raise',
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    SMA for Polars DataFrame with NaN handling.
+    """SMA for Polars DataFrame with NaN handling.
 
     Parameters
     ----------
@@ -268,6 +266,7 @@ def sma_polars(
     -------
     pl.DataFrame
         The original DataFrame with added column (same length).
+
     """
     close = df[close_col].to_numpy()
     # Polars version always returns full-length array (trim=False is implicit)
@@ -280,7 +279,7 @@ def sma_polars(
         nan_policy=nan_policy,
         trim=False,
     )
-    out_name = output_col or f"SMA_{length}"
+    out_name = output_col or f'SMA_{length}'
     return pl.DataFrame({
         date_col: df[date_col],
         out_name: result

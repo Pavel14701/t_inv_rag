@@ -18,8 +18,7 @@ def _cdl_spinningtop_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Spinning Top pattern.
+    """Numba‑accelerated Spinning Top pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -58,8 +57,7 @@ def cdl_spinningtop(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Spinning Top pattern.
+    """Universal Spinning Top pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series): 
@@ -88,17 +86,15 @@ def cdl_spinningtop(
 
 def cdl_spinningtop_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_SPINNINGTOP",
+    output_col: str = 'CDL_SPINNINGTOP',
 ) -> pl.DataFrame:
-    """
-    Add Spinning Top column to Polars DataFrame.
-    """
+    """Add Spinning Top column to Polars DataFrame."""
     out = cdl_spinningtop(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

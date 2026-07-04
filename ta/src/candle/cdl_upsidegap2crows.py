@@ -18,8 +18,7 @@ def _cdl_upsidegap2crows_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba-accelerated Upside Gap Two Crows pattern.
+    """Numba-accelerated Upside Gap Two Crows pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -83,8 +82,7 @@ def cdl_upsidegap2crows(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Upside Gap Two Crows pattern.
+    """Universal Upside Gap Two Crows pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series):
@@ -113,17 +111,15 @@ def cdl_upsidegap2crows(
 
 def cdl_upsidegap2crows_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_UPSIDEGAP2CROWS",
+    output_col: str = 'CDL_UPSIDEGAP2CROWS',
 ) -> pl.DataFrame:
-    """
-    Add Upside Gap Two Crows pattern column to Polars DataFrame.
-    """
+    """Add Upside Gap Two Crows pattern column to Polars DataFrame."""
     out = cdl_upsidegap2crows(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

@@ -18,8 +18,7 @@ def _cdl_sticksandwich_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba-accelerated Stick Sandwich pattern.
+    """Numba-accelerated Stick Sandwich pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -91,8 +90,7 @@ def cdl_sticksandwich(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Stick Sandwich pattern.
+    """Universal Stick Sandwich pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series): 
@@ -121,17 +119,15 @@ def cdl_sticksandwich(
 
 def cdl_sticksandwich_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_STICKSANDWICH",
+    output_col: str = 'CDL_STICKSANDWICH',
 ) -> pl.DataFrame:
-    """
-    Add Stick Sandwich column to Polars DataFrame.
-    """
+    """Add Stick Sandwich column to Polars DataFrame."""
     out = cdl_sticksandwich(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

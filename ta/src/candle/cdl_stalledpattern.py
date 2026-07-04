@@ -18,8 +18,7 @@ def _cdl_stalledpattern_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba-accelerated Stalled Pattern (Deliberation) pattern.
+    """Numba-accelerated Stalled Pattern (Deliberation) pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -90,8 +89,7 @@ def cdl_stalledpattern(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Stalled Pattern (Deliberation) pattern.
+    """Universal Stalled Pattern (Deliberation) pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series):
@@ -120,17 +118,15 @@ def cdl_stalledpattern(
 
 def cdl_stalledpattern_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_STALLEDPATTERN",
+    output_col: str = 'CDL_STALLEDPATTERN',
 ) -> pl.DataFrame:
-    """
-    Add Stalled Pattern column to Polars DataFrame.
-    """
+    """Add Stalled Pattern column to Polars DataFrame."""
     out = cdl_stalledpattern(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

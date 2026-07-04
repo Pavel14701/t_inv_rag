@@ -14,8 +14,7 @@ def _hl2(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    HL2 (average of high and low) using Numba (optimized).
+    """HL2 (average of high and low) using Numba (optimized).
 
     Parameters
     ----------
@@ -30,6 +29,7 @@ def _hl2(
     -------
     np.ndarray
         HL2 values with applied offset and fillna.
+
     """
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -50,9 +50,7 @@ def hl2_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal HL2 (always uses Numba).
-    """
+    """Universal HL2 (always uses Numba)."""
     if isinstance(high, pl.Series):
         high = high.to_numpy()
     if isinstance(low, pl.Series):
@@ -65,14 +63,13 @@ def hl2_ind(
 # ----------------------------------------------------------------------
 def hl2_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
+    high_col: str = 'high',
+    low_col: str = 'low',
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    HL2 for Polars DataFrame.
+    """HL2 for Polars DataFrame.
 
     Parameters
     ----------
@@ -91,9 +88,10 @@ def hl2_polars(
     -------
     pl.DataFrame
         The original DataFrame with added columns.    
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     result = hl2_ind(high, low, offset, fillna)
-    out_name = output_col or "HL2"
+    out_name = output_col or 'HL2'
     return df.with_columns([pl.Series(out_name, result)])

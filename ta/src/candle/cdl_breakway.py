@@ -21,34 +21,34 @@ def _cdl_breakaway_nb(
     strict,
     symmetric
 ):
-    """
-    Numba-accelerated Breakaway pattern with optional strict filtering
+    """Numba-accelerated Breakaway pattern with optional strict filtering
     and optional symmetric mode.
 
     Returns:
         1.0 → bullish breakaway
        -1.0 → bearish breakaway
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
 
     for i in range(4, n):
         # Candle 1
-        o4, c4 = open_[i-4], close[i-4]
-        h4, l4 = high[i-4], low[i-4]
+        o4, c4 = open_[i - 4], close[i - 4]
+        h4, l4 = high[i - 4], low[i - 4]
 
         # Candle 2
-        o3, c3 = open_[i-3], close[i-3]
-        h3, l3 = high[i-3], low[i-3]
+        o3, c3 = open_[i - 3], close[i - 3]
+        h3, l3 = high[i - 3], low[i - 3]
 
         # Candle 3
-        o2, c2 = open_[i-2], close[i-2]
-        h2, l2 = high[i-2], low[i-2]
+        o2, c2 = open_[i - 2], close[i - 2]
+        h2, l2 = high[i - 2], low[i - 2]
 
         # Candle 4
-        o1, c1 = open_[i-1], close[i-1]
-        h1, l1 = high[i-1], low[i-1]
+        o1, c1 = open_[i - 1], close[i - 1]
+        h1, l1 = high[i - 1], low[i - 1]
 
         # Candle 5 (signal)
         o0, c0 = open_[i], close[i]
@@ -145,8 +145,7 @@ def cdl_breakaway(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """
-    Universal Breakaway pattern with strict mode and optional symmetric mode.
+    """Universal Breakaway pattern with strict mode and optional symmetric mode.
 
     If symmetric=False and TA-Lib is available → TA-Lib is used.
     If symmetric=True → TA-Lib is skipped and Numba is always used.
@@ -185,17 +184,17 @@ def cdl_breakaway(
 
 def cdl_breakaway_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col="CDL_BREAKAWAY",
+    output_col='CDL_BREAKAWAY',
 ):
     out = cdl_breakaway(
         df[open_col].to_numpy(),

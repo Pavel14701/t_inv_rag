@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd # type: ignore
+import pandas as pd  # type: ignore
 from numpy.typing import NDArray
 from pandas_ta import accbands  # type: ignore
 
@@ -8,8 +8,7 @@ from infrastructure._types import PriceDataFrame
 
 
 class AccelerationBands:
-    """
-    Acceleration Bands Indicator Implementation.
+    """Acceleration Bands Indicator Implementation.
 
     Acceleration Bands (ACCB) were developed by Mark Helweg and 
     are designed to indicate volatility and acceleration in 
@@ -27,8 +26,7 @@ class AccelerationBands:
         data: PriceDataFrame,
         config: AcceletrationBandsDM
     ) -> pd.DataFrame:
-        """
-        Calculates Acceleration Bands (ACCB) values.
+        """Calculates Acceleration Bands (ACCB) values.
 
         Args:
             data (PriceDataFrame): Price dataset containing high, low, and close prices.
@@ -38,6 +36,7 @@ class AccelerationBands:
         Returns:
             pd.DataFrame: A DataFrame containing upper, lower, and center 
             acceleration bands, plus close prices.
+
         """
         acc_bands = accbands(
             high=data.high_prices,
@@ -50,13 +49,12 @@ class AccelerationBands:
         )
         if acc_bands is not None:
             acc_bands.index = pd.DatetimeIndex(data.index)  # type: ignore
-            acc_bands["close_prices"] = data.close_prices
+            acc_bands['close_prices'] = data.close_prices
             return acc_bands
-        raise ValueError("Failed to compute Acceleration Bands — result is None")
+        raise ValueError('Failed to compute Acceleration Bands — result is None')
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Generates trading signals based on Acceleration Bands interaction.
+        """Generates trading signals based on Acceleration Bands interaction.
 
         Signals:
         - Buy: Price crosses above the lower band
@@ -68,14 +66,15 @@ class AccelerationBands:
 
         Returns:
             pd.DataFrame: A DataFrame containing buy_signals and sell_signals (0 or 1).
+
         """
-        upper_band: NDArray[np.float64] = data["ACCbands_upper"].to_numpy(  # type: ignore
+        upper_band: NDArray[np.float64] = data['ACCbands_upper'].to_numpy(  # type: ignore
             dtype=np.float64
         )
-        lower_band: NDArray[np.float64] = data["ACCbands_lower"].to_numpy(  # type: ignore
+        lower_band: NDArray[np.float64] = data['ACCbands_lower'].to_numpy(  # type: ignore
             dtype=np.float64
         )
-        close_prices: NDArray[np.float64] = data["close_prices"].to_numpy(  # type: ignore
+        close_prices: NDArray[np.float64] = data['close_prices'].to_numpy(  # type: ignore
             dtype=np.float64
             )
         buy_signal: NDArray[np.int_] = (
@@ -85,8 +84,8 @@ class AccelerationBands:
             (close_prices > lower_band) & (np.roll(close_prices, 1) < lower_band)
         ).astype(np.int_)
         signals = pd.DataFrame(index=pd.DatetimeIndex(data.index))  # type: ignore
-        signals["buy_signals"] = buy_signal
-        signals["sell_signals"] = sell_signal
+        signals['buy_signals'] = buy_signal
+        signals['sell_signals'] = sell_signal
         return signals
 
     def check_last_signal(
@@ -94,8 +93,7 @@ class AccelerationBands:
         data: PriceDataFrame,
         config: AcceletrationBandsDM
     ) -> str | None:
-        """
-        Determines the last trading signal based on Acceleration Bands.
+        """Determines the last trading signal based on Acceleration Bands.
 
         Returns:
         - "long" if the last bar has a buy signal
@@ -108,13 +106,14 @@ class AccelerationBands:
 
         Returns:
             str | None: "long", "short", or None
+
         """
         acc_bands_df = self.calc_accbands(data, config)
         signals_df = self.generate_signals(acc_bands_df)
-        buy_series: pd.Series[int] = signals_df["buy_signals"].astype("int64")
-        sell_series: pd.Series[int] = signals_df["sell_signals"].astype("int64")
+        buy_series: pd.Series[int] = signals_df['buy_signals'].astype('int64')
+        sell_series: pd.Series[int] = signals_df['sell_signals'].astype('int64')
         if buy_series.iloc[-1] == 1:
-            return "long"
+            return 'long'
         elif sell_series.iloc[-1] == 1:
-            return "short"
+            return 'short'
         return None

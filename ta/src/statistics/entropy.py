@@ -8,8 +8,7 @@ from ..utils import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _entropy_numba_core(close: np.ndarray, length: int, base: float) -> np.ndarray:
-    """
-    Rolling entropy via sliding window (Numba).
+    """Rolling entropy via sliding window (Numba).
 
     Parameters
     ----------
@@ -24,6 +23,7 @@ def _entropy_numba_core(close: np.ndarray, length: int, base: float) -> np.ndarr
     -------
     np.ndarray
         Entropy values; first `length-1` positions are NaN.
+
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -53,9 +53,7 @@ def entropy_numba(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Rolling entropy using Numba (raw numpy version).
-    """
+    """Rolling entropy using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -70,8 +68,7 @@ def entropy_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Universal rolling entropy (always uses Numba).
+    """Universal rolling entropy (always uses Numba).
 
     Parameters
     ----------
@@ -90,6 +87,7 @@ def entropy_ind(
     -------
     np.ndarray
         Entropy values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -98,15 +96,14 @@ def entropy_ind(
 
 def entropy_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     base: float = 2.0,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
 ) -> pl.Series:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -119,8 +116,9 @@ def entropy_polars(
     Returns
     -------
     pl.Series
+
     """
     close = df[close_col].to_numpy()
     result = entropy_ind(close, length, base, offset, fillna)
-    out_name = output_col or f"ENTP_{length}"
+    out_name = output_col or f'ENTP_{length}'
     return pl.Series(out_name, result)

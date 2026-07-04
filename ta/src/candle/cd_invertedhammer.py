@@ -19,8 +19,7 @@ def _cdl_invertedhammer_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Inverted Hammer pattern.
+    """Numba‑accelerated Inverted Hammer pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -72,8 +71,7 @@ def cdl_invertedhammer(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Inverted Hammer pattern.
+    """Universal Inverted Hammer pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Polars → numpy
@@ -105,17 +103,15 @@ def cdl_invertedhammer(
 
 def cdl_invertedhammer_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_INVERTEDHAMMER",
+    output_col: str = 'CDL_INVERTEDHAMMER',
 ) -> pl.DataFrame:
-    """
-    Add Inverted Hammer column to Polars DataFrame.
-    """
+    """Add Inverted Hammer column to Polars DataFrame."""
     out = cdl_invertedhammer(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

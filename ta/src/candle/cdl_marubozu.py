@@ -18,8 +18,7 @@ def _cdl_marubozu_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Marubozu pattern.
+    """Numba‑accelerated Marubozu pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -57,8 +56,7 @@ def cdl_marubozu(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Marubozu pattern.
+    """Universal Marubozu pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Polars → numpy
@@ -91,17 +89,15 @@ def cdl_marubozu(
 
 def cdl_marubozu_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_MARUBOZU",
+    output_col: str = 'CDL_MARUBOZU',
 ) -> pl.DataFrame:
-    """
-    Add Marubozu column to Polars DataFrame.
-    """
+    """Add Marubozu column to Polars DataFrame."""
     out = cdl_marubozu(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

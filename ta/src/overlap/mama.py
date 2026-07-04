@@ -19,9 +19,7 @@ def _mama_numba_core(
     slowlimit: float,
     prenan: int
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    MAMA core loop (Numba). Returns (mama, fama).
-    """
+    """MAMA core loop (Numba). Returns (mama, fama)."""
     n = len(close)
     mama = np.full(n, np.nan, dtype=np.float64)
     fama = np.full(n, np.nan, dtype=np.float64)
@@ -127,9 +125,7 @@ def mama_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    MAMA using Numba. Returns (mama, fama).
-    """
+    """MAMA using Numba. Returns (mama, fama)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -150,11 +146,9 @@ def mama_talib(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    MAMA using TA‑Lib. Returns (mama, fama).
-    """
+    """MAMA using TA‑Lib. Returns (mama, fama)."""
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -176,8 +170,7 @@ def mama_ind(
     fillna: Optional[float] = None,
     use_talib: bool = True
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Universal MAMA with backend selection.
+    """Universal MAMA with backend selection.
 
     Parameters
     ----------
@@ -197,6 +190,7 @@ def mama_ind(
     Returns
     -------
     (mama, fama) : tuple of np.ndarray
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -212,17 +206,16 @@ def mama_ind(
 # ----------------------------------------------------------------------
 def mama_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     fastlimit: float = 0.5,
     slowlimit: float = 0.05,
     prenan: int = 3,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    suffix: str = ""
+    suffix: str = ''
 ) -> pl.DataFrame:
-    """
-    Add MAMA and FAMA columns to Polars DataFrame.
+    """Add MAMA and FAMA columns to Polars DataFrame.
 
     Parameters
     ----------
@@ -238,13 +231,14 @@ def mama_polars(
     -------
     pl.DataFrame
         Original DataFrame with columns 'MAMA{suffix}' and 'FAMA{suffix}'.
+
     """
     close = df[close_col].to_numpy()
     mama_arr, fama_arr = mama_ind(
         close, fastlimit, slowlimit, prenan, offset, fillna, use_talib
     )
-    suffix = suffix or f"_{fastlimit}_{slowlimit}"
+    suffix = suffix or f'_{fastlimit}_{slowlimit}'
     return df.with_columns([
-        pl.Series(f"MAMA{suffix}", mama_arr),
-        pl.Series(f"FAMA{suffix}", fama_arr)
+        pl.Series(f'MAMA{suffix}', mama_arr),
+        pl.Series(f'FAMA{suffix}', fama_arr)
     ])

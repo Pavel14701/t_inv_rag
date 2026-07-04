@@ -16,8 +16,7 @@ def _compute_gain_loss_numba(
     close: np.ndarray, 
     drift: int
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Compute gain and loss arrays from close prices with given drift.
+    """Compute gain and loss arrays from close prices with given drift.
     Returns (gain, loss).
     """
     n = len(close)
@@ -47,8 +46,7 @@ def rsi_numpy(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Numpy‑based RSI calculation with NaN handling and trim option.
+    """Numpy‑based RSI calculation with NaN handling and trim option.
 
     Parameters
     ----------
@@ -70,18 +68,19 @@ def rsi_numpy(
     -------
     np.ndarray
         RSI values.
+
     """
     # ---- Input validation ----
     if length < 1:
-        raise ValueError("RSI length must be >= 1")
+        raise ValueError('RSI length must be >= 1')
     if drift < 1:
-        raise ValueError("drift must be >= 1")
+        raise ValueError('drift must be >= 1')
     close = np.asarray(close, dtype=np.float64)
     # Check for infinite values
     if np.isinf(close).any():
-        raise ValueError("Input contains non-finite values (inf or -inf).")
+        raise ValueError('Input contains non-finite values (inf or -inf).')
     # Apply NaN policy
-    close = _handle_nan_policy(close, nan_policy, "close")
+    close = _handle_nan_policy(close, nan_policy, 'close')
     # Ensure C-contiguous
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -124,9 +123,7 @@ def rsi_ind(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Universal RSI (accepts numpy array or Polars Series) with NaN handling and trim.
-    """
+    """Universal RSI (accepts numpy array or Polars Series) with NaN handling and trim."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return rsi_numpy(
@@ -147,7 +144,7 @@ def rsi_ind(
 # ----------------------------------------------------------------------
 def rsi_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 14,
     scalar: float = 100.0,
     drift: int = 1,
@@ -157,8 +154,7 @@ def rsi_polars(
     nan_policy: str = 'raise',
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add RSI column to Polars DataFrame.
+    """Add RSI column to Polars DataFrame.
 
     Parameters
     ----------
@@ -174,6 +170,7 @@ def rsi_polars(
     -------
     pl.DataFrame
         Original DataFrame with added RSI column.
+
     """
     close = df[close_col].to_numpy()
     result = rsi_numpy(
@@ -187,5 +184,5 @@ def rsi_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars always returns full length
     )
-    out_name = output_col or f"RSI_{length}"
+    out_name = output_col or f'RSI_{length}'
     return df.with_columns(pl.Series(out_name, result))

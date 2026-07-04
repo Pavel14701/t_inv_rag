@@ -18,8 +18,7 @@ def _cdl_shortline_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Short Line Candle pattern.
+    """Numba‑accelerated Short Line Candle pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -56,8 +55,7 @@ def cdl_shortline(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Short Line Candle pattern.
+    """Universal Short Line Candle pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series): 
@@ -86,17 +84,15 @@ def cdl_shortline(
 
 def cdl_shortline_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_SHORTLINE",
+    output_col: str = 'CDL_SHORTLINE',
 ) -> pl.DataFrame:
-    """
-    Add Short Line Candle column to Polars DataFrame.
-    """
+    """Add Short Line Candle column to Polars DataFrame."""
     out = cdl_shortline(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

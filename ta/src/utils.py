@@ -16,8 +16,7 @@ def _apply_offset_fillna(
     offset: int, 
     fillna: float | None
 ) -> np.ndarray:
-    """
-    Apply shift (offset) and fill NaN values in a single pass.
+    """Apply shift (offset) and fill NaN values in a single pass.
 
     Parameters
     ----------
@@ -32,6 +31,7 @@ def _apply_offset_fillna(
     -------
     np.ndarray
         New array with applied offset and fillna.
+
     """
     n = len(arr)
     out = np.empty(n, dtype=np.float64)
@@ -104,8 +104,7 @@ def _rolling_max_numba(arr, window):
 
 @njit(types.void(types.float64[:], types.unicode_type), cache=True, fastmath=True)
 def _fill_nan_policy_numba(arr: np.ndarray, nan_policy: str) -> None:
-    """
-    Modify arr in-place according to nan_policy ('ffill', 'bfill', or 'both').
+    """Modify arr in-place according to nan_policy ('ffill', 'bfill', or 'both').
     Assumes arr has at least one NaN and is a copy.
     """
     n = len(arr)
@@ -130,9 +129,9 @@ def _handle_nan_policy(arr: np.ndarray, nan_policy: str, name: str) -> np.ndarra
     _fill_nan_policy_numba(arr, nan_policy)
     return arr
 
+
 def replace_inf_with_nan(arr: np.ndarray) -> np.ndarray:
-    """
-    Replaces all infinite values (inf, -inf) with NaN.
+    """Replaces all infinite values (inf, -inf) with NaN.
     Works in-place, returns the array for convenience.
     """
     arr[~np.isfinite(arr)] = np.nan

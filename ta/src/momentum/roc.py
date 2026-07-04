@@ -9,9 +9,8 @@ from ..utils import _apply_offset_fillna
 
 @jit((float64[:], int64, float64), nopython=True, fastmath=True, cache=True)
 def _roc_numba_core(close: np.ndarray, length: int, scalar: float) -> np.ndarray:
-    """
-    Rate of Change core calculation.
-    ROC = scalar * (close[i] - close[i-length]) / close[i-length]
+    """Rate of Change core calculation.
+    ROC = scalar * (close[i] - close[i-length]) / close[i-length].
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -35,8 +34,7 @@ def roc_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based ROC calculation.
+    """Numpy‑based ROC calculation.
 
     Parameters
     ----------
@@ -52,6 +50,7 @@ def roc_numpy(
     -------
     np.ndarray
         ROC values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -74,9 +73,7 @@ def roc_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal ROC (accepts numpy array or Polars Series).
-    """
+    """Universal ROC (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return roc_numpy(close, length, scalar, offset, fillna, use_talib)
@@ -84,8 +81,8 @@ def roc_ind(
 
 def roc_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
-    date_col: str = "date",
+    close_col: str = 'close',
+    date_col: str = 'date',
     length: int = 10,
     scalar: float = 100.0,
     offset: int = 0,
@@ -93,8 +90,7 @@ def roc_polars(
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add ROC column and return a new DataFrame with date and ROC.
+    """Add ROC column and return a new DataFrame with date and ROC.
 
     Parameters
     ----------
@@ -112,10 +108,11 @@ def roc_polars(
     -------
     pl.DataFrame
         DataFrame with date and ROC columns.
+
     """
     close = df[close_col].to_numpy()
     result = roc_numpy(close, length, scalar, offset, fillna, use_talib)
-    out_name = output_col or f"ROC_{length}"
+    out_name = output_col or f'ROC_{length}'
     return pl.DataFrame({
         date_col: df[date_col],
         out_name: result,

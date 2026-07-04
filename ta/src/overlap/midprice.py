@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Midprice indicator – Numba‑accelerated with TA‑Lib fallback.
-"""
+"""Midprice indicator – Numba‑accelerated with TA‑Lib fallback."""
 
 from typing import Optional
 
@@ -18,8 +16,7 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=True, cache=True)
 def _midprice_numba_core(high: np.ndarray, low: np.ndarray, length: int) -> np.ndarray:
-    """
-    Compute midprice = (rolling_min(low) + rolling_max(high)) / 2 in one pass.
+    """Compute midprice = (rolling_min(low) + rolling_max(high)) / 2 in one pass.
 
     Parameters
     ----------
@@ -32,6 +29,7 @@ def _midprice_numba_core(high: np.ndarray, low: np.ndarray, length: int) -> np.n
     -------
     np.ndarray
         Midprice values; first `length-1` positions are NaN.
+
     """
     n = len(high)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -63,9 +61,7 @@ def midprice_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Midprice using Numba (raw numpy version).
-    """
+    """Midprice using Numba (raw numpy version)."""
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     if not high.flags.c_contiguous:
@@ -87,11 +83,9 @@ def midprice_talib(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Midprice using TA‑Lib.
-    """
+    """Midprice using TA‑Lib."""
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
 
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -115,8 +109,7 @@ def midprice_ind(
     fillna: Optional[float] = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal Midprice with backend selection.
+    """Universal Midprice with backend selection.
 
     Parameters
     ----------
@@ -135,6 +128,7 @@ def midprice_ind(
     -------
     np.ndarray
         Midprice values.
+
     """
     if isinstance(high, pl.Series):
         high = high.to_numpy()
@@ -152,16 +146,15 @@ def midprice_ind(
 # ----------------------------------------------------------------------
 def midprice_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
+    high_col: str = 'high',
+    low_col: str = 'low',
     length: int = 2,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
-    """
-    Add Midprice column to Polars DataFrame.
+    """Add Midprice column to Polars DataFrame.
 
     Parameters
     ----------
@@ -184,9 +177,10 @@ def midprice_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     result = midprice_ind(high, low, length, offset, fillna, use_talib)
-    out_name = output_col or f"MIDPRICE_{length}"
+    out_name = output_col or f'MIDPRICE_{length}'
     return df.with_columns([pl.Series(out_name, result)])

@@ -21,26 +21,26 @@ def _cdl_abandonedbaby_nb(
     strict,
     symmetric
 ):
-    """
-    Numba-accelerated Abandoned Baby pattern with optional strict filtering
+    """Numba-accelerated Abandoned Baby pattern with optional strict filtering
     and optional symmetric mode.
 
     Returns:
         1.0 → bullish abandoned baby
        -1.0 → bearish abandoned baby
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
 
     for i in range(2, n):
         # Candle 1
-        o2, c2 = open_[i-2], close[i-2]
-        h2, l2 = high[i-2], low[i-2]
+        o2, c2 = open_[i - 2], close[i - 2]
+        h2, l2 = high[i - 2], low[i - 2]
 
         # Candle 2 (doji)
-        o1, c1 = open_[i-1], close[i-1]
-        h1, l1 = high[i-1], low[i-1]
+        o1, c1 = open_[i - 1], close[i - 1]
+        h1, l1 = high[i - 1], low[i - 1]
 
         # Candle 3
         o0, c0 = open_[i], close[i]
@@ -51,7 +51,7 @@ def _cdl_abandonedbaby_nb(
         # ---------------- Bullish Abandoned Baby ----------------
         bull = (
             (c2 < o2) and                         # first candle bearish
-            (abs(c1 - o1) <= (h1 - l1) * 0.1) and # doji
+            (abs(c1 - o1) <= (h1 - l1) * 0.1) and  # doji
             (l1 > h2) and                         # gap down before doji
             (o0 > h1) and (c0 > o0)               # gap up + bullish candle
         )
@@ -59,7 +59,7 @@ def _cdl_abandonedbaby_nb(
         # ---------------- Bearish Abandoned Baby ----------------
         bear = (
             (c2 > o2) and                         # first candle bullish
-            (abs(c1 - o1) <= (h1 - l1) * 0.1) and # doji
+            (abs(c1 - o1) <= (h1 - l1) * 0.1) and  # doji
             (h1 < l2) and                         # gap up before doji
             (o0 < l1) and (c0 < o0)               # gap down + bearish candle
         )
@@ -123,8 +123,7 @@ def cdl_abandonedbaby(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """
-    Universal Abandoned Baby pattern with strict mode and symmetric control.
+    """Universal Abandoned Baby pattern with strict mode and symmetric control.
 
     If symmetric=False and TA-Lib is available → TA-Lib is used.
     If symmetric=True → TA-Lib is skipped and Numba is always used.
@@ -163,17 +162,17 @@ def cdl_abandonedbaby(
 
 def cdl_abandonedbaby_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col="CDL_ABANDONEDBABY",
+    output_col='CDL_ABANDONEDBABY',
 ):
     out = cdl_abandonedbaby(
         df[open_col].to_numpy(),

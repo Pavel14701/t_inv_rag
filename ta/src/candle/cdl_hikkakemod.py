@@ -21,13 +21,13 @@ def _cdl_hikkakemod_nb(
     lookahead,
     strict,
 ):
-    """
-    Optimized Hikkake Modified pattern.
+    """Optimized Hikkake Modified pattern.
 
     Returns:
         1.0 → bullish hikkake modified
        -1.0 → bearish hikkake modified
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, np.float64)
@@ -39,7 +39,7 @@ def _cdl_hikkakemod_nb(
         l1 = low[i - 1]
         h0 = high[i]
         l0 = low[i]
-        c0 = close[i]
+        close[i]
         # Inside bar: bar -1 inside bar -2
         if not (h1 < h2 and l1 > l2):
             continue
@@ -84,9 +84,7 @@ def cdl_hikkakemod(
     strict=False,
     lookahead=3,
 ):
-    """
-    Hikkake Modified pattern with strict support.
-    """
+    """Hikkake Modified pattern with strict support."""
     # Polars → numpy
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
@@ -114,15 +112,15 @@ def cdl_hikkakemod(
 
 def cdl_hikkakemod_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     lookahead=3,
-    output_col="CDL_HIKKAKEMOD",
+    output_col='CDL_HIKKAKEMOD',
 ):
     out = cdl_hikkakemod(
         df[open_col].to_numpy(),

@@ -17,8 +17,7 @@ def _rwi_numba_core(
     atr: np.ndarray,
     length: int,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Numba-ускоренное вычисление RWI high и low.
+    """Numba-ускоренное вычисление RWI high и low.
 
     Parameters
     ----------
@@ -32,6 +31,7 @@ def _rwi_numba_core(
     Returns
     -------
     (rwi_high, rwi_low) как numpy массивы.
+
     """
     n = len(high)
     rwi_high = np.full(n, np.nan, dtype=np.float64)
@@ -56,16 +56,15 @@ def rwi_numpy(
     low: np.ndarray,
     close: np.ndarray,
     length: int = 14,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Numpy‑based Random Walk Index (RWI) calculation.
+    """Numpy‑based Random Walk Index (RWI) calculation.
 
     Parameters
     ----------
@@ -82,19 +81,20 @@ def rwi_numpy(
     Returns
     -------
     (rwi_high, rwi_low) as numpy arrays.
+
     """
     # ---- Validation ----
     if length < 1:
-        raise ValueError("length must be >= 1")
+        raise ValueError('length must be >= 1')
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
-    for name, arr in [("high", high), ("low", low), ("close", close)]:
+    for name, arr in [('high', high), ('low', low), ('close', close)]:
         if np.isinf(arr).any():
-            raise ValueError(f"Input {name} contains non-finite values (inf or -inf).")
-    high = _handle_nan_policy(high, nan_policy, "high")
-    low = _handle_nan_policy(low, nan_policy, "low")
-    close = _handle_nan_policy(close, nan_policy, "close")
+            raise ValueError(f'Input {name} contains non-finite values (inf or -inf).')
+    high = _handle_nan_policy(high, nan_policy, 'high')
+    low = _handle_nan_policy(low, nan_policy, 'low')
+    close = _handle_nan_policy(close, nan_policy, 'close')
     if not (
         high.flags.c_contiguous and 
         low.flags.c_contiguous and 
@@ -107,8 +107,8 @@ def rwi_numpy(
     min_required = length + 1
     if n < min_required:
         raise ValueError(
-            f"Input series too short: need at \
-                least {min_required} elements, got {n}."
+            f'Input series too short: need at \
+                least {min_required} elements, got {n}.'
             )
     # ---- ATR ----
     atr = atr_ind(
@@ -123,7 +123,7 @@ def rwi_numpy(
         trim=False,  # ATR returns full length
     )
     if np.all(np.isnan(atr)):
-        raise ValueError("ATR calculation failed.")
+        raise ValueError('ATR calculation failed.')
     # ---- Вычисление RWI через Numba-ядро ----
     rwi_high, rwi_low = _rwi_numba_core(high, low, atr, length)
     # ---- Trim ----
@@ -149,16 +149,15 @@ def rwi_ind(
     low: np.ndarray | pl.Series,
     close: np.ndarray | pl.Series,
     length: int = 14,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Universal Random Walk Index (accepts numpy arrays or Polars Series).
+    """Universal Random Walk Index (accepts numpy arrays or Polars Series).
     Returns (rwi_high, rwi_low) as numpy arrays.
     """
     if isinstance(high, pl.Series):
@@ -185,20 +184,19 @@ def rwi_ind(
 # ----------------------------------------------------------------------
 def rwi_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     length: int = 14,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
-    suffix: str = "",
+    nan_policy: str = 'raise',
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add RWI columns to Polars DataFrame.
+    """Add RWI columns to Polars DataFrame.
 
     Columns added:
         RWI_HIGH{suffix}
@@ -218,6 +216,7 @@ def rwi_polars(
     -------
     pl.DataFrame
         Original DataFrame with added columns (same length).
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -233,8 +232,8 @@ def rwi_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars always returns full length
     )
-    suffix = suffix or f"_{length}"
+    suffix = suffix or f'_{length}'
     return df.with_columns([
-        pl.Series(f"RWI_HIGH{suffix}", rwi_high),
-        pl.Series(f"RWI_LOW{suffix}", rwi_low),
+        pl.Series(f'RWI_HIGH{suffix}', rwi_high),
+        pl.Series(f'RWI_LOW{suffix}', rwi_low),
     ])

@@ -21,11 +21,10 @@ def _cdl_3starsinsouth_nb(
     strict,
     symmetric
 ):
-    """
-    Three Stars In The South (bullish) + optional mirrored bearish variant.
+    """Three Stars In The South (bullish) + optional mirrored bearish variant.
     1.0 → bullish
-   -1.0 → bearish (only if symmetric=True)
-    0.0 → none
+    -1.0 → bearish (only if symmetric=True)
+    0.0 → none.
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -111,9 +110,7 @@ def cdl_3starsinsouth(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """
-    Three Stars In The South with optional symmetric bearish mode.
-    """
+    """Three Stars In The South with optional symmetric bearish mode."""
     # Polars → NumPy
     if isinstance(open_, pl.Series): 
         open_ = open_.to_numpy()
@@ -156,17 +153,17 @@ def cdl_3starsinsouth(
 
 def cdl_3starsinsouth_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col="CDL_3STARSINSOUTH",
+    output_col='CDL_3STARSINSOUTH',
 ):
     out = cdl_3starsinsouth(
         df[open_col].to_numpy(),

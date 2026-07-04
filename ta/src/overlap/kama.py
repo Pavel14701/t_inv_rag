@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Kaufman's Adaptive Moving Average (KAMA) with dual backend (Numba/TA‑Lib).
-"""
+"""Kaufman's Adaptive Moving Average (KAMA) with dual backend (Numba/TA‑Lib)."""
 
 from typing import Optional
 
@@ -24,8 +22,7 @@ def _kama_numba_core(
     slow: int,
     drift: int
 ) -> np.ndarray:
-    """
-    KAMA core loop (Numba implementation).
+    """KAMA core loop (Numba implementation).
 
     Parameters
     ----------
@@ -42,6 +39,7 @@ def _kama_numba_core(
     -------
     np.ndarray
         KAMA values; first `length-1` positions are NaN.
+
     """
     n = len(close)
     kama = np.full(n, np.nan, dtype=np.float64)
@@ -91,8 +89,7 @@ def kama_talib(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    KAMA using TA-Lib (C implementation).
+    """KAMA using TA-Lib (C implementation).
 
     Parameters
     ----------
@@ -113,9 +110,10 @@ def kama_talib(
     -------
     np.ndarray
         KAMA values.
+
     """
     if not talib_available:
-        raise ImportError("TA-Lib is not available")
+        raise ImportError('TA-Lib is not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -135,9 +133,7 @@ def kama_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    KAMA using Numba (raw numpy version).
-    """
+    """KAMA using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -155,8 +151,7 @@ def kama_ind(
     fillna: Optional[float] = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal KAMA with automatic backend selection.
+    """Universal KAMA with automatic backend selection.
 
     Parameters
     ----------
@@ -181,6 +176,7 @@ def kama_ind(
     -------
     np.ndarray
         KAMA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -192,7 +188,7 @@ def kama_ind(
 
 def kama_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     fast: int = 2,
     slow: int = 30,
@@ -202,8 +198,7 @@ def kama_polars(
     use_talib: bool = True,
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
-    """
-    KAMA for Polars DataFrame.
+    """KAMA for Polars DataFrame.
 
     Parameters
     ----------
@@ -232,8 +227,9 @@ def kama_polars(
     -------
     pl.DataFrame
         Original DataFrame with KAMA series.
+
     """
     close = df[close_col].to_numpy()
     result = kama_ind(close, length, fast, slow, drift, offset, fillna, use_talib)
-    out_name = output_col or f"KAMA_{length}_{fast}_{slow}"
+    out_name = output_col or f'KAMA_{length}_{fast}_{slow}'
     return df.with_columns([pl.Series(out_name, result)])

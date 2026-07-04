@@ -18,8 +18,7 @@ def _atrts_numba_core(
     length: int,
     ma_length: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Core ATR Trailing Stop logic.
+    """Core ATR Trailing Stop logic.
 
     Parameters
     ----------
@@ -39,6 +38,7 @@ def _atrts_numba_core(
     atrts, long_stop, short_stop : np.ndarray
         Main trailing stop line, long stop values, short stop values.
         First max(length, ma_length) values are NaN.
+
     """
     n = len(close)
     atrts = np.empty(n, dtype=np.float64)
@@ -84,15 +84,14 @@ def atrts_numpy(
     length: int = 14,
     ma_length: int = 20,
     k: float = 3.0,
-    mamode: str = "ema",
+    mamode: str = 'ema',
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
     percent: bool = False,
 ) -> np.ndarray:
-    """
-    Numpy‑based ATR Trailing Stop.
+    """Numpy‑based ATR Trailing Stop.
 
     Returns main ATRTS line as numpy array.
     """
@@ -137,15 +136,14 @@ def atrts(
     length: int = 14,
     ma_length: int = 20,
     k: float = 3.0,
-    mamode: str = "ema",
+    mamode: str = 'ema',
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
     percent: bool = False,
 ) -> np.ndarray:
-    """
-    Universal ATR Trailing Stop (accepts numpy arrays or Polars Series).
+    """Universal ATR Trailing Stop (accepts numpy arrays or Polars Series).
 
     Returns main ATRTS line as numpy array.
     """
@@ -172,13 +170,13 @@ def atrts(
 
 def atrts_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     length: int = 14,
     ma_length: int = 20,
     k: float = 3.0,
-    mamode: str = "ema",
+    mamode: str = 'ema',
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
@@ -186,8 +184,7 @@ def atrts_polars(
     percent: bool = False,
     output_col: Optional[str] = None,
 ) -> pl.DataFrame:
-    """
-    Add ATR Trailing Stop column to Polars DataFrame.
+    """Add ATR Trailing Stop column to Polars DataFrame.
 
     Parameters
     ----------
@@ -203,6 +200,7 @@ def atrts_polars(
     -------
     pl.DataFrame
         Original DataFrame with ATRTS column.
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -219,5 +217,5 @@ def atrts_polars(
         use_talib=use_talib,
         percent=percent,
     )
-    out_name = output_col or f"ATRTS_{length}_{ma_length}_{k}"
+    out_name = output_col or f'ATRTS_{length}_{ma_length}_{k}'
     return df.with_columns([pl.Series(out_name, result)])

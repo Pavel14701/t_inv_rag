@@ -8,8 +8,7 @@ from ..utils import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _skew_numba_core(close: np.ndarray, length: int) -> np.ndarray:
-    """
-    Rolling skewness using sliding sums of powers (Numba).
+    """Rolling skewness using sliding sums of powers (Numba).
 
     Parameters
     ----------
@@ -17,10 +16,12 @@ def _skew_numba_core(close: np.ndarray, length: int) -> np.ndarray:
         Close prices (float64).
     length : int
         Window length.
+
     Returns
     -------
     np.ndarray
         Skewness values; first `length-1` positions are NaN.
+
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -68,9 +69,7 @@ def skew_numba(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Rolling skewness using Numba (raw numpy version).
-    """
+    """Rolling skewness using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -84,8 +83,7 @@ def skew_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Universal rolling skewness (always uses Numba).
+    """Universal rolling skewness (always uses Numba).
 
     Parameters
     ----------
@@ -102,6 +100,7 @@ def skew_ind(
     -------
     np.ndarray
         Skewness values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -110,14 +109,13 @@ def skew_ind(
 
 def skew_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 30,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
 ) -> pl.Series:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -135,8 +133,9 @@ def skew_polars(
     Returns
     -------
     pl.Series
+
     """
     close = df[close_col].to_numpy()
     result = skew_ind(close, length, offset, fillna)
-    out_name = output_col or f"SKEW_{length}"
+    out_name = output_col or f'SKEW_{length}'
     return pl.Series(out_name, result)

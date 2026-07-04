@@ -21,13 +21,13 @@ def _cdl_hikkake_nb(
     lookahead,
     strict,
 ):
-    """
-    Optimized Hikkake pattern (approximation of TA-Lib logic).
+    """Optimized Hikkake pattern (approximation of TA-Lib logic).
 
     Returns:
         1.0 → bullish hikkake (bear trap)
        -1.0 → bearish hikkake (bull trap)
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, np.float64)
@@ -84,13 +84,13 @@ def cdl_hikkake(
     strict: bool = False,
     lookahead: int = 3,
 ) -> np.ndarray:
-    """
-    Hikkake pattern with strict support and optional TA-Lib fallback.
+    """Hikkake pattern with strict support and optional TA-Lib fallback.
 
     Returns:
         1.0 → bullish hikkake
        -1.0 → bearish hikkake
         0.0 → none
+
     """
     # Polars → numpy
     if isinstance(open_, pl.Series): 
@@ -115,15 +115,15 @@ def cdl_hikkake(
 
 def cdl_hikkake_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     lookahead: int = 3,
-    output_col: str = "CDL_HIKKAKE",
+    output_col: str = 'CDL_HIKKAKE',
 ) -> pl.DataFrame:
     out = cdl_hikkake(
         df[open_col].to_numpy(),

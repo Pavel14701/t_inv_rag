@@ -18,8 +18,7 @@ def _true_range_numba_core(
     drift: int,
     prenan: bool
 ) -> np.ndarray:
-    """
-    Compute True Range (TR) using Numba.
+    """Compute True Range (TR) using Numba.
 
     Parameters
     ----------
@@ -35,6 +34,7 @@ def _true_range_numba_core(
     -------
     np.ndarray
         TR array.
+
     """
     n = len(high)
     tr = np.full(n, np.nan, dtype=np.float64)
@@ -77,8 +77,7 @@ def true_range_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    True Range using Numba.
+    """True Range using Numba.
 
     Parameters
     ----------
@@ -97,6 +96,7 @@ def true_range_numba(
     -------
     np.ndarray
         TR values.
+
     """
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -124,8 +124,7 @@ def true_range_talib(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    True Range using TA-Lib (C implementation).
+    """True Range using TA-Lib (C implementation).
 
     Parameters
     ----------
@@ -144,9 +143,10 @@ def true_range_talib(
     -------
     np.ndarray
         TR values.
+
     """
     if not talib_available:
-        raise ImportError("TA-Lib is not available")
+        raise ImportError('TA-Lib is not available')
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
@@ -173,8 +173,7 @@ def true_range_ind(
     fillna: float | None = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal True Range with automatic backend selection.
+    """Universal True Range with automatic backend selection.
 
     Parameters
     ----------
@@ -195,6 +194,7 @@ def true_range_ind(
     -------
     np.ndarray
         TR values.
+
     """
     if isinstance(high, pl.Series):
         high = high.to_numpy()
@@ -213,9 +213,9 @@ def true_range_ind(
 # ----------------------------------------------------------------------
 def true_range_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     drift: int = 1,
     prenan: bool = False,
     offset: int = 0,
@@ -223,8 +223,7 @@ def true_range_polars(
     use_talib: bool = True,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    True Range for Polars DataFrame.
+    """True Range for Polars DataFrame.
 
     Parameters
     ----------
@@ -249,6 +248,7 @@ def true_range_polars(
     -------
     pl.DataFrame
         The original DataFrame with added columns.    
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -261,5 +261,5 @@ def true_range_polars(
         fillna=fillna,
         use_talib=use_talib
     )
-    out_name = output_col or f"TRUERANGE_{drift}"
+    out_name = output_col or f'TRUERANGE_{drift}'
     return df.with_columns([pl.Series(out_name, result)])

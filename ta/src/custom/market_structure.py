@@ -58,7 +58,7 @@ class OrderBlockConfig:
     require_fvg: bool = False
     fvg_tolerance: float = 0.0
     fvg_volume_multiplier: float = 0.0
-    fvg_volume_mode: Literal["any", "center", "first", "last"] = "any"
+    fvg_volume_mode: Literal['any', 'center', 'first', 'last'] = 'any'
     fvg_bonus_multiplier: float = 1.0
 
     # Breaker block filter
@@ -74,7 +74,7 @@ class OrderBlockConfig:
     shift_require_extremes: bool = True
 
     # Zone entry mode
-    zone_entry_mode: Literal["wick", "close", "any"] = "wick"
+    zone_entry_mode: Literal['wick', 'close', 'any'] = 'wick'
 
     # Mitigation / closure filter
     require_closure_outside: bool = False
@@ -128,20 +128,21 @@ class OrderBlockConfig:
     def __post_init__(self):
         if self.strength_reaction_cap <= 0:
             raise ValueError(
-                f"strength_reaction_cap must be positive; \
-                    got {self.strength_reaction_cap}"
+                f'strength_reaction_cap must be positive; \
+                    got {self.strength_reaction_cap}'
             )
         if self.strength_reaction_cap > self.strength_max_multiplier:
             raise ValueError(
-                "strength_reaction_cap must not exceed strength_max_multiplier; "
-                f"got strength_reaction_cap={self.strength_reaction_cap}, "
-                f"strength_max_multiplier={self.strength_max_multiplier}"
+                'strength_reaction_cap must not exceed strength_max_multiplier; '
+                f'got strength_reaction_cap={self.strength_reaction_cap}, '
+                f'strength_max_multiplier={self.strength_max_multiplier}'
             )
 
 
 @dataclass
 class OrderBlock:
     """Represents a confirmed order block."""
+
     id: int
     block_type: str          # "supply" or "demand"
     start: datetime          # time of the original peak/valley
@@ -244,12 +245,12 @@ def classify_market_structure(
     peak_code, valley_code, trend_code = _classify_market_structure_nb(
         peaks_arr, valleys_arr, high_prices, low_prices, lookback, min_consecutive
     )
-    peak_map = {0: "LH", 1: "HH", 2: "?"}
-    valley_map = {0: "LL", 1: "HL", 2: "?"}
-    trend_map = {0: "up", 1: "down", 2: None}
-    peak_label = peak_map.get(peak_code, "?")
-    valley_label = valley_map.get(valley_code, "?")
-    structure_label = f"{peak_label}/{valley_label}" if "?" not in (
+    peak_map = {0: 'LH', 1: 'HH', 2: '?'}
+    valley_map = {0: 'LL', 1: 'HL', 2: '?'}
+    trend_map = {0: 'up', 1: 'down', 2: None}
+    peak_label = peak_map.get(peak_code, '?')
+    valley_label = valley_map.get(valley_code, '?')
+    structure_label = f'{peak_label}/{valley_label}' if '?' not in (
         peak_label, valley_label
     ) else None
     trend_direction = trend_map.get(trend_code)
@@ -259,9 +260,9 @@ def classify_market_structure(
 def is_block_aligned_with_trend(block_type: str, trend_dir: str | None) -> bool:
     if trend_dir is None:
         return True
-    if block_type == "supply" and trend_dir == "down":
+    if block_type == 'supply' and trend_dir == 'down':
         return True
-    if block_type == "demand" and trend_dir == "up":
+    if block_type == 'demand' and trend_dir == 'up':
         return True
     return False
 
@@ -283,12 +284,12 @@ def precompute_indicators(
     zone_low = close - cfg.zone_atr_multiplier * atr
     zone_high = close + cfg.zone_atr_multiplier * atr
     result = {
-        "atr": atr,
-        "avg_volume": avg_volume,
-        "local_highs": local_highs,
-        "local_lows": local_lows,
-        "zone_low": zone_low,
-        "zone_high": zone_high,
+        'atr': atr,
+        'avg_volume': avg_volume,
+        'local_highs': local_highs,
+        'local_lows': local_lows,
+        'zone_low': zone_low,
+        'zone_high': zone_high,
     }
     if cfg.use_adx_filter:
         adx, adxr, di_plus, di_minus = adx_ind(
@@ -296,11 +297,11 @@ def precompute_indicators(
             length=cfg.adx_period,
             use_talib=cfg.use_talib,
         )
-        result["adx"] = adx
-        result["di_plus"] = di_plus
-        result["di_minus"] = di_minus
+        result['adx'] = adx
+        result['di_plus'] = di_plus
+        result['di_minus'] = di_minus
     if cfg.use_rsi_confirmation:
-        result["rsi"] = rsi_ind(close, length=cfg.rsi_period, use_talib=cfg.use_talib)
+        result['rsi'] = rsi_ind(close, length=cfg.rsi_period, use_talib=cfg.use_talib)
     if cfg.use_macd_confirmation:
         macd, signal, hist = macd_ind(
             close,
@@ -309,9 +310,9 @@ def precompute_indicators(
             signal=cfg.macd_signal,
             use_talib=cfg.use_talib,
         )
-        result["macd"] = macd
-        result["macd_signal"] = signal
-        result["macd_hist"] = hist
+        result['macd'] = macd
+        result['macd_signal'] = signal
+        result['macd_hist'] = hist
     return result
 
 
@@ -467,15 +468,15 @@ def generate_block_candidates(
         peak_mask[peak_indices] = True
     if len(valley_indices) > 0:
         valley_mask[valley_indices] = True
-    avg_volume = indicators["avg_volume"]
-    atr = indicators["atr"]
-    local_highs = indicators["local_highs"]
-    local_lows = indicators["local_lows"]
+    avg_volume = indicators['avg_volume']
+    atr = indicators['atr']
+    local_highs = indicators['local_highs']
+    local_lows = indicators['local_lows']
     # ADX arrays (or placeholders)
-    if cfg.use_adx_filter and "adx" in indicators:
-        adx = indicators["adx"]
-        di_plus = indicators["di_plus"]
-        di_minus = indicators["di_minus"]
+    if cfg.use_adx_filter and 'adx' in indicators:
+        adx = indicators['adx']
+        di_plus = indicators['di_plus']
+        di_minus = indicators['di_minus']
     else:
         adx = np.full(n, np.nan, dtype=np.float64)
         di_plus = np.full(n, np.nan, dtype=np.float64)
@@ -495,13 +496,13 @@ def generate_block_candidates(
     )
     candidates = []
     for bt, idx, brk, st in zip(block_types, idx_list, break_idx_list, strength_list):
-        block_type = "supply" if bt == 0 else "demand"
+        block_type = 'supply' if bt == 0 else 'demand'
         candidates.append({
-            "block_type": block_type,
-            "idx": idx,
-            "break_idx": brk,
-            "strength": st,
-            "start_date": dates[idx],
+            'block_type': block_type,
+            'idx': idx,
+            'break_idx': brk,
+            'strength': st,
+            'start_date': dates[idx],
         })
     return candidates
 
@@ -509,7 +510,7 @@ def generate_block_candidates(
 def _compute_lookback(indicators: dict[str, np.ndarray], cfg: OrderBlockConfig) -> int:
     if not cfg.use_dynamic_lookback:
         return cfg.lookback_min
-    median_atr = np.nanmedian(indicators["atr"])
+    median_atr = np.nanmedian(indicators['atr'])
     if not np.isfinite(median_atr):
         return cfg.lookback_min
     lookback = int(
@@ -556,13 +557,13 @@ def check_fvg(
     if fvg_volume_multiplier > 0:
         avg = avg_vol[break_idx]
         candles_vol = [volume[break_idx - 1], volume[break_idx], volume[break_idx + 1]]
-        if fvg_volume_mode == "any":
+        if fvg_volume_mode == 'any':
             ok = any(v > fvg_volume_multiplier * avg for v in candles_vol)
-        elif fvg_volume_mode == "center":
+        elif fvg_volume_mode == 'center':
             ok = volume[break_idx] > fvg_volume_multiplier * avg
-        elif fvg_volume_mode == "first":
+        elif fvg_volume_mode == 'first':
             ok = volume[break_idx - 1] > fvg_volume_multiplier * avg
-        elif fvg_volume_mode == "last":
+        elif fvg_volume_mode == 'last':
             ok = volume[break_idx + 1] > fvg_volume_multiplier * avg
         else:
             ok = any(v > fvg_volume_multiplier * avg for v in candles_vol)
@@ -587,7 +588,7 @@ def check_breaker(
         return 1.0
     start = max(0, len(confirmed_blocks) - breaker_lookback)
     for prev in confirmed_blocks[start:]:
-        if prev.block_type == ("supply" if is_supply else "demand"):
+        if prev.block_type == ('supply' if is_supply else 'demand'):
             continue
         if not (
             current_zone_high > prev.zone_low and current_zone_low < prev.zone_high
@@ -619,7 +620,7 @@ def check_zone_entry(
     max_zone_penetration: float,
     zone_entry_mode: str,
 ) -> bool:
-    if zone_entry_mode == "wick":
+    if zone_entry_mode == 'wick':
         if is_supply:
             if not (zone_low <= low[j] <= zone_high):
                 return False
@@ -631,7 +632,7 @@ def check_zone_entry(
             if high[j] > zone_high + max_zone_penetration * (zone_high - zone_low):
                 return False
         return True
-    elif zone_entry_mode == "close":
+    elif zone_entry_mode == 'close':
         if is_supply:
             if not (zone_low <= close[j] <= zone_high):
                 return False
@@ -664,7 +665,7 @@ def check_rsi_macd(
     use_macd: bool,
 ) -> bool:
     if use_rsi:
-        rsi = indicators["rsi"][j]
+        rsi = indicators['rsi'][j]
         if not np.isfinite(rsi):
             return False
         if is_supply and rsi < rsi_overbought:
@@ -672,7 +673,7 @@ def check_rsi_macd(
         if not is_supply and rsi > rsi_oversold:
             return False
     if use_macd:
-        hist = indicators["macd_hist"][j]
+        hist = indicators['macd_hist'][j]
         if not np.isfinite(hist):
             return False
         if is_supply and hist > 0:
@@ -803,17 +804,17 @@ def validate_block_candidates(
     existing_blocks: list[OrderBlock],
 ) -> list[OrderBlock]:
     confirmed = existing_blocks.copy()
-    avg_vol = indicators["avg_volume"]
-    zone_low_arr = indicators["zone_low"]
-    zone_high_arr = indicators["zone_high"]
+    avg_vol = indicators['avg_volume']
+    zone_low_arr = indicators['zone_low']
+    zone_high_arr = indicators['zone_high']
     peak_list = sorted(peak_indices.tolist())
     valley_list = sorted(valley_indices.tolist())
     block_id = len(confirmed)
     for cand in candidates:
-        idx = cand["idx"]
-        break_idx = cand["break_idx"]
-        is_supply = cand["block_type"] == "supply"
-        base_strength = cand.get("strength", 1.0)
+        idx = cand['idx']
+        break_idx = cand['break_idx']
+        is_supply = cand['block_type'] == 'supply'
+        base_strength = cand.get('strength', 1.0)
         age_candles = break_idx - idx
         if cfg.max_extreme_age > 0 and age_candles > cfg.max_extreme_age:
             continue
@@ -827,7 +828,7 @@ def validate_block_candidates(
                 lookback=cfg.structure_lookback,
                 min_consecutive=cfg.min_structure_extremes
             )
-            if not is_block_aligned_with_trend(cand["block_type"], trend_dir):
+            if not is_block_aligned_with_trend(cand['block_type'], trend_dir):
                 continue
         else:
             struct_label, trend_dir = None, None
@@ -843,7 +844,7 @@ def validate_block_candidates(
         breaker_bonus = check_breaker(
             confirmed, cfg.breaker_lookback,
             zone_low_arr[idx], zone_high_arr[idx],
-            is_supply, close[break_idx], indicators["atr"][break_idx],
+            is_supply, close[break_idx], indicators['atr'][break_idx],
             cfg.breaker_require_displacement, cfg.displacement_multiplier,
             cfg.breaker_bonus_multiplier,
         ) if cfg.check_breaker else 1.0
@@ -885,7 +886,7 @@ def validate_block_candidates(
             )
             # Displacement check
             if not check_displacement(
-                reaction_abs, indicators["atr"][j],
+                reaction_abs, indicators['atr'][j],
                 cfg.displacement_multiplier, reaction_pct, cfg.min_reaction_size,
             ):
                 continue
@@ -899,13 +900,13 @@ def validate_block_candidates(
             # Strength
             strength_val = compute_strength(
                 base_strength, volume[j], avg_vol[j],
-                reaction_abs, indicators["atr"][j], reaction_pct,
+                reaction_abs, indicators['atr'][j], reaction_pct,
                 age_candles, fvg_present, breaker_bonus, cfg,
             )
             block = OrderBlock(
                 id=block_id,
-                block_type=cand["block_type"],
-                start=cand["start_date"],
+                block_type=cand['block_type'],
+                start=cand['start_date'],
                 break_=dates[break_idx],
                 retest=dates[j],
                 zone_low=float(zone_low),
@@ -963,11 +964,11 @@ def cluster_order_blocks(
 # ----------------------------------------------------------------------
 def identify_order_blocks(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
-    volume_col: str = "volume",
-    date_col: str = "date",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    volume_col: str = 'volume',
+    date_col: str = 'date',
     cfg: OrderBlockConfig | None = None,
 ) -> pl.DataFrame:
     if cfg is None:
@@ -1009,28 +1010,28 @@ def identify_order_blocks(
     if not confirmed:
         return pl.DataFrame(
             schema={
-                "id": pl.Int64,
-                "block_type": pl.Utf8,
-                "start": pl.Datetime,
-                "break": pl.Datetime,
-                "retest": pl.Datetime,
-                "zone_low": pl.Float64,
-                "zone_high": pl.Float64,
-                "strength": pl.Float64,
-                "structure_label": pl.Utf8,
-                "trend_direction": pl.Utf8,
+                'id': pl.Int64,
+                'block_type': pl.Utf8,
+                'start': pl.Datetime,
+                'break': pl.Datetime,
+                'retest': pl.Datetime,
+                'zone_low': pl.Float64,
+                'zone_high': pl.Float64,
+                'strength': pl.Float64,
+                'structure_label': pl.Utf8,
+                'trend_direction': pl.Utf8,
             }
         )
     data = {
-        "id": [b.id for b in confirmed],
-        "block_type": [b.block_type for b in confirmed],
-        "start": [b.start for b in confirmed],
-        "break": [b.break_ for b in confirmed],
-        "retest": [b.retest for b in confirmed],
-        "zone_low": [b.zone_low for b in confirmed],
-        "zone_high": [b.zone_high for b in confirmed],
-        "strength": [b.strength for b in confirmed],
-        "structure_label": [b.structure_label for b in confirmed],
-        "trend_direction": [b.trend_direction for b in confirmed],
+        'id': [b.id for b in confirmed],
+        'block_type': [b.block_type for b in confirmed],
+        'start': [b.start for b in confirmed],
+        'break': [b.break_ for b in confirmed],
+        'retest': [b.retest for b in confirmed],
+        'zone_low': [b.zone_low for b in confirmed],
+        'zone_high': [b.zone_high for b in confirmed],
+        'strength': [b.strength for b in confirmed],
+        'structure_label': [b.structure_label for b in confirmed],
+        'trend_direction': [b.trend_direction for b in confirmed],
     }
-    return pl.DataFrame(data).sort("start")
+    return pl.DataFrame(data).sort('start')

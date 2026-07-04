@@ -18,8 +18,7 @@ def _alligator_numba_parallel(
     offset: int,
     fillna: float | None
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute the three Alligator lines in parallel using prange.
+    """Compute the three Alligator lines in parallel using prange.
     Offset and fillna are applied inside.
     """
     n = len(close)
@@ -78,8 +77,7 @@ def alligator_ind(
     fillna: float | None = None,
     parallel: bool = True
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Bill Williams Alligator indicator.
+    """Bill Williams Alligator indicator.
 
     Parameters
     ----------
@@ -99,6 +97,7 @@ def alligator_ind(
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
         Jaw, teeth, lips as numpy arrays.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -134,17 +133,16 @@ def alligator_ind(
 # ----------------------------------------------------------------------
 def alligator_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     jaw: int = 13,
     teeth: int = 8,
     lips: int = 5,
     offset: int = 0,
     fillna: float | None = None,
     parallel: bool = True,
-    suffix: str = ""
+    suffix: str = ''
 ) -> pl.DataFrame:
-    """
-    Add Alligator columns (jaw, teeth, lips) to a Polars DataFrame.
+    """Add Alligator columns (jaw, teeth, lips) to a Polars DataFrame.
 
     Parameters
     ----------
@@ -167,15 +165,16 @@ def alligator_polars(
     -------
     pl.DataFrame
         Original DataFrame with three new columns.
+
     """
     close = df[close_col].to_numpy()
     jaw_arr, teeth_arr, lips_arr = alligator_ind(
         close, jaw=jaw, teeth=teeth, lips=lips,
         offset=offset, fillna=fillna, parallel=parallel
     )
-    suffix = suffix or f"_{jaw}_{teeth}_{lips}"
+    suffix = suffix or f'_{jaw}_{teeth}_{lips}'
     return df.with_columns([
-        pl.Series(f"AGj{suffix}", jaw_arr),
-        pl.Series(f"AGt{suffix}", teeth_arr),
-        pl.Series(f"AGl{suffix}", lips_arr)
+        pl.Series(f'AGj{suffix}', jaw_arr),
+        pl.Series(f'AGt{suffix}', teeth_arr),
+        pl.Series(f'AGl{suffix}', lips_arr)
     ])

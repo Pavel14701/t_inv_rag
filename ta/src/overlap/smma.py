@@ -9,8 +9,7 @@ from numba import jit
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=True, cache=True)
 def _smma_numba_core(close: np.ndarray, length: int) -> np.ndarray:
-    """
-    Smoothed Moving Average (SMMA) core calculation.
+    """Smoothed Moving Average (SMMA) core calculation.
 
     First value (at index length-1) is SMA of first `length` elements.
     Then: SMMA[i] = ((length-1) * SMMA[i-1] + close[i]) / length
@@ -39,8 +38,7 @@ def smma_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Smoothed Moving Average using Numba.
+    """Smoothed Moving Average using Numba.
 
     Parameters
     ----------
@@ -57,6 +55,7 @@ def smma_numba(
     -------
     np.ndarray
         SMMA values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -82,8 +81,7 @@ def smma_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal Smoothed Moving Average (Numba only).
+    """Universal Smoothed Moving Average (Numba only).
 
     Parameters
     ----------
@@ -100,6 +98,7 @@ def smma_ind(
     -------
     np.ndarray
         SMMA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -111,14 +110,13 @@ def smma_ind(
 # ----------------------------------------------------------------------
 def smma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    SMMA for Polars DataFrame (Numba only).
+    """SMMA for Polars DataFrame (Numba only).
 
     Parameters
     ----------
@@ -139,6 +137,7 @@ def smma_polars(
     -------
     pl.DataFrame
         The original DataFrame with added columns.
+
     """
     close = df[close_col].to_numpy()
     result = smma_ind(
@@ -147,5 +146,5 @@ def smma_polars(
         offset=offset,
         fillna=fillna
     )
-    out_name = output_col or f"SMMA_{length}"
+    out_name = output_col or f'SMMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

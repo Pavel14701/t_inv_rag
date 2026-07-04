@@ -13,8 +13,7 @@ def tos_stdevall_numpy(
     offset: int = 0,
     fillna: float | None = None,
 ) -> dict[str, np.ndarray]:
-    """
-    Numpy‑based TOS_STDEVALL calculation.
+    """Numpy‑based TOS_STDEVALL calculation.
 
     Parameters
     ----------
@@ -41,6 +40,7 @@ def tos_stdevall_numpy(
             f"TOS_STDEVALL{_suffix}_L_{i}"        – lower band for multiplier i
             f"TOS_STDEVALL{_suffix}_U_{i}"        – upper band for multiplier i
         where `_suffix` = f"_{length}" if length is not None else "".
+
     """
     close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
@@ -49,14 +49,14 @@ def tos_stdevall_numpy(
     if length is not None:
         length = int(length)
         if length < 2:
-            raise ValueError("length must be >= 2")
+            raise ValueError('length must be >= 2')
         close = close[-length:]
-        suffix = f"_{length}"
+        suffix = f'_{length}'
     else:
         length = len(close)
-        suffix = ""
+        suffix = ''
     if length < 2:
-        raise ValueError("Need at least 2 data points")
+        raise ValueError('Need at least 2 data points')
     # Default stds
     if stds is None:
         stds = [1.0, 2.0, 3.0]
@@ -70,11 +70,11 @@ def tos_stdevall_numpy(
     stdev = np.std(close, ddof=ddof)
     # Prepare result dictionary
     res = {}
-    base_name = f"TOS_STDEVALL{suffix}"
-    res[f"{base_name}_LR"] = lr
+    base_name = f'TOS_STDEVALL{suffix}'
+    res[f'{base_name}_LR'] = lr
     for i in stds:
-        res[f"{base_name}_L_{i}"] = lr - i * stdev
-        res[f"{base_name}_U_{i}"] = lr + i * stdev
+        res[f'{base_name}_L_{i}'] = lr - i * stdev
+        res[f'{base_name}_U_{i}'] = lr + i * stdev
     # Apply offset and fillna to every column
     for key, arr in res.items():
         res[key] = _apply_offset_fillna(arr, offset, fillna)
@@ -89,8 +89,7 @@ def tos_stdevall_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> dict[str, np.ndarray]:
-    """
-    Universal TOS_STDEVALL (accepts numpy array or Polars Series).
+    """Universal TOS_STDEVALL (accepts numpy array or Polars Series).
 
     Parameters
     ----------
@@ -108,6 +107,7 @@ def tos_stdevall_ind(
     -------
     dict[str, np.ndarray]
         Dictionary of result arrays.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -116,16 +116,15 @@ def tos_stdevall_ind(
 
 def tos_stdevall_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int | None = None,
     stds: list[float] | None = None,
     ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add TOS_STDEVALL columns to a Polars DataFrame.
+    """Add TOS_STDEVALL columns to a Polars DataFrame.
 
     The following columns are added:
         - TOS_STDEVALL{_suffix}_LR
@@ -156,6 +155,7 @@ def tos_stdevall_polars(
     -------
     pl.DataFrame
         Original DataFrame with new columns added.
+
     """
     close = df[close_col].to_numpy()
     res_dict = tos_stdevall_numpy(close, length, stds, ddof, offset, fillna)
@@ -166,11 +166,11 @@ def tos_stdevall_polars(
         for key, arr in res_dict.items():
             # Replace the base name part with custom suffix
             # e.g. "TOS_STDEVALL_20_LR" -> "TOS_STDEVALL_custom_LR"
-            base = "TOS_STDEVALL"
+            base = 'TOS_STDEVALL'
             if length is not None:
-                base += f"_{length}"
+                base += f'_{length}'
             if key.startswith(base):
-                new_key = key.replace(base, f"TOS_STDEVALL{suffix}", 1)
+                new_key = key.replace(base, f'TOS_STDEVALL{suffix}', 1)
             else:
                 new_key = key  # fallback
             new_dict[new_key] = arr

@@ -18,8 +18,7 @@ def _cdl_risefall3methods_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Rise/Fall 3 Methods pattern.
+    """Numba‑accelerated Rise/Fall 3 Methods pattern.
     Returns boolean mask where pattern completes (True at the 5th candle).
     Detects both Rising Three Methods (bullish) and Falling Three Methods (bearish).
     """
@@ -96,8 +95,7 @@ def cdl_risefall3methods(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Rise/Fall 3 Methods pattern.
+    """Universal Rise/Fall 3 Methods pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series):
@@ -126,17 +124,15 @@ def cdl_risefall3methods(
 
 def cdl_risefall3methods_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_RISEFALL3METHODS",
+    output_col: str = 'CDL_RISEFALL3METHODS',
 ) -> pl.DataFrame:
-    """
-    Add Rise/Fall 3 Methods column to Polars DataFrame.
-    """
+    """Add Rise/Fall 3 Methods column to Polars DataFrame."""
     out = cdl_risefall3methods(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

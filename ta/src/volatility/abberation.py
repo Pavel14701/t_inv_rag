@@ -17,8 +17,7 @@ def aberration_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Numpy‑based Aberration calculation.
+    """Numpy‑based Aberration calculation.
 
     Returns (zg, sg, xg, atr) as numpy arrays.
     """
@@ -33,7 +32,7 @@ def aberration_numpy(
     atr_arr = atr_ind(
         high, low, close,
         length=atr_length,
-        mamode="rma",
+        mamode='rma',
         offset=0,
         fillna=None,
         percent=False,
@@ -62,8 +61,7 @@ def aberration_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Universal Aberration (accepts numpy arrays or Polars Series).
+    """Universal Aberration (accepts numpy arrays or Polars Series).
     Returns (zg, sg, xg, atr) as numpy arrays.
     """
     if isinstance(high, pl.Series):
@@ -79,18 +77,17 @@ def aberration_ind(
 
 def aberration_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     length: int = 5,
     atr_length: int = 15,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add Aberration columns to Polars DataFrame.
+    """Add Aberration columns to Polars DataFrame.
 
     Columns added:
         ABER_ZG_{length}_{atr_length}
@@ -116,6 +113,7 @@ def aberration_polars(
     -------
     pl.DataFrame
         Original DataFrame with four new columns.
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -123,10 +121,10 @@ def aberration_polars(
     zg, sg, xg, atr_arr = aberration_numpy(
         high, low, close, length, atr_length, offset, fillna, use_talib
     )
-    suffix = suffix or f"_{length}_{atr_length}"
+    suffix = suffix or f'_{length}_{atr_length}'
     return df.with_columns([
-        pl.Series(f"ABER_ZG{suffix}", zg),
-        pl.Series(f"ABER_SG{suffix}", sg),
-        pl.Series(f"ABER_XG{suffix}", xg),
-        pl.Series(f"ABER_ATR{suffix}", atr_arr),
+        pl.Series(f'ABER_ZG{suffix}', zg),
+        pl.Series(f'ABER_SG{suffix}', sg),
+        pl.Series(f'ABER_XG{suffix}', xg),
+        pl.Series(f'ABER_ATR{suffix}', atr_arr),
     ])

@@ -1,4 +1,4 @@
-import pandas as pd # type: ignore
+import pandas as pd  # type: ignore
 import pandas_ta as ta  # type: ignore
 
 from domain.entities import AdxConfigDM
@@ -6,8 +6,7 @@ from infrastructure._types import PriceDataFrame
 
 
 class ADXTrend:
-    """
-    Average Directional Index (ADX) Trend Indicator Implementation.
+    """Average Directional Index (ADX) Trend Indicator Implementation.
     The ADX measures the strength of a trend and is 
     composed of three components:
     - **ADX**: Indicates the trend strength 
@@ -35,18 +34,21 @@ class ADXTrend:
         data: PriceDataFrame, 
         config: AdxConfigDM
     ) -> pd.DataFrame:
-        """
-        Computes the ADX, DMP (+DI), and DMN (-DI) trend indicators.
+        """Computes the ADX, DMP (+DI), and DMN (-DI) trend indicators.
+
         Args:
             data (PriceDataFrame): Price dataset containing 
               high, low, and close prices.
             config (AdxConfigDM): Configuration for ADX 
               (length, smoothing factors, drift, offset).
+
         Returns:
             pd.DataFrame: A DataFrame containing ADX, DMP, and DMN trend values.
+
         Raises:
             ValueError: If the ADX calculation returns missing 
               values for any required component.
+
         """
         adx_ind = ta.adx(  # type: ignore
             high=data.high_prices,
@@ -61,11 +63,11 @@ class ADXTrend:
             offset=config.offset
         )
         if adx_ind is None:
-            raise ValueError("ADX calculation failed — result is None")
+            raise ValueError('ADX calculation failed — result is None')
         required_keys = {
-            "adx": f"ADX_{config.lensig}",
-            "dmp": f"DMP_{config.length}",
-            "dmn": f"DMN_{config.length}",
+            'adx': f'ADX_{config.lensig}',
+            'dmp': f'DMP_{config.length}',
+            'dmn': f'DMN_{config.length}',
         }
         missing = [k for k, v in required_keys.items() if adx_ind.get(v) is None]  # type: ignore
         if missing:
@@ -79,12 +81,14 @@ class ADXTrend:
         )
 
     def get_signal(self, adx_trigger: int, data: pd.DataFrame) -> bool:
-        """
-        Determines whether the trend strength exceeds a defined threshold.
+        """Determines whether the trend strength exceeds a defined threshold.
+
         Args:
             adx_trigger (int): Minimum ADX value required to confirm a trend.
             data (pd.DataFrame): DataFrame containing ADX values.
+
         Returns:
             bool: True if ADX exceeds the threshold, False otherwise.
+
         """
-        return int(data["adx"].iloc[-1]) >= adx_trigger  # type: ignore
+        return int(data['adx'].iloc[-1]) >= adx_trigger  # type: ignore

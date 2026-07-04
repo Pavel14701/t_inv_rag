@@ -19,8 +19,7 @@ def cci_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based CCI calculation.
+    """Numpy‑based CCI calculation.
 
     Parameters
     ----------
@@ -38,6 +37,7 @@ def cci_numpy(
     -------
     np.ndarray
         CCI values.
+
     """
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -71,9 +71,7 @@ def cci_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal CCI (accepts numpy arrays or Polars Series).
-    """
+    """Universal CCI (accepts numpy arrays or Polars Series)."""
     if isinstance(high, pl.Series):
         high = high.to_numpy()
     if isinstance(low, pl.Series):
@@ -85,10 +83,10 @@ def cci_ind(
 
 def cci_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
-    date_col: str = "date",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    date_col: str = 'date',
     length: int = 14,
     c: float = 0.015,
     offset: int = 0,
@@ -96,8 +94,7 @@ def cci_polars(
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -110,12 +107,13 @@ def cci_polars(
     Returns
     -------
     pl.DataFrame
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     result = cci_numpy(high, low, close, length, c, offset, fillna, use_talib)
-    out_name = output_col or f"CCI_{length}_{c}"
+    out_name = output_col or f'CCI_{length}_{c}'
     return pl.DataFrame({
         date_col: df[date_col],
         out_name: result

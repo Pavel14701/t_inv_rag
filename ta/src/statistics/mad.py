@@ -8,8 +8,7 @@ from ..utils import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _mad_numba_core(close: np.ndarray, length: int) -> np.ndarray:
-    """
-    Rolling Mean Absolute Deviation with sliding window and online mean update.
+    """Rolling Mean Absolute Deviation with sliding window and online mean update.
 
     Parameters
     ----------
@@ -22,6 +21,7 @@ def _mad_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     -------
     np.ndarray
         MAD values; first `length-1` positions are NaN.
+
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -57,9 +57,7 @@ def mad_numba(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Rolling Mean Absolute Deviation using Numba (raw numpy version).
-    """
+    """Rolling Mean Absolute Deviation using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -74,8 +72,7 @@ def mad_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Universal rolling MAD (always uses Numba).
+    """Universal rolling MAD (always uses Numba).
 
     Parameters
     ----------
@@ -92,6 +89,7 @@ def mad_ind(
     -------
     np.ndarray
         MAD values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -101,14 +99,13 @@ def mad_ind(
 
 def mad_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 30,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
 ) -> pl.Series:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -126,8 +123,9 @@ def mad_polars(
     Returns
     -------
     pl.Series
+
     """
     close = df[close_col].to_numpy()
     result = mad_ind(close, length, offset, fillna)
-    out_name = output_col or f"MAD_{length}"
+    out_name = output_col or f'MAD_{length}'
     return pl.Series(out_name, result)

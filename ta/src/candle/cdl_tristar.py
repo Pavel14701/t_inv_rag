@@ -18,8 +18,7 @@ def _cdl_tristar_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Tristar pattern.
+    """Numba‑accelerated Tristar pattern.
     Returns boolean mask where pattern completes (True at the 3rd doji).
     """
     n = len(open_)
@@ -78,8 +77,7 @@ def cdl_tristar(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Tristar pattern.
+    """Universal Tristar pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series): 
@@ -108,17 +106,15 @@ def cdl_tristar(
 
 def cdl_tristar_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_TRISTAR",
+    output_col: str = 'CDL_TRISTAR',
 ) -> pl.DataFrame:
-    """
-    Add Tristar pattern column to Polars DataFrame.
-    """
+    """Add Tristar pattern column to Polars DataFrame."""
     out = cdl_tristar(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

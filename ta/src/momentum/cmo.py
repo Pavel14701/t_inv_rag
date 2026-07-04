@@ -17,8 +17,7 @@ def _cmo_numba_core(
     drift: int,
     scalar: float,
 ) -> np.ndarray:
-    """
-    Compute CMO using sliding window sums of positive and negative changes.
+    """Compute CMO using sliding window sums of positive and negative changes.
 
     Parameters
     ----------
@@ -35,6 +34,7 @@ def _cmo_numba_core(
     -------
     np.ndarray
         CMO values; first (length+drift-1) positions are NaN.
+
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -73,8 +73,7 @@ def cmo_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based CMO calculation.
+    """Numpy‑based CMO calculation.
 
     Parameters
     ----------
@@ -94,6 +93,7 @@ def cmo_numpy(
     -------
     np.ndarray
         CMO values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -115,9 +115,7 @@ def cmo_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal CMO (accepts numpy array or Polars Series).
-    """
+    """Universal CMO (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return cmo_numpy(close, length, scalar, drift, offset, fillna, use_talib)
@@ -125,7 +123,7 @@ def cmo_ind(
 
 def cmo_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 14,
     scalar: float = 100.0,
     drift: int = 1,
@@ -134,8 +132,7 @@ def cmo_polars(
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add CMO column to Polars DataFrame.
+    """Add CMO column to Polars DataFrame.
 
     Parameters
     ----------
@@ -151,8 +148,9 @@ def cmo_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     close = df[close_col].to_numpy()
     result = cmo_numpy(close, length, scalar, drift, offset, fillna, use_talib)
-    out_name = output_col or f"CMO_{length}"
+    out_name = output_col or f'CMO_{length}'
     return df.with_columns([pl.Series(out_name, result)])

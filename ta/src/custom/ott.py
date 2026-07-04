@@ -127,15 +127,14 @@ def ott_numpy(
     close: np.ndarray,
     length: int = 2,
     percent: float = 1.4,
-    ma_type: Literal["SMA", "EMA", "WMA", "TMA", "VAR", "WWMA", "ZLEMA", "TSF"] = "VAR",
+    ma_type: Literal['SMA', 'EMA', 'WMA', 'TMA', 'VAR', 'WWMA', 'ZLEMA', 'TSF'] = 'VAR',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Numpy‑based Optimized Trend Tracker (OTT).
+    """Numpy‑based Optimized Trend Tracker (OTT).
 
     Parameters
     ----------
@@ -152,44 +151,45 @@ def ott_numpy(
     Returns
     -------
     (ma, long_stop, short_stop, direction, ott)
+
     """
     # ---- Validation ----
     if length < 1:
-        raise ValueError("length must be >= 1")
+        raise ValueError('length must be >= 1')
     if percent <= 0:
-        raise ValueError("percent must be positive")
+        raise ValueError('percent must be positive')
 
     close = np.asarray(close, dtype=np.float64)
     if np.isinf(close).any():
-        raise ValueError("Input contains non‑finite values (inf or -inf).")
-    close = _handle_nan_policy(close, nan_policy, "close")
+        raise ValueError('Input contains non‑finite values (inf or -inf).')
+    close = _handle_nan_policy(close, nan_policy, 'close')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     n = len(close)
     if n < length:
         raise ValueError(
-            f"Input series too short: need at least {length} elements, got {n}."
+            f'Input series too short: need at least {length} elements, got {n}.'
         )
     # ---- Moving Average ----
     ma_type_upper = ma_type.upper()
-    if ma_type_upper == "SMA":
+    if ma_type_upper == 'SMA':
         ma = sma_ind(close, length=length, use_talib=use_talib, nan_policy=nan_policy)
-    elif ma_type_upper == "EMA":
+    elif ma_type_upper == 'EMA':
         ma = ema_ind(close, length=length, use_talib=use_talib, nan_policy=nan_policy)
-    elif ma_type_upper == "WMA":
+    elif ma_type_upper == 'WMA':
         ma = wma_ind(close, length=length, use_talib=use_talib, nan_policy=nan_policy)
-    elif ma_type_upper == "TMA":
+    elif ma_type_upper == 'TMA':
         ma = _tma_numpy(close, length, use_talib, nan_policy)
-    elif ma_type_upper == "VAR":
+    elif ma_type_upper == 'VAR':
         ma = _vidya_numba(close, length)
-    elif ma_type_upper == "WWMA":
+    elif ma_type_upper == 'WWMA':
         ma = _wwma_numba(close, length)
-    elif ma_type_upper == "ZLEMA":
+    elif ma_type_upper == 'ZLEMA':
         ma = _zlema_numpy(close, length, use_talib, nan_policy)
-    elif ma_type_upper == "TSF":
+    elif ma_type_upper == 'TSF':
         ma = _tsf_numba(close, length)
     else:
-        raise ValueError(f"Unsupported ma_type: {ma_type}")
+        raise ValueError(f'Unsupported ma_type: {ma_type}')
     # ---- Stop levels ----
     offset_vals = ma * percent / 100.0
     long_stop_raw = ma - offset_vals
@@ -259,19 +259,17 @@ def ott_ind(
     length: int = 2,
     percent: float = 1.4,
     ma_type: Literal[
-        "SMA", "EMA", "WMA", 
-        "TMA", "VAR", "WWMA", 
-        "ZLEMA", "TSF"
-    ] = "VAR",
+        'SMA', 'EMA', 'WMA', 
+        'TMA', 'VAR', 'WWMA', 
+        'ZLEMA', 'TSF'
+    ] = 'VAR',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Universal OTT (accepts numpy array or Polars Series).
-    """
+    """Universal OTT (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return ott_numpy(
@@ -292,22 +290,21 @@ def ott_ind(
 # ----------------------------------------------------------------------
 def ott_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 2,
     percent: float = 1.4,
     ma_type: Literal[
-        "SMA", "EMA", "WMA", 
-        "TMA", "VAR", "WWMA", 
-        "ZLEMA", "TSF"
-    ] = "VAR",
+        'SMA', 'EMA', 'WMA', 
+        'TMA', 'VAR', 'WWMA', 
+        'ZLEMA', 'TSF'
+    ] = 'VAR',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
-    suffix: str = "",
+    nan_policy: str = 'raise',
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add OTT columns to Polars DataFrame.
+    """Add OTT columns to Polars DataFrame.
 
     Columns added:
         OTT_MA{suffix}
@@ -329,11 +326,11 @@ def ott_polars(
         trim=False,
     )
     if not suffix:
-        suffix = f"_{length}_{percent}_{ma_type}"
+        suffix = f'_{length}_{percent}_{ma_type}'
     return df.with_columns([
-        pl.Series(f"OTT_MA{suffix}", ma),
-        pl.Series(f"OTT_LONG_STOP{suffix}", long_stop),
-        pl.Series(f"OTT_SHORT_STOP{suffix}", short_stop),
-        pl.Series(f"OTT_DIRECTION{suffix}", direction),
-        pl.Series(f"OTT{suffix}", ott),
+        pl.Series(f'OTT_MA{suffix}', ma),
+        pl.Series(f'OTT_LONG_STOP{suffix}', long_stop),
+        pl.Series(f'OTT_SHORT_STOP{suffix}', short_stop),
+        pl.Series(f'OTT_DIRECTION{suffix}', direction),
+        pl.Series(f'OTT{suffix}', ott),
     ])

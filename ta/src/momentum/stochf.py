@@ -17,13 +17,12 @@ def stochf_numpy(
     close: np.ndarray,
     k: int = 14,
     d: int = 3,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Fast Stochastic using Numba rolling min/max and universal MA.
+    """Fast Stochastic using Numba rolling min/max and universal MA.
 
     Returns (stoch_k, stoch_d) as numpy arrays.
     """
@@ -70,13 +69,12 @@ def stochf_ind(
     close: np.ndarray | pl.Series,
     k: int = 14,
     d: int = 3,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Universal Fast Stochastic (accepts numpy arrays or Polars Series).
+    """Universal Fast Stochastic (accepts numpy arrays or Polars Series).
 
     Returns (stoch_k, stoch_d) as numpy arrays.
     """
@@ -91,20 +89,19 @@ def stochf_ind(
 
 def stochf_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
-    date_col: str = "date",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    date_col: str = 'date',
     k: int = 14,
     d: int = 3,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Compute Fast Stochastic columns (%K and %D) and return a new DataFrame
+    """Compute Fast Stochastic columns (%K and %D) and return a new DataFrame
     containing the date column and the two indicator columns.
 
     Parameters
@@ -137,6 +134,7 @@ def stochf_polars(
             date_col (as provided),
             STOCHFk{suffix} (fast %K line),
             STOCHFd{suffix} (fast %D line).
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -144,9 +142,9 @@ def stochf_polars(
     stoch_k, stoch_d = stochf_numpy(
         high, low, close, k, d, mamode, offset, fillna, use_talib
     )
-    suffix = suffix or f"_{k}_{d}"
+    suffix = suffix or f'_{k}_{d}'
     return pl.DataFrame({
         date_col: df[date_col],
-        f"STOCHFk{suffix}": stoch_k,
-        f"STOCHFd{suffix}": stoch_d,
+        f'STOCHFk{suffix}': stoch_k,
+        f'STOCHFd{suffix}': stoch_d,
     })

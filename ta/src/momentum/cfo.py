@@ -15,8 +15,7 @@ def cfo_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based Chande Forecast Oscillator.
+    """Numpy‑based Chande Forecast Oscillator.
 
     Parameters
     ----------
@@ -34,6 +33,7 @@ def cfo_numpy(
     -------
     np.ndarray
         CFO values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -57,9 +57,7 @@ def cfo_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal CFO (accepts numpy array or Polars Series).
-    """
+    """Universal CFO (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return cfo_numpy(close, length, scalar, drift, offset, fillna, use_talib)
@@ -67,8 +65,8 @@ def cfo_ind(
 
 def cfo_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
-    date_col: str = "date",
+    close_col: str = 'close',
+    date_col: str = 'date',
     length: int = 9,
     scalar: float = 100.0,
     drift: int = 1,
@@ -77,8 +75,7 @@ def cfo_polars(
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -91,10 +88,11 @@ def cfo_polars(
     Returns
     -------
     pl.DataFrame
+
     """
     close = df[close_col].to_numpy()
     result = cfo_numpy(close, length, scalar, drift, offset, fillna, use_talib)
-    out_name = output_col or f"CFO_{length}"
+    out_name = output_col or f'CFO_{length}'
     return pl.DataFrame({
         date_col: df[date_col],
         out_name: result

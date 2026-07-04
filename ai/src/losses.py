@@ -7,7 +7,7 @@ def dual_loss(
     outcome_logits: torch.Tensor,
     action_targets: torch.Tensor,
     outcome_targets: torch.Tensor,
-    outcome_mode: str = "binary",
+    outcome_mode: str = 'binary',
     lambda_outcome: float = 0.3,
     ignore_index: int = 2,
 ):
@@ -18,7 +18,7 @@ def dual_loss(
     )
 
     entry_mask = action_targets == 1
-    if outcome_mode == "binary":
+    if outcome_mode == 'binary':
         logits = outcome_logits[entry_mask].squeeze(-1)
         targets = outcome_targets[entry_mask].float()
         valid = targets != ignore_index
@@ -27,7 +27,7 @@ def dual_loss(
             if valid.sum() > 0
             else torch.tensor(0.0, device=action_logits.device)
         )
-    elif outcome_mode == "multiclass":
+    elif outcome_mode == 'multiclass':
         logits = outcome_logits[entry_mask]
         targets = outcome_targets[entry_mask].long()
         valid = targets != ignore_index
@@ -36,7 +36,7 @@ def dual_loss(
             if valid.sum() > 0
             else torch.tensor(0.0, device=action_logits.device)
         )
-    elif outcome_mode == "regression":
+    elif outcome_mode == 'regression':
         logits = outcome_logits[entry_mask].squeeze(-1)
         targets = outcome_targets[entry_mask].float()
         valid = ~torch.isnan(targets)

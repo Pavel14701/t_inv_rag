@@ -18,8 +18,7 @@ def _cdl_onneck_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated On-Neck pattern.
+    """Numba‑accelerated On-Neck pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -60,8 +59,7 @@ def cdl_onneck(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal On-Neck pattern.
+    """Universal On-Neck pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Polars → numpy
@@ -94,17 +92,15 @@ def cdl_onneck(
 
 def cdl_onneck_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_ONNECK",
+    output_col: str = 'CDL_ONNECK',
 ) -> pl.DataFrame:
-    """
-    Add On-Neck column to Polars DataFrame.
-    """
+    """Add On-Neck column to Polars DataFrame."""
     out = cdl_onneck(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

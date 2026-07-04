@@ -15,8 +15,7 @@ def ohlc4_numpy(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    OHLC4 using pure NumPy (vectorised, no JIT needed).
+    """OHLC4 using pure NumPy (vectorised, no JIT needed).
 
     Parameters
     ----------
@@ -31,6 +30,7 @@ def ohlc4_numpy(
     -------
     np.ndarray
         OHLC4 values.
+
     """
     # Ensure float64 and C‑contiguous with minimal copying
     open = np.asarray(open, dtype=np.float64, copy=False)
@@ -51,8 +51,7 @@ def ohlc4_ind(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Universal OHLC4 (always uses NumPy).
+    """Universal OHLC4 (always uses NumPy).
 
     Parameters
     ----------
@@ -67,6 +66,7 @@ def ohlc4_ind(
     -------
     np.ndarray
         OHLC4 values.
+
     """
     if isinstance(open, pl.Series):
         open = open.to_numpy()
@@ -81,16 +81,15 @@ def ohlc4_ind(
 
 def ohlc4_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: Optional[float] = None,
-    output_col: str = "OHLC4"
+    output_col: str = 'OHLC4'
 ) -> pl.DataFrame:
-    """
-    Add OHLC4 column to Polars DataFrame.
+    """Add OHLC4 column to Polars DataFrame.
 
     Parameters
     ----------
@@ -109,6 +108,7 @@ def ohlc4_polars(
     -------
     pl.DataFrame
         Original DataFrame with OHLC4 column.
+
     """
     open_arr = df[open_col].to_numpy()
     high_arr = df[high_col].to_numpy()

@@ -16,9 +16,7 @@ def trima_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Triangular Moving Average using Numba (raw numpy version).
-    """
+    """Triangular Moving Average using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -37,11 +35,9 @@ def trima_talib(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Triangular Moving Average using TA‑Lib (C implementation).
-    """
+    """Triangular Moving Average using TA‑Lib (C implementation)."""
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -59,8 +55,7 @@ def trima_ind(
     fillna: float | None = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal TRIMA with backend selection.
+    """Universal TRIMA with backend selection.
 
     Parameters
     ----------
@@ -79,6 +74,7 @@ def trima_ind(
     -------
     np.ndarray
         TRIMA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -93,15 +89,14 @@ def trima_ind(
 # ----------------------------------------------------------------------
 def trima_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    Add TRIMA column to Polars DataFrame.
+    """Add TRIMA column to Polars DataFrame.
 
     Parameters
     ----------
@@ -117,8 +112,9 @@ def trima_polars(
     -------
     pl.DataFrame
         Original DataFrame with TRIMA column.
+
     """
     close = df[close_col].to_numpy()
     result = trima_ind(close, length, offset, fillna, use_talib)
-    out_name = output_col or f"TRIMA_{length}"
+    out_name = output_col or f'TRIMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

@@ -27,8 +27,7 @@ def _tv_dmp_dmn_adx(
     scalar: float,
     atr: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute DMP, DMN and ADX according to TradingView logic.
+    """Compute DMP, DMN and ADX according to TradingView logic.
     Returns (dmp, dmn, adx).
     """
     n = len(pos)
@@ -90,7 +89,7 @@ def adx_numpy(
     adxr_length: int = 2,
     scalar: float = 100.0,
     tvmode: bool = False,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
@@ -98,8 +97,7 @@ def adx_numpy(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Numpy‑based ADX calculation with NaN handling and trim option.
+    """Numpy‑based ADX calculation with NaN handling and trim option.
 
     Parameters
     ----------
@@ -130,26 +128,27 @@ def adx_numpy(
     Returns
     -------
     (adx, adxr, dmp, dmn) as numpy arrays, possibly trimmed.
+
     """
     if signal_length is None:
         signal_length = length
     # ---- Input validation ----
     if length < 1 or signal_length < 1:
-        raise ValueError("length and signal_length must be >= 1")
+        raise ValueError('length and signal_length must be >= 1')
     if adxr_length < 1:
-        raise ValueError("adxr_length must be >= 1")
+        raise ValueError('adxr_length must be >= 1')
     # Convert to float64 and check contiguity
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
     # Check for infinite values
-    for name, arr in [("high", high), ("low", low), ("close", close)]:
+    for name, arr in [('high', high), ('low', low), ('close', close)]:
         if np.isinf(arr).any():
-            raise ValueError(f"Input {name} contains non-finite values (inf or -inf).")
+            raise ValueError(f'Input {name} contains non-finite values (inf or -inf).')
     # Apply NaN policy to each array
-    high = _handle_nan_policy(high, nan_policy, "high")
-    low = _handle_nan_policy(low, nan_policy, "low")
-    close = _handle_nan_policy(close, nan_policy, "close")
+    high = _handle_nan_policy(high, nan_policy, 'high')
+    low = _handle_nan_policy(low, nan_policy, 'low')
+    close = _handle_nan_policy(close, nan_policy, 'close')
     # Ensure C-contiguous for performance (fixing the previous bug)
     if not high.flags.c_contiguous:
         high = np.ascontiguousarray(high)
@@ -161,7 +160,7 @@ def adx_numpy(
     atr = atr_ind(
         high, low, close,
         length=length,
-        mamode="rma",
+        mamode='rma',
         drift=drift,
         offset=0,
         fillna=None,
@@ -169,7 +168,7 @@ def adx_numpy(
         nan_policy=nan_policy,   # assume atr_ind also supports nan_policy
     )
     if np.all(np.isnan(atr)):
-        raise ValueError("ATR calculation failed")
+        raise ValueError('ATR calculation failed')
     # 2. Up and Down movements
     up = high - np.roll(high, drift)
     up[:drift] = np.nan
@@ -215,7 +214,7 @@ def adx_numpy(
     if trim:
         start = length + signal_length - 1
         if start >= len(adx):
-            raise ValueError("Trim start index exceeds array length. Series too short.")
+            raise ValueError('Trim start index exceeds array length. Series too short.')
         adx = adx[start:]
         adxr = adxr[start:]
         dmp = dmp[start:]
@@ -237,7 +236,7 @@ def adx_ind(
     adxr_length: int = 2,
     scalar: float = 100.0,
     tvmode: bool = False,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
@@ -245,8 +244,7 @@ def adx_ind(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Universal ADX (accepts numpy arrays or Polars Series) with NaN handling and trim.
+    """Universal ADX (accepts numpy arrays or Polars Series) with NaN handling and trim.
     Returns (adx, adxr, dmp, dmn) as numpy arrays.
     """
     if isinstance(high, pl.Series):
@@ -274,25 +272,24 @@ def adx_ind(
 
 def adx_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
-    date_col: str = "date",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    date_col: str = 'date',
     length: int = 14,
     signal_length: int | None = None,
     adxr_length: int = 2,
     scalar: float = 100.0,
     tvmode: bool = False,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
     nan_policy: str = 'raise',
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    ADX for Polars DataFrame (does not support trim because it must return same length).
+    """ADX for Polars DataFrame (does not support trim because it must return same length).
 
     Columns added:
         ADX_{signal_length}
@@ -320,11 +317,11 @@ def adx_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars always returns full length
     )
-    suffix = suffix or f"_{signal_length}"
+    suffix = suffix or f'_{signal_length}'
     return pl.DataFrame({
         date_col: df[date_col],
-        f"ADX{suffix}": adx_arr,
-        f"ADXR_{signal_length}_{adxr_length}": adxr_arr,
-        f"DMP_{length}": dmp_arr,
-        f"DMN_{length}": dmn_arr,
+        f'ADX{suffix}': adx_arr,
+        f'ADXR_{signal_length}_{adxr_length}': adxr_arr,
+        f'DMP_{length}': dmp_arr,
+        f'DMN_{length}': dmn_arr,
     })
