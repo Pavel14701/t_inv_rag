@@ -13,8 +13,7 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @lru_cache(maxsize=128)
 def _symmetric_weights(length: int) -> np.ndarray:
-    """
-    Generate normalized symmetric triangle weights.
+    """Generate normalized symmetric triangle weights.
     For length n, weights form a symmetric triangle: [1,2,...,2,1] (or [1,2,...,2,1]).
     Normalized so sum = 1.
     """
@@ -36,8 +35,7 @@ def _symmetric_weights(length: int) -> np.ndarray:
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=True, cache=True)
 def _swma_numba_core(close: np.ndarray, weights: np.ndarray) -> np.ndarray:
-    """
-    SWMA core loop.
+    """SWMA core loop.
 
     Parameters
     ----------
@@ -50,6 +48,7 @@ def _swma_numba_core(close: np.ndarray, weights: np.ndarray) -> np.ndarray:
     -------
     np.ndarray
         SWMA values; first (len(weights)-1) positions are NaN.
+
     """
     n = len(close)
     length = len(weights)
@@ -73,9 +72,7 @@ def swma_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    SWMA using Numba (raw numpy version).
-    """
+    """SWMA using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -93,9 +90,7 @@ def swma_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal SWMA (always uses Numba).
-    """
+    """Universal SWMA (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return swma_numba(close, length, offset, fillna)
@@ -106,14 +101,13 @@ def swma_ind(
 # ----------------------------------------------------------------------
 def swma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    Add SWMA column to Polars DataFrame.
+    """Add SWMA column to Polars DataFrame.
 
     Parameters
     ----------
@@ -134,8 +128,9 @@ def swma_polars(
     -------
     pl.DataFrame
         Original DataFrame with SWMA column.
+
     """
     close = df[close_col].to_numpy()
     result = swma_ind(close, length, offset, fillna)
-    out_name = output_col or f"SWMA_{length}"
+    out_name = output_col or f'SWMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

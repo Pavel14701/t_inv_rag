@@ -18,8 +18,7 @@ def _cdl_separatinglines_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Separating Lines pattern.
+    """Numba‑accelerated Separating Lines pattern.
     Returns boolean mask where pattern completes (True at the 2nd candle).
     """
     n = len(open_)
@@ -65,8 +64,7 @@ def cdl_separatinglines(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Separating Lines pattern.
+    """Universal Separating Lines pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series): 
@@ -95,17 +93,15 @@ def cdl_separatinglines(
 
 def cdl_separatinglines_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_SEPARATINGLINES",
+    output_col: str = 'CDL_SEPARATINGLINES',
 ) -> pl.DataFrame:
-    """
-    Add Separating Lines column to Polars DataFrame.
-    """
+    """Add Separating Lines column to Polars DataFrame."""
     out = cdl_separatinglines(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

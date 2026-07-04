@@ -7,9 +7,9 @@ from .datatypes import OrderBlock
 
 
 def compute_atr(df: pl.DataFrame, period: int = 14) -> np.ndarray:
-    high = df["high"].to_numpy()
-    low = df["low"].to_numpy()
-    close = df["close"].to_numpy()
+    high = df['high'].to_numpy()
+    low = df['low'].to_numpy()
+    close = df['close'].to_numpy()
 
     prev_close = np.roll(close, 1)
     prev_close[0] = close[0]
@@ -19,7 +19,7 @@ def compute_atr(df: pl.DataFrame, period: int = 14) -> np.ndarray:
     tr3 = np.abs(low - prev_close)
     tr = np.maximum(tr1, np.maximum(tr2, tr3))
 
-    atr = np.convolve(tr, np.ones(period) / period, mode="same")
+    atr = np.convolve(tr, np.ones(period) / period, mode='same')
     atr[:period] = atr[period]
     atr[atr <= 0] = 1e-6
     return atr.astype(np.float32)
@@ -29,18 +29,18 @@ def compute_ob_distances(
     df: pl.DataFrame,
     order_blocks: list[OrderBlock],
     atr_series: np.ndarray,
-    close_col: str = "close",
+    close_col: str = 'close',
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     n = df.height
     close = df[close_col].to_numpy()
 
     supply_blocks = [
         ob for ob in order_blocks
-        if ob.block_type.lower() == "supply"
+        if ob.block_type.lower() == 'supply'
     ]
     demand_blocks = [
         ob for ob in order_blocks
-        if ob.block_type.lower() == "demand"
+        if ob.block_type.lower() == 'demand'
     ]
     strongest_block = max(
         order_blocks, key=lambda ob: ob.strength
@@ -271,12 +271,12 @@ def generate_labels_from_strategy(
     action = np.zeros(n, dtype=int)
     outcome = np.full(n, np.nan if use_r_multiple else 2, dtype=float)
 
-    open_p = df["open"].to_numpy()
-    high = df["high"].to_numpy()
-    low = df["low"].to_numpy()
-    close = df["close"].to_numpy()
-    tp = df["tp"].to_numpy()
-    sl = df["sl"].to_numpy()
+    open_p = df['open'].to_numpy()
+    high = df['high'].to_numpy()
+    low = df['low'].to_numpy()
+    close = df['close'].to_numpy()
+    tp = df['tp'].to_numpy()
+    sl = df['sl'].to_numpy()
 
     position = no_position()
 

@@ -12,8 +12,7 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=True, cache=True)
 def _cmo_numba(close: np.ndarray, length: int, drift: int) -> np.ndarray:
-    """
-    Compute Chande Momentum Oscillator (CMO) using Numba.
+    """Compute Chande Momentum Oscillator (CMO) using Numba.
     Returns an array of CMO values, same length as `close`.
     First (length + drift - 1) values are NaN.
     """
@@ -58,9 +57,7 @@ def vidya_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    VIDYA using Numba (raw numpy version).
-    """
+    """VIDYA using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -93,13 +90,12 @@ def vidya_talib(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    VIDYA using TA‑Lib (C implementation). Note: TA‑Lib provides CMO,
+    """VIDYA using TA‑Lib (C implementation). Note: TA‑Lib provides CMO,
     but not VIDYA directly. We'll compute CMO and then apply VIDYA formula
     in Python (non‑Numba). For consistency, we still return numpy array.
     """
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -130,8 +126,8 @@ def vidya_ind(
     fillna: float | None = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal VIDYA with backend selection.
+    """Universal VIDYA with backend selection.
+
     Parameters
     ----------
     close : np.ndarray or pl.Series
@@ -151,6 +147,7 @@ def vidya_ind(
     -------
     np.ndarray
         VIDYA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -165,7 +162,7 @@ def vidya_ind(
 # ----------------------------------------------------------------------
 def vidya_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 14,
     drift: int = 1,
     offset: int = 0,
@@ -173,8 +170,7 @@ def vidya_polars(
     use_talib: bool = True,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    Add VIDYA column to Polars DataFrame.
+    """Add VIDYA column to Polars DataFrame.
 
     Parameters
     ----------
@@ -190,8 +186,9 @@ def vidya_polars(
     -------
     pl.DataFrame
         Original DataFrame with VIDYA column.
+
     """
     close = df[close_col].to_numpy()
     result = vidya_ind(close, length, drift, offset, fillna, use_talib)
-    out_name = output_col or f"VIDYA_{length}"
+    out_name = output_col or f'VIDYA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

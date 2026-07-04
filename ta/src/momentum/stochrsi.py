@@ -23,15 +23,14 @@ def stochrsi_numpy(
     rsi_length: int = 14,
     k: int = 3,
     d: int = 3,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Numpy-based Stochastic RSI calculation.
+    """Numpy-based Stochastic RSI calculation.
 
     Parameters
     ----------
@@ -52,16 +51,17 @@ def stochrsi_numpy(
     Returns
     -------
     (stoch_k, stoch_d) as numpy arrays.
+
     """
     # Input validation
     if length < 1 or rsi_length < 1 or k < 1 or d < 1:
-        raise ValueError("All period lengths must be >= 1")
+        raise ValueError('All period lengths must be >= 1')
     close = np.asarray(close, dtype=np.float64)
     # Check for inf
     if np.isinf(close).any():
-        raise ValueError("Input contains non-finite values (inf or -inf).")
+        raise ValueError('Input contains non-finite values (inf or -inf).')
     # Handle NaN
-    close = _handle_nan_policy(close, nan_policy, "close")
+    close = _handle_nan_policy(close, nan_policy, 'close')
     # Ensure contiguous
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -119,15 +119,14 @@ def stochrsi_ind(
     rsi_length: int = 14,
     k: int = 3,
     d: int = 3,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Universal Stochastic RSI (accepts numpy array or Polars Series).
+    """Universal Stochastic RSI (accepts numpy array or Polars Series).
     Returns (stoch_k, stoch_d) as numpy arrays.
     """
     if isinstance(close, pl.Series):
@@ -152,21 +151,20 @@ def stochrsi_ind(
 # ----------------------------------------------------------------------
 def stochrsi_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 14,
     rsi_length: int = 14,
     k: int = 3,
     d: int = 3,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     output_col_k: str | None = None,
     output_col_d: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add Stochastic RSI %K and %D columns to Polars DataFrame.
+    """Add Stochastic RSI %K and %D columns to Polars DataFrame.
 
     Parameters
     ----------
@@ -184,6 +182,7 @@ def stochrsi_polars(
     -------
     pl.DataFrame
         Original DataFrame with added columns (same length).
+
     """
     close = df[close_col].to_numpy()
     stoch_k, stoch_d = stochrsi_numpy(
@@ -201,9 +200,9 @@ def stochrsi_polars(
     )
     # Generate default column names
     if output_col_k is None:
-        output_col_k = f"STOCHRSIk_{length}_{rsi_length}_{k}_{d}"
+        output_col_k = f'STOCHRSIk_{length}_{rsi_length}_{k}_{d}'
     if output_col_d is None:
-        output_col_d = f"STOCHRSId_{length}_{rsi_length}_{k}_{d}"
+        output_col_d = f'STOCHRSId_{length}_{rsi_length}_{k}_{d}'
     return df.with_columns([
         pl.Series(output_col_k, stoch_k),
         pl.Series(output_col_d, stoch_d),

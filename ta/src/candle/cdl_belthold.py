@@ -21,14 +21,14 @@ def _cdl_belthold_nb(
     strict,
     symmetric
 ):
-    """
-    Numba-accelerated Belt Hold pattern with optional strict filtering
+    """Numba-accelerated Belt Hold pattern with optional strict filtering
     and optional symmetric mode.
 
     Returns:
         1.0 → bullish belt hold
        -1.0 → bearish belt hold
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -94,8 +94,7 @@ def cdl_belthold(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """
-    Universal Belt Hold pattern with strict mode and optional symmetric mode.
+    """Universal Belt Hold pattern with strict mode and optional symmetric mode.
 
     If symmetric=False and TA-Lib is available → TA-Lib is used.
     If symmetric=True → TA-Lib is skipped and Numba is always used.
@@ -134,17 +133,17 @@ def cdl_belthold(
 
 def cdl_belthold_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col="CDL_BELTHOLD",
+    output_col='CDL_BELTHOLD',
 ):
     out = cdl_belthold(
         df[open_col].to_numpy(),

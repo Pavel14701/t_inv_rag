@@ -21,22 +21,22 @@ def _cdl_counterattack_nb(
     strict,
     symmetric
 ):
-    """
-    Optimized Counterattack pattern.
+    """Optimized Counterattack pattern.
 
     Returns:
         1.0 → bullish counterattack
        -1.0 → bearish counterattack
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
 
     for i in range(1, n):
-        o1 = open_[i-1]
-        c1 = close[i-1]
-        h1 = high[i-1]
-        l1 = low[i-1]
+        o1 = open_[i - 1]
+        c1 = close[i - 1]
+        h1 = high[i - 1]
+        l1 = low[i - 1]
 
         o0 = open_[i]
         c0 = close[i]
@@ -111,9 +111,7 @@ def cdl_counterattack(
     min_body_factor=0.3,
     max_shadow_factor=0.5,
 ):
-    """
-    Counterattack pattern with strict and symmetric support.
-    """
+    """Counterattack pattern with strict and symmetric support."""
     if isinstance(open_, pl.Series): open_ = open_.to_numpy()
     if isinstance(high, pl.Series): high = high.to_numpy()
     if isinstance(low, pl.Series): low = low.to_numpy()
@@ -139,17 +137,17 @@ def cdl_counterattack(
 
 def cdl_counterattack_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.3,
     max_shadow_factor=0.5,
-    output_col="CDL_COUNTERATTACK",
+    output_col='CDL_COUNTERATTACK',
 ):
     out = cdl_counterattack(
         df[open_col].to_numpy(),

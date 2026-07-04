@@ -18,8 +18,7 @@ def _cdl_matchinglow_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Matching Low pattern.
+    """Numba‑accelerated Matching Low pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -53,8 +52,7 @@ def cdl_matchinglow(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Matching Low pattern.
+    """Universal Matching Low pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Polars → numpy
@@ -88,17 +86,15 @@ def cdl_matchinglow(
 
 def cdl_matchinglow_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_MATCHINGLOW",
+    output_col: str = 'CDL_MATCHINGLOW',
 ) -> pl.DataFrame:
-    """
-    Add Matching Low column to Polars DataFrame.
-    """
+    """Add Matching Low column to Polars DataFrame."""
     out = cdl_matchinglow(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

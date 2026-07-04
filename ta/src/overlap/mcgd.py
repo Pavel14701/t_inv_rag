@@ -11,8 +11,7 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=True, cache=True)
 def _mcgd_numba_core(close: np.ndarray, length: int, c: float) -> np.ndarray:
-    """
-    McGinley Dynamic core loop.
+    """McGinley Dynamic core loop.
 
     Parameters
     ----------
@@ -27,6 +26,7 @@ def _mcgd_numba_core(close: np.ndarray, length: int, c: float) -> np.ndarray:
     -------
     np.ndarray
         MCGD values; first element equals first close price.
+
     """
     n = len(close)
     mcgd = np.empty(n, dtype=np.float64)
@@ -53,8 +53,7 @@ def mcgd_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    McGinley Dynamic using Numba.
+    """McGinley Dynamic using Numba.
 
     Parameters
     ----------
@@ -73,6 +72,7 @@ def mcgd_numba(
     -------
     np.ndarray
         MCGD values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -92,9 +92,7 @@ def mcgd_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal McGinley Dynamic (always uses Numba).
-    """
+    """Universal McGinley Dynamic (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return mcgd_numba(close, length, c, offset, fillna)
@@ -105,15 +103,14 @@ def mcgd_ind(
 # ----------------------------------------------------------------------
 def mcgd_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     c: float = 1.0,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    Add MCGD column to Polars DataFrame.
+    """Add MCGD column to Polars DataFrame.
 
     Parameters
     ----------
@@ -136,8 +133,9 @@ def mcgd_polars(
     -------
     pl.DataFrame
         Original DataFrame with MCGD series.
+
     """
     close = df[close_col].to_numpy()
     result = mcgd_ind(close, length, c, offset, fillna)
-    out_name = output_col or f"MCGD_{length}"
+    out_name = output_col or f'MCGD_{length}'
     return df.with_columns([pl.Series(out_name, result)])

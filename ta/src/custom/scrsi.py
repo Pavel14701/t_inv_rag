@@ -12,8 +12,7 @@ from ..utils import _apply_offset_fillna, _handle_nan_policy
 # ----------------------------------------------------------------------
 @njit((float64[:], int64, int64), fastmath=True, cache=True)
 def _cyclic_smoothing(rsi_scaled: np.ndarray, vibration: int) -> np.ndarray:
-    """
-    Apply cyclic smoothing to scaled RSI.
+    """Apply cyclic smoothing to scaled RSI.
 
     Parameters
     ----------
@@ -26,6 +25,7 @@ def _cyclic_smoothing(rsi_scaled: np.ndarray, vibration: int) -> np.ndarray:
     -------
     np.ndarray
         Smoothed SCRSI values.
+
     """
     n = len(rsi_scaled)
     torque = 2.0 / (vibration + 1.0)
@@ -48,8 +48,7 @@ def scrsi_numpy(
     offset: int = 0,
     fillna: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, float, float]:
-    """
-    Numpy‑based Smooth Cicle RSI calculation.
+    """Numpy‑based Smooth Cicle RSI calculation.
 
     Parameters
     ----------
@@ -71,26 +70,27 @@ def scrsi_numpy(
     Returns
     -------
     (rsi_scaled, crsi, lower_bound, upper_bound)
+
     """
     # Input validation
     if domcycle < 2:
-        raise ValueError("domcycle must be >= 2")
+        raise ValueError('domcycle must be >= 2')
     if vibration < 2:
-        raise ValueError("vibration must be >= 2")
+        raise ValueError('vibration must be >= 2')
     if not (0 < leveling < 50):
-        raise ValueError("leveling must be between 0 and 50")
+        raise ValueError('leveling must be between 0 and 50')
     if vibration > domcycle:
-        raise ValueError("vibration should not exceed domcycle.")
+        raise ValueError('vibration should not exceed domcycle.')
     close = np.asarray(close, dtype=np.float64)
     if np.isinf(close).any():
-        raise ValueError("Input contains non-finite values (inf or -inf).")
-    close = _handle_nan_policy(close, nan_policy, "close")
+        raise ValueError('Input contains non-finite values (inf or -inf).')
+    close = _handle_nan_policy(close, nan_policy, 'close')
     # Check if series is long enough
     min_length = domcycle + vibration
     if len(close) < min_length:
         raise ValueError(
-            f"Input series too short: need at least \
-                {min_length} elements, got {len(close)}."
+            f'Input series too short: need at least \
+                {min_length} elements, got {len(close)}.'
         )
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -151,8 +151,7 @@ def scrsi_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, float, float]:
-    """
-    Universal SCRSI (accepts numpy array or Polars Series).
+    """Universal SCRSI (accepts numpy array or Polars Series).
     Returns (rsi_scaled, crsi, lower_bound, upper_bound).
     """
     if isinstance(close, pl.Series):
@@ -171,7 +170,7 @@ def scrsi_ind(
 
 def scrsi_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     domcycle: int = 14,
     vibration: int = 5,
     leveling: float = 10.0,
@@ -183,8 +182,7 @@ def scrsi_polars(
     output_col_lb: str | None = None,
     output_col_ub: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add SCRSI columns to Polars DataFrame.
+    """Add SCRSI columns to Polars DataFrame.
 
     Parameters
     ----------
@@ -206,6 +204,7 @@ def scrsi_polars(
     -------
     pl.DataFrame
         Original DataFrame with added columns (same length).
+
     """
     close = df[close_col].to_numpy()
     rsi_scaled, crsi, lb, ub = scrsi_numpy(
@@ -219,15 +218,15 @@ def scrsi_polars(
         fillna=fillna,
     )
     # Default column names
-    suffix = f"_{domcycle}_{vibration}"
+    suffix = f'_{domcycle}_{vibration}'
     if output_col_scaled is None:
-        output_col_scaled = f"SCRSI_scaled{suffix}"
+        output_col_scaled = f'SCRSI_scaled{suffix}'
     if output_col_crsi is None:
-        output_col_crsi = f"SCRSI_crsi{suffix}"
+        output_col_crsi = f'SCRSI_crsi{suffix}'
     if output_col_lb is None:
-        output_col_lb = f"SCRSI_lb{suffix}"
+        output_col_lb = f'SCRSI_lb{suffix}'
     if output_col_ub is None:
-        output_col_ub = f"SCRSI_ub{suffix}"
+        output_col_ub = f'SCRSI_ub{suffix}'
     return df.with_columns([
         pl.Series(output_col_scaled, rsi_scaled),
         pl.Series(output_col_crsi, crsi),

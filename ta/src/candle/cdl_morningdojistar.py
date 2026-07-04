@@ -18,8 +18,7 @@ def _cdl_morningdojistar_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Morning Doji Star pattern.
+    """Numba‑accelerated Morning Doji Star pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -72,8 +71,7 @@ def cdl_morningdojistar(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Morning Doji Star pattern.
+    """Universal Morning Doji Star pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Polars → numpy
@@ -107,17 +105,15 @@ def cdl_morningdojistar(
 
 def cdl_morningdojistar_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_MORNINGDOJISTAR",
+    output_col: str = 'CDL_MORNINGDOJISTAR',
 ) -> pl.DataFrame:
-    """
-    Add Morning Doji Star column to Polars DataFrame.
-    """
+    """Add Morning Doji Star column to Polars DataFrame."""
     out = cdl_morningdojistar(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

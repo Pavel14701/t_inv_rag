@@ -18,8 +18,7 @@ def _cdl_morningstar_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Morning Star pattern.
+    """Numba‑accelerated Morning Star pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -79,8 +78,7 @@ def cdl_morningstar(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Morning Star pattern.
+    """Universal Morning Star pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Polars → numpy
@@ -112,17 +110,15 @@ def cdl_morningstar(
 
 def cdl_morningstar_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_MORNINGSTAR",
+    output_col: str = 'CDL_MORNINGSTAR',
 ) -> pl.DataFrame:
-    """
-    Add Morning Star column to Polars DataFrame.
-    """
+    """Add Morning Star column to Polars DataFrame."""
     out = cdl_morningstar(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

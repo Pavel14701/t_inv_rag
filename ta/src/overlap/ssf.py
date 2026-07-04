@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Ehlers Super Smoother Filter (SSF) – aggressively optimized Numba version.
-"""
+"""Ehlers Super Smoother Filter (SSF) – aggressively optimized Numba version."""
 
 from typing import Optional
 
@@ -63,9 +61,7 @@ def ssf_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Super Smoother Filter using Numba.
-    """
+    """Super Smoother Filter using Numba."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -88,9 +84,7 @@ def ssf_ind(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Universal SSF.
-    """
+    """Universal SSF."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return ssf_numba(close, length, everget, pi, sqrt2, offset, fillna)
@@ -101,7 +95,7 @@ def ssf_ind(
 # ----------------------------------------------------------------------
 def ssf_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 20,
     everget: bool = False,
     pi: float = 3.14159,
@@ -110,9 +104,7 @@ def ssf_polars(
     fillna: Optional[float] = None,
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
-    """
-    Add SSF column to Polars DataFrame.
-    """
+    """Add SSF column to Polars DataFrame."""
     close = df[close_col].to_numpy()
     result = ssf_ind(close, length, everget, pi, sqrt2, offset, fillna)
     out_name = output_col or f"SSF{'e' if everget else ''}_{length}"

@@ -12,13 +12,12 @@ def apo_numpy(
     close: np.ndarray,
     fast: int = 12,
     slow: int = 26,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based APO calculation.
+    """Numpy‑based APO calculation.
 
     Parameters
     ----------
@@ -36,6 +35,7 @@ def apo_numpy(
     -------
     np.ndarray
         APO values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -55,14 +55,12 @@ def apo_ind(
     close: np.ndarray | pl.Series,
     fast: int = 12,
     slow: int = 26,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Absolute Price Oscillator (accepts numpy array or Polars Series).
-    """
+    """Universal Absolute Price Oscillator (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return apo_numpy(close, fast, slow, mamode, offset, fillna, use_talib)
@@ -70,18 +68,17 @@ def apo_ind(
 
 def apo_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
-    date_col: str = "date",
+    close_col: str = 'close',
+    date_col: str = 'date',
     fast: int = 12,
     slow: int = 26,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -94,10 +91,11 @@ def apo_polars(
     Returns
     -------
     pl.DataFrame
+
     """
     close = df[close_col].to_numpy()
     result = apo_ind(close, fast, slow, mamode, offset, fillna, use_talib)
-    out_name = output_col or f"APO_{fast}_{slow}"
+    out_name = output_col or f'APO_{fast}_{slow}'
     return pl.DataFrame({
         date_col: df[date_col],
         out_name: result

@@ -13,8 +13,7 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @lru_cache(maxsize=128)
 def _alma_weights(length: int, sigma: float, dist_offset: float) -> np.ndarray:
-    """
-    Generate normalized weights for ALMA.
+    """Generate normalized weights for ALMA.
 
     Parameters
     ----------
@@ -29,6 +28,7 @@ def _alma_weights(length: int, sigma: float, dist_offset: float) -> np.ndarray:
     -------
     np.ndarray
         Normalized weights.
+
     """
     x = np.arange(length, dtype=np.float64)
     k = dist_offset * (length - 1)
@@ -44,9 +44,7 @@ def _alma_numba_full(
     offset: int,
     fillna: float | None
 ) -> np.ndarray:
-    """
-    ALMA core with integrated offset and fillna.
-    """
+    """ALMA core with integrated offset and fillna."""
     n = len(arr)
     length = len(weights)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -73,8 +71,7 @@ def alma_numba_opt(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Arnaud Legoux Moving Average using Numba (optimized).
+    """Arnaud Legoux Moving Average using Numba (optimized).
 
     Parameters
     ----------
@@ -95,6 +92,7 @@ def alma_numba_opt(
     -------
     np.ndarray
         ALMA values.
+
     """
     # Minimize copying
     close = np.asarray(close, dtype=np.float64, copy=False)
@@ -116,9 +114,7 @@ def alma_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal ALMA (always uses Numba).
-    """
+    """Universal ALMA (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return alma_numba_opt(close, length, sigma, dist_offset, offset, fillna)
@@ -129,7 +125,7 @@ def alma_ind(
 # ----------------------------------------------------------------------
 def alma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 9,
     sigma: float = 6.0,
     dist_offset: float = 0.85,
@@ -137,8 +133,7 @@ def alma_polars(
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    ALMA for Polars DataFrame.
+    """ALMA for Polars DataFrame.
 
     Parameters
     ----------
@@ -163,6 +158,7 @@ def alma_polars(
     -------
     pl.DataFrame
         The original DataFrame with added columns.    
+
     """
     close = df[close_col].to_numpy()
     result = alma_ind(
@@ -173,5 +169,5 @@ def alma_polars(
         offset=offset,
         fillna=fillna
     )
-    out_name = output_col or f"ALMA_{length}_{sigma}_{dist_offset}"
+    out_name = output_col or f'ALMA_{length}_{sigma}_{dist_offset}'
     return df.with_columns([pl.Series(out_name, result)])

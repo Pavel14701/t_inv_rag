@@ -14,27 +14,25 @@ from ..utils import _apply_offset_fillna
 def hma_numba(
     close: np.ndarray,
     length: int = 10,
-    mamode: str = "wma",
+    mamode: str = 'wma',
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Hull Moving Average using Numba and selected base MA.
-    """
+    """Hull Moving Average using Numba and selected base MA."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     half_length = int(length / 2)
     sqrt_length = int(np.sqrt(length))
     ma_func: Callable[[np.ndarray, int], np.ndarray]
-    if mamode == "sma":
+    if mamode == 'sma':
         ma_func = sma_ind
-    elif mamode == "ema":
+    elif mamode == 'ema':
         ma_func = ema_ind
-    elif mamode == "wma":
+    elif mamode == 'wma':
         ma_func = wma_ind
     else:
-        raise ValueError(f"Unsupported mamode: {mamode}")
+        raise ValueError(f'Unsupported mamode: {mamode}')
     maf = ma_func(close, half_length)
     mas = ma_func(close, length)
     diff = 2.0 * maf - mas
@@ -48,13 +46,11 @@ def hma_numba(
 def hma_ind(
     close: np.ndarray | pl.Series,
     length: int = 10,
-    mamode: str = "wma",
+    mamode: str = 'wma',
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal Hull Moving Average (always uses Numba).
-    """
+    """Universal Hull Moving Average (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return hma_numba(close, length, mamode, offset, fillna)
@@ -65,15 +61,14 @@ def hma_ind(
 # ----------------------------------------------------------------------
 def hma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
-    mamode: str = "wma",
+    mamode: str = 'wma',
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    HMA for Polars DataFrame.
+    """HMA for Polars DataFrame.
 
     Parameters
     ----------
@@ -96,8 +91,9 @@ def hma_polars(
     -------
     pl.DataFrame
         HMA series.
+
     """
     close = df[close_col].to_numpy()
     result = hma_ind(close, length, mamode, offset, fillna)
-    out_name = output_col or f"HMA_{length}"
+    out_name = output_col or f'HMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

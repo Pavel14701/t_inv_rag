@@ -27,37 +27,36 @@ from . import (
 )
 
 _MA_FUNCS: dict[str, Callable] = {
-    "dema": dema_ind,
-    "ema": ema_ind,
-    "fwma": fwma_ind,
-    "hma": hma_ind,
-    "kama": kama_ind,
-    "linreg": linreg_ind,
-    "midpoint": midpoint_ind,
-    "pwma": pwma_ind,
-    "rma": rma_ind,
-    "sinwma": sinwma_ind,
-    "sma": sma_ind,
-    "ssf": ssf_ind,
-    "swma": swma_ind,
-    "t3": t3_ind,
-    "tema": tema_ind,
-    "trima": trima_ind,
-    "vidya": vidya_ind,
-    "wma": wma_ind,
+    'dema': dema_ind,
+    'ema': ema_ind,
+    'fwma': fwma_ind,
+    'hma': hma_ind,
+    'kama': kama_ind,
+    'linreg': linreg_ind,
+    'midpoint': midpoint_ind,
+    'pwma': pwma_ind,
+    'rma': rma_ind,
+    'sinwma': sinwma_ind,
+    'sma': sma_ind,
+    'ssf': ssf_ind,
+    'swma': swma_ind,
+    't3': t3_ind,
+    'tema': tema_ind,
+    'trima': trima_ind,
+    'vidya': vidya_ind,
+    'wma': wma_ind,
 }
 
 
 def zlma_ind(
     close: np.ndarray | pl.Series,
     length: int = 10,
-    mamode: str = "ema",
+    mamode: str = 'ema',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Zero Lag Moving Average (ZLMA).
+    """Zero Lag Moving Average (ZLMA).
 
     Calculated as:
     1. lag = int(0.5 * (length - 1))
@@ -65,7 +64,7 @@ def zlma_ind(
     3. Applies the specified moving average (mamode) to close_detrend.
 
     Parameters
-    ---------
+    ----------
     close : np.ndarray or pl.Series
         Close prices.
     length : int
@@ -83,6 +82,7 @@ def zlma_ind(
     -------
     np.ndarray
         ZLMA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -99,7 +99,7 @@ def zlma_ind(
         close_detrend = close
     ma_func = _MA_FUNCS.get(mamode.lower())
     if ma_func is None:
-        raise ValueError(f"Unsupported type of MA: {mamode}")
+        raise ValueError(f'Unsupported type of MA: {mamode}')
     # Calling MA with use_talib passed and the rest of the parameters set to default.
     # All MA functions are assumed to have the signature:
     # func(close, length, offset=0, fillna=None, use_talib=True, ...)
@@ -121,19 +121,18 @@ def zlma_ind(
 
 def zlma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
-    mamode: str = "ema",
+    mamode: str = 'ema',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add the ZLMA column to the Polars DataFrame.
+    """Add the ZLMA column to the Polars DataFrame.
 
     Parameters
-    ---------
+    ----------
     df : pl.DataFrame
         Source data.
     close_col : str
@@ -146,8 +145,9 @@ def zlma_polars(
     -------
     pl.DataFrame
         The original DataFrame with the added column.
+
     """
     close = df[close_col].to_numpy()
     result = zlma_ind(close, length, mamode, offset, fillna, use_talib)
-    out_name = output_col or f"ZL_{mamode.upper()}_{length}"
+    out_name = output_col or f'ZL_{mamode.upper()}_{length}'
     return df.with_columns([pl.Series(out_name, result)])

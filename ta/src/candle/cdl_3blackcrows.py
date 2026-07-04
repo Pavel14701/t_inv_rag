@@ -18,8 +18,7 @@ def _cdl_3blackcrows_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Three Black Crows pattern.
+    """Numba‑accelerated Three Black Crows pattern.
     Returns float64 mask: 1.0 where pattern completes, else 0.0.
     """
     n = len(open_)
@@ -61,8 +60,7 @@ def cdl_3blackcrows(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Three Black Crows pattern.
+    """Universal Three Black Crows pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     # Convert Polars Series to numpy
@@ -103,17 +101,15 @@ def cdl_3blackcrows(
 
 def cdl_3blackcrows_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_3BLACKCROWS",
+    output_col: str = 'CDL_3BLACKCROWS',
 ) -> pl.DataFrame:
-    """
-    Add Three Black Crows column to Polars DataFrame.
-    """
+    """Add Three Black Crows column to Polars DataFrame."""
     out = cdl_3blackcrows(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

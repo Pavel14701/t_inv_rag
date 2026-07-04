@@ -23,8 +23,7 @@ def avsl_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Adaptive Volume Support Level (AVSL) – Numpy version.
+    """Adaptive Volume Support Level (AVSL) – Numpy version.
     Returns support line as numpy array.
     """
     # Ensure contiguous
@@ -67,9 +66,7 @@ def avsl_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal AVSL (accepts numpy arrays or Polars Series).
-    """
+    """Universal AVSL (accepts numpy arrays or Polars Series)."""
     if isinstance(low, pl.Series):
         low = low.to_numpy()
     if isinstance(close, pl.Series):
@@ -88,20 +85,18 @@ def avsl_polars(
     df: pl.DataFrame,
     fast: int,
     slow: int,
-    low_col: str = "low",
-    close_col: str = "close",
-    volume_col: str = "volume",
-    date_col: str = "date",
+    low_col: str = 'low',
+    close_col: str = 'close',
+    volume_col: str = 'volume',
+    date_col: str = 'date',
     stand_div: float = 1.0,
     max_deviation: float | None = None,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    output_col: str = "avsl",
+    output_col: str = 'avsl',
 ) -> pl.DataFrame:
-    """
-    Add AVSL column to Polars DataFrame.
-    """
+    """Add AVSL column to Polars DataFrame."""
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     volume = df[volume_col].to_numpy()

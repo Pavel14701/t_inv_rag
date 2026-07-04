@@ -17,8 +17,7 @@ def macd_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Numpy‑based MACD calculation.
+    """Numpy‑based MACD calculation.
 
     Parameters
     ----------
@@ -38,6 +37,7 @@ def macd_numpy(
     -------
     tuple of np.ndarray
         (macd_line, signal_line, histogram)
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -78,9 +78,7 @@ def macd_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Universal MACD (accepts numpy array or Polars Series).
-    """
+    """Universal MACD (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return macd_numpy(close, fast, slow, signal, asmode, offset, fillna, use_talib)
@@ -88,8 +86,8 @@ def macd_ind(
 
 def macd_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
-    date_col: str = "date",
+    close_col: str = 'close',
+    date_col: str = 'date',
     fast: int = 12,
     slow: int = 26,
     signal: int = 9,
@@ -97,10 +95,9 @@ def macd_polars(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add MACD columns to Polars DataFrame.
+    """Add MACD columns to Polars DataFrame.
 
     Columns added:
         MACD{suffix}_{fast}_{slow}_{signal}
@@ -123,16 +120,17 @@ def macd_polars(
     -------
     pl.DataFrame
         Original DataFrame with new columns.
+
     """
     close = df[close_col].to_numpy()
     macd_line, signal_line, hist = macd_numpy(
         close, fast, slow, signal, asmode, offset, fillna, use_talib
     )
-    suffix = suffix or f"_{fast}_{slow}_{signal}"
-    prefix = "MACDAS" if asmode else "MACD"
+    suffix = suffix or f'_{fast}_{slow}_{signal}'
+    prefix = 'MACDAS' if asmode else 'MACD'
     return pl.DataFrame({
         date_col: df[date_col],
-        f"{prefix}{suffix}": macd_line,
-        f"{prefix}s{suffix}": signal_line,
-        f"{prefix}h{suffix}": hist,
+        f'{prefix}{suffix}': macd_line,
+        f'{prefix}s{suffix}': signal_line,
+        f'{prefix}h{suffix}': hist,
     })

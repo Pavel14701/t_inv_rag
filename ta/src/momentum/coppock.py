@@ -16,8 +16,7 @@ def coppock_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based Coppock Curve calculation.
+    """Numpy‑based Coppock Curve calculation.
 
     Parameters
     ----------
@@ -33,6 +32,7 @@ def coppock_numpy(
     -------
     np.ndarray
         Coppock values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -53,9 +53,7 @@ def coppock_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Coppock Curve (accepts numpy array or Polars Series).
-    """
+    """Universal Coppock Curve (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return coppock_numpy(close, fast, slow, wma_length, offset, fillna, use_talib)
@@ -63,8 +61,8 @@ def coppock_ind(
 
 def coppock_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
-    date_col: str = "date",
+    close_col: str = 'close',
+    date_col: str = 'date',
     fast: int = 11,
     slow: int = 14,
     wma_length: int = 10,
@@ -73,8 +71,7 @@ def coppock_polars(
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -87,10 +84,11 @@ def coppock_polars(
     Returns
     -------
     pl.DataFrame
+
     """
     close = df[close_col].to_numpy()
     result = coppock_numpy(close, fast, slow, wma_length, offset, fillna, use_talib)
-    out_name = output_col or f"COPC_{fast}_{slow}_{wma_length}"
+    out_name = output_col or f'COPC_{fast}_{slow}_{wma_length}'
     return pl.DataFrame({
         date_col: df[date_col],
         out_name: result

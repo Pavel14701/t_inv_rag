@@ -18,27 +18,27 @@ from . import (
 def main():
     total_bars = 10000
     df = pl.DataFrame({
-        "open": np.random.randn(total_bars) + 100,
-        "high": np.random.randn(total_bars) + 101,
-        "low": np.random.randn(total_bars) + 99,
-        "close": np.random.randn(total_bars) + 100,
-        "volume": np.random.randn(total_bars) + 1000,
-        "tp": np.random.randn(total_bars) + 105,
-        "sl": np.random.randn(total_bars) + 95,
+        'open': np.random.randn(total_bars) + 100,
+        'high': np.random.randn(total_bars) + 101,
+        'low': np.random.randn(total_bars) + 99,
+        'close': np.random.randn(total_bars) + 100,
+        'volume': np.random.randn(total_bars) + 1000,
+        'tp': np.random.randn(total_bars) + 105,
+        'sl': np.random.randn(total_bars) + 95,
     })
 
     order_blocks = [
         OrderBlock(
             id=1,
-            block_type="demand",
-            start=df["open"].to_list()[0],
-            break_=df["open"].to_list()[0],
-            retest=df["open"].to_list()[0],
+            block_type='demand',
+            start=df['open'].to_list()[0],
+            break_=df['open'].to_list()[0],
+            retest=df['open'].to_list()[0],
             zone_low=100.0,
             zone_high=105.0,
             strength=1.0,
-            structure_label="valid",
-            trend_direction="up",
+            structure_label='valid',
+            trend_direction='up',
             start_idx=100,
             end_idx=105,
         )
@@ -50,17 +50,17 @@ def main():
     )
 
     df = df.with_columns([
-        pl.Series("dist_supply", dist_supply),
-        pl.Series("dist_demand", dist_demand),
-        pl.Series("dist_strong", dist_strong),
+        pl.Series('dist_supply', dist_supply),
+        pl.Series('dist_demand', dist_demand),
+        pl.Series('dist_strong', dist_strong),
     ])
 
     action, outcome = generate_labels_from_strategy(df, order_blocks)
 
-    price_cols = ["open", "high", "low", "close", "volume"]
+    price_cols = ['open', 'high', 'low', 'close', 'volume']
     ind_cols = []          # сюда твои индикаторы
-    sig_cols = ["dist_supply", "dist_demand", "dist_strong"]  # + паттерны
-    tp_sl_cols = ["tp", "sl"]
+    sig_cols = ['dist_supply', 'dist_demand', 'dist_strong']  # + паттерны
+    tp_sl_cols = ['tp', 'sl']
 
     data = np.column_stack([
         df[price_cols].to_numpy(),
@@ -91,7 +91,7 @@ def main():
         shuffle=False, collate_fn=collate_ob
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     model = EntryExitTransformer(
         n_price_feats=len(price_cols),
@@ -101,7 +101,7 @@ def main():
         hidden_size=64,
         num_layers=2,
         num_heads=4,
-        outcome_mode="binary",
+        outcome_mode='binary',
         atr_global=float(atr.mean()),
     ).to(device)
 
@@ -111,11 +111,11 @@ def main():
         val_loader,
         epochs=3,
         device=device,
-        outcome_mode="binary",
+        outcome_mode='binary',
         lambda_outcome=0.3,
         lr=1e-4,
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

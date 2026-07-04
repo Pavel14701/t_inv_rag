@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, cast
 
 import numpy as np
-import pandas as pd # type: ignore
+import pandas as pd  # type: ignore
 import pandas_ta as ta  # type: ignore
 from numba import njit  # type: ignore
 from numpy.typing import NDArray
@@ -12,8 +12,7 @@ from infrastructure._types import PriceDataFrame
 
 
 class BaseAVS(ABC):
-    """
-    Abstract base class for adaptive volume-based support/resistance 
+    """Abstract base class for adaptive volume-based support/resistance
     indicators (AVSL/AVSR).
 
     This class encapsulates the shared logic for computing dynamic price levels based on
@@ -29,24 +28,25 @@ class BaseAVS(ABC):
     - How to apply the adjustment and deviation (directional logic)
     - The output column name
     """
+
     @abstractmethod
     def _get_price_series(self, data: PriceDataFrame) -> pd.Series[Any]:
-        """
-        Selects the base price series for level calculation.
+        """Selects the base price series for level calculation.
 
         Returns:
             pd.Series: Typically either `low_prices` (for support) or 
             `high_prices` (for resistance).
+
         """
         pass
 
     @abstractmethod
     def _output_column_name(self) -> str:
-        """
-        Returns the name of the output column in the resulting DataFrame.
+        """Returns the name of the output column in the resulting DataFrame.
 
         Returns:
             str: e.g., "avsl" or "avsr"
+
         """
         pass
 
@@ -57,8 +57,7 @@ class BaseAVS(ABC):
         price_v: NDArray[np.float64],
         deviation: pd.Series[Any]
     ) -> pd.Series:
-        """
-        Applies directional logic to combine the base price, volume adjustment, 
+        """Applies directional logic to combine the base price, volume adjustment,
         and deviation.
 
         This method defines how the final level is constructed:
@@ -72,6 +71,7 @@ class BaseAVS(ABC):
 
         Returns:
             pd.Series: Adjusted price series to be smoothed by SMA.
+
         """
         pass
 
@@ -80,8 +80,7 @@ class BaseAVS(ABC):
         data: PriceDataFrame, 
         config: AvslConfigDM
     ) -> pd.DataFrame:
-        """
-        Computes the adaptive support or resistance level.
+        """Computes the adaptive support or resistance level.
 
         This method orchestrates the full indicator calculation:
         1. Computes volume-based moving averages and derived metrics (VPCI)
@@ -99,15 +98,16 @@ class BaseAVS(ABC):
         Returns:
             pd.DataFrame: A DataFrame with a single column (e.g., "avsl" or "avsr") 
             indexed by time.
+
         """
         vw_f, vw_s, vpc, vpr, vm, vpci = self._compute_base_series(data, config)
         price_v = self._price_fun(data, vpc, vpr, vpci)
         deviation = np.float64(config.stand_div) * vpci * vm
         price_series = self._get_price_series(data)
         adjusted = self._adjust_formula(price_series, price_v, deviation)
-        result = ta.sma(close=adjusted, length=config.length_slow, talib=True) # type: ignore
+        result = ta.sma(close=adjusted, length=config.length_slow, talib=True)  # type: ignore
         if result is None:
-            raise ValueError("SMA calculation failed")
+            raise ValueError('SMA calculation failed')
         return pd.DataFrame({self._output_column_name(): result}, index=data.index)
 
     def _compute_base_series(
@@ -122,8 +122,7 @@ class BaseAVS(ABC):
         pd.Series[float],
         pd.Series[float]
     ]:
-        """
-        Computes the foundational time series for volume-price dynamics.
+        """Computes the foundational time series for volume-price dynamics.
 
         This includes:
         - VWMA (Volume-Weighted Moving Average)
@@ -135,41 +134,42 @@ class BaseAVS(ABC):
 
         Returns:
             Tuple of six pd.Series: (vwma_fast, vwma_slow, vpc, vpr, vm, vpci)
+
         """
-        vw_ma_fast = cast(pd.Series, ta.vwma( # type: ignore
+        vw_ma_fast = cast(pd.Series, ta.vwma(  # type: ignore
             data.close_prices, 
             data.volumes, 
             config.length_fast
         ))
-        vw_ma_slow = cast(pd.Series, ta.vwma( # type: ignore
+        vw_ma_slow = cast(pd.Series, ta.vwma(  # type: ignore
             data.close_prices, 
             data.volumes, 
             config.length_slow
         ))
-        sma_fast = cast(pd.Series, ta.sma( # type: ignore
+        sma_fast = cast(pd.Series, ta.sma(  # type: ignore
             data.close_prices, 
             config.length_fast, 
             talib=True
         ))
-        sma_slow = cast(pd.Series, ta.sma( # type: ignore
+        sma_slow = cast(pd.Series, ta.sma(  # type: ignore
             data.close_prices, 
             config.length_slow, 
             talib=True
         ))
-        vol_fast = cast(pd.Series, ta.sma( # type: ignore
+        vol_fast = cast(pd.Series, ta.sma(  # type: ignore
             data.volumes, 
             config.length_fast, 
             talib=True
         ))
-        vol_slow = cast(pd.Series, ta.sma( # type: ignore
+        vol_slow = cast(pd.Series, ta.sma(  # type: ignore
             data.volumes, 
             config.length_slow, 
             talib=True
         ))
-        vpc = (vw_ma_slow - sma_slow).astype("float64")
-        vpr = (vw_ma_fast / sma_fast).astype("float64")
-        vm = (vol_fast / vol_slow).astype("float64")
-        vpci = (vpc * vpr * vm).astype("float64")
+        vpc = (vw_ma_slow - sma_slow).astype('float64')
+        vpr = (vw_ma_fast / sma_fast).astype('float64')
+        vm = (vol_fast / vol_slow).astype('float64')
+        vpci = (vpc * vpr * vm).astype('float64')
 
         return vw_ma_fast, vw_ma_slow, vpc, vpr, vm, vpci
 
@@ -180,8 +180,7 @@ class BaseAVS(ABC):
         vpr: pd.Series,
         vpci: pd.Series
     ) -> NDArray[np.float64]:
-        """
-        Computes a dynamic price adjustment factor based on volume-price interaction.
+        """Computes a dynamic price adjustment factor based on volume-price interaction.
 
         This function transforms the selected price series (low or high) using:
         - A dynamic window length (lenV) based on VPCI
@@ -190,22 +189,22 @@ class BaseAVS(ABC):
 
         Returns:
             np.ndarray: Adjusted price influence array (price_v), same length as input.
+
         """
         price_np = self._get_price_series(data).to_numpy()
-        vpc_np = vpc.astype("float64").to_numpy()
-        vpr_np = vpr.astype("float64").to_numpy()
-        vpci_np = vpci.astype("float64").to_numpy()
-        lenV = self.compute_len_v(vpc_np, vpci_np) # type: ignore # ????
-        VPCc = self.compute_vpcc(vpc_np) # type: ignore # ?????
-        return _compute_price_v(price_np, vpr_np, lenV, VPCc) # type: ignore # ?????
+        vpc_np = vpc.astype('float64').to_numpy()
+        vpr_np = vpr.astype('float64').to_numpy()
+        vpci_np = vpci.astype('float64').to_numpy()
+        lenV = self.compute_len_v(vpc_np, vpci_np)  # type: ignore # ????
+        VPCc = self.compute_vpcc(vpc_np)  # type: ignore # ?????
+        return _compute_price_v(price_np, vpr_np, lenV, VPCc)  # type: ignore # ?????
 
     @staticmethod
     def compute_len_v(
         vpc: NDArray[np.float64], 
         vpci: NDArray[np.float64]
     ) -> NDArray[np.int32]:
-        """
-        Computes a dynamic window length for each time step based on VPCI and VPC.
+        """Computes a dynamic window length for each time step based on VPCI and VPC.
 
         - If VPC is negative: window = round(abs(VPCI - 3))
         - If VPC is positive: window = round(VPCI + 3)
@@ -213,6 +212,7 @@ class BaseAVS(ABC):
 
         Returns:
             np.ndarray: Array of integer window lengths.
+
         """
         return np.where(
             np.isnan(vpci), 1,
@@ -225,8 +225,7 @@ class BaseAVS(ABC):
 
     @staticmethod
     def compute_vpcc(vpc: NDArray[np.float64]) -> NDArray[np.float64]:
-        """
-        Stabilizes the VPC coefficient to avoid division by near-zero values.
+        """Stabilizes the VPC coefficient to avoid division by near-zero values.
 
         - If VPC is between -1 and 0 → set to -1.0
         - If VPC is between 0 and 1 → set to 1.0
@@ -234,6 +233,7 @@ class BaseAVS(ABC):
 
         Returns:
             np.ndarray: Corrected VPC coefficients.
+
         """
         return np.where(
             (vpc > -1) & (vpc < 0), -1.0,
@@ -245,8 +245,7 @@ class BaseAVS(ABC):
         data: PriceDataFrame, 
         config: AvslConfigDM
     ) -> float | None:
-        """
-        Retrieves the most recent value of the computed 
+        """Retrieves the most recent value of the computed
         adaptive level (support or resistance).
 
         This method is typically used for signal generation, decision-making, or 
@@ -268,6 +267,7 @@ class BaseAVS(ABC):
 
         Returns:
             float | None: The most recent AVS value, or None if unavailable or invalid.
+
         """
         df = self.calculate(data, config)
         if df.empty:
@@ -283,8 +283,7 @@ def _compute_price_v(
     lenV: NDArray[np.int32],
     VPCc: NDArray[np.float64]
 ) -> NDArray[np.float64]:
-    """
-    Computes a rolling average of price / (VPCc * VPR) over a dynamic window.
+    """Computes a rolling average of price / (VPCc * VPR) over a dynamic window.
 
     For each time step:
     - Uses a backward-looking window of length `lenV[i]`
@@ -295,6 +294,7 @@ def _compute_price_v(
 
     Returns:
         np.ndarray: Adjusted price influence array (price_v)
+
     """
     n = price.shape[0]
     out = np.empty(n, dtype=np.float64)
@@ -317,8 +317,7 @@ def _compute_price_v(
 
 
 class AVSL(BaseAVS):
-    """
-    Adaptive Volume-Weighted Support Level (AVSL) Indicator.
+    """Adaptive Volume-Weighted Support Level (AVSL) Indicator.
 
     This indicator calculates a dynamic support level based on volume-weighted price 
     behavior, volume momentum, and volatility. It is designed to adapt to changing 
@@ -338,25 +337,25 @@ class AVSL(BaseAVS):
     """
 
     def _get_price_series(self, data: PriceDataFrame) -> pd.Series:
-        """
-        Selects the low price series as the base for support level calculation.
+        """Selects the low price series as the base for support level calculation.
 
         Args:
             data (PriceDataFrame): Market data containing low, high, close, and volume.
 
         Returns:
             pd.Series: The low price series.
+
         """
         return data.low_prices
 
     def _output_column_name(self) -> str:
-        """
-        Specifies the name of the output column for the AVSL indicator.
+        """Specifies the name of the output column for the AVSL indicator.
 
         Returns:
             str: The column name "avsl".
+
         """
-        return "avsl"
+        return 'avsl'
 
     def _adjust_formula(
         self,
@@ -364,8 +363,7 @@ class AVSL(BaseAVS):
         price_v: NDArray[np.float64],
         deviation: pd.Series
     ) -> pd.Series:
-        """
-        Applies directional logic to compute the adjusted support level.
+        """Applies directional logic to compute the adjusted support level.
 
         The formula subtracts the volume-driven adjustment from the low price,
         then adds a volatility buffer to avoid overly tight support zones.
@@ -377,13 +375,13 @@ class AVSL(BaseAVS):
 
         Returns:
             pd.Series: The adjusted support level series.
+
         """
         return price_series - price_v + deviation
 
 
 class AVSR(BaseAVS):
-    """
-    Adaptive Volume-Weighted Resistance Level (AVSR) Indicator.
+    """Adaptive Volume-Weighted Resistance Level (AVSR) Indicator.
 
     This indicator calculates a dynamic resistance level based on volume-weighted 
     price behavior, volume momentum, and volatility. It adapts to market conditions 
@@ -404,25 +402,25 @@ class AVSR(BaseAVS):
     """
 
     def _get_price_series(self, data: PriceDataFrame) -> pd.Series:
-        """
-        Selects the high price series as the base for resistance level calculation.
+        """Selects the high price series as the base for resistance level calculation.
 
         Args:
             data (PriceDataFrame): Market data containing low, high, close, and volume.
 
         Returns:
             pd.Series: The high price series.
+
         """
         return data.high_prices
 
     def _output_column_name(self) -> str:
-        """
-        Specifies the name of the output column for the AVSR indicator.
+        """Specifies the name of the output column for the AVSR indicator.
 
         Returns:
             str: The column name "avsr".
+
         """
-        return "avsr"
+        return 'avsr'
 
     def _adjust_formula(
         self,
@@ -430,8 +428,7 @@ class AVSR(BaseAVS):
         price_v: NDArray[np.float64],
         deviation: pd.Series
     ) -> pd.Series:
-        """
-        Applies directional logic to compute the adjusted resistance level.
+        """Applies directional logic to compute the adjusted resistance level.
 
         The formula adds the volume-driven adjustment to the high price,
         then subtracts a volatility buffer to avoid overly optimistic resistance zones.
@@ -443,5 +440,6 @@ class AVSR(BaseAVS):
 
         Returns:
             pd.Series: The adjusted resistance level series.
+
         """
         return price_series + price_v - deviation

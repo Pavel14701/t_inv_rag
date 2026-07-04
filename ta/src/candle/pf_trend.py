@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import polars as pl
-from numba import float64, int64, int8, njit
+from numba import float64, int64, njit
 
 from ..utils import _apply_offset_fillna
 
@@ -16,8 +16,7 @@ def _pf_trend_nb(
     box_size: float,
     reversal: int
 ) -> np.ndarray:
-    """
-    Numba-accelerated Point & Figure trend state (X/O) by close prices.
+    """Numba-accelerated Point & Figure trend state (X/O) by close prices.
 
     Returns int8 array:
     -  1  → колонка X (бычья)
@@ -95,8 +94,7 @@ def pf_trend(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Point & Figure trend state по ряду цен (обычно close).
+    """Point & Figure trend state по ряду цен (обычно close).
 
     Возвращает float64-массив:
     -  1.0 → колонка X (рост)
@@ -117,16 +115,14 @@ def pf_trend(
 
 def pf_trend_polars(
     df: pl.DataFrame,
-    price_col: str = "close",
+    price_col: str = 'close',
     box_size: float = 1.0,
     reversal: int = 3,
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "PF_TREND",
+    output_col: str = 'PF_TREND',
 ) -> pl.DataFrame:
-    """
-    Добавляет колонку Point & Figure тренда в Polars DataFrame.
-    """
+    """Добавляет колонку Point & Figure тренда в Polars DataFrame."""
     out = pf_trend(
         df[price_col].to_numpy(),
         box_size=box_size,

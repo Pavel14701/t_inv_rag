@@ -8,8 +8,8 @@ from ..utils import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _quantile_numba_core(close: np.ndarray, length: int, q: float) -> np.ndarray:
-    """
-    Rolling quantile using a sliding window and sorting each window.
+    """Rolling quantile using a sliding window and sorting each window.
+
     Parameters
     ----------
     close : np.ndarray
@@ -18,10 +18,12 @@ def _quantile_numba_core(close: np.ndarray, length: int, q: float) -> np.ndarray
         Window length.
     q : float
         Quantile (0 < q < 1).
+
     Returns
     -------
     np.ndarray
         Quantile values; first `length-1` positions are NaN.
+
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -42,9 +44,7 @@ def quantile_numba(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Rolling quantile using Numba (raw numpy version).
-    """
+    """Rolling quantile using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -59,8 +59,8 @@ def quantile_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Universal rolling quantile (always uses Numba).
+    """Universal rolling quantile (always uses Numba).
+
     Parameters
     ----------
     close : np.ndarray or pl.Series
@@ -78,6 +78,7 @@ def quantile_ind(
     -------
     np.ndarray
         Quantile values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -86,15 +87,14 @@ def quantile_ind(
 
 def quantile_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 30,
     q: float = 0.5,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
 ) -> pl.Series:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -108,8 +108,9 @@ def quantile_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     close = df[close_col].to_numpy()
     result = quantile_ind(close, length, q, offset, fillna)
-    out_name = output_col or f"QTL_{length}_{q}"
+    out_name = output_col or f'QTL_{length}_{q}'
     return pl.Series(out_name, result)

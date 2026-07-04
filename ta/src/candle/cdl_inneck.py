@@ -18,8 +18,7 @@ def _cdl_inneck_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated In-Neck pattern.
+    """Numba‑accelerated In-Neck pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -31,8 +30,8 @@ def _cdl_inneck_nb(
         l1 = low[i - 1]
         o2 = open_[i]
         c2 = close[i]
-        h2 = high[i]
-        l2 = low[i]
+        high[i]
+        low[i]
         # First candle: long black (bearish)
         if not (c1 < o1):
             continue
@@ -64,8 +63,7 @@ def cdl_inneck(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal In-Neck pattern.
+    """Universal In-Neck pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series):
@@ -94,17 +92,15 @@ def cdl_inneck(
 
 def cdl_inneck_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_INNECK",
+    output_col: str = 'CDL_INNECK',
 ) -> pl.DataFrame:
-    """
-    Add In-Neck column to Polars DataFrame.
-    """
+    """Add In-Neck column to Polars DataFrame."""
     out = cdl_inneck(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

@@ -22,8 +22,7 @@ def cdl_z_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> dict[str, np.ndarray]:
-    """
-    Numpy‑based Z Candles calculation.
+    """Numpy‑based Z Candles calculation.
 
     Returns a dictionary with keys: 'open_Z', 'high_Z', 'low_Z', 'close_Z'.
     """
@@ -53,12 +52,12 @@ def cdl_z_numpy(
         z_high = zscore_ind(high, length=length, ddof=ddof, use_talib=use_talib)
         z_low = zscore_ind(low, length=length, ddof=ddof, use_talib=use_talib)
         z_close = zscore_ind(close, length=length, ddof=ddof, use_talib=use_talib)
-    suffix = "a" if full else f"_{length}_{ddof}"
+    suffix = 'a' if full else f'_{length}_{ddof}'
     return {
-        f"open_Z{suffix}": _apply_offset_fillna(z_open, offset, fillna),
-        f"high_Z{suffix}": _apply_offset_fillna(z_high, offset, fillna),
-        f"low_Z{suffix}": _apply_offset_fillna(z_low, offset, fillna),
-        f"close_Z{suffix}": _apply_offset_fillna(z_close, offset, fillna),
+        f'open_Z{suffix}': _apply_offset_fillna(z_open, offset, fillna),
+        f'high_Z{suffix}': _apply_offset_fillna(z_high, offset, fillna),
+        f'low_Z{suffix}': _apply_offset_fillna(z_low, offset, fillna),
+        f'close_Z{suffix}': _apply_offset_fillna(z_close, offset, fillna),
     }
 
 
@@ -74,9 +73,7 @@ def cdl_z(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> dict[str, np.ndarray]:
-    """
-    Universal Z Candles (accepts numpy arrays or Polars Series).
-    """
+    """Universal Z Candles (accepts numpy arrays or Polars Series)."""
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
     if isinstance(high, pl.Series):
@@ -92,21 +89,20 @@ def cdl_z(
 
 def cdl_z_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
-    date_col: str = "date",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    date_col: str = 'date',
     length: int = 30,
     full: bool = False,
     ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add Z Candle columns to a Polars DataFrame.
+    """Add Z Candle columns to a Polars DataFrame.
 
     Columns added:
         open_Z{suffix}, high_Z{suffix}, low_Z{suffix}, close_Z{suffix}
@@ -128,6 +124,7 @@ def cdl_z_polars(
     -------
     pl.DataFrame
         New DataFrame with date and the four Z‑score columns.
+
     """
     open_arr = df[open_col].to_numpy()
     high_arr = df[high_col].to_numpy()
@@ -147,8 +144,8 @@ def cdl_z_polars(
         new_dict = {}
         for key, arr in res_dict.items():
             # expected key format: "open_Z{auto}"
-            base = key.split("_Z")[0]  # e.g. "open"
-            new_dict[f"{base}_Z{suffix}"] = arr
+            base = key.split('_Z')[0]  # e.g. "open"
+            new_dict[f'{base}_Z{suffix}'] = arr
         res_dict = new_dict
     # Build output DataFrame with date column
     out_df = pl.DataFrame({date_col: df[date_col]})

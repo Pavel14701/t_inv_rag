@@ -21,27 +21,27 @@ def _cdl_3whitesoldiers_nb(
     strict,
     symmetric
 ):
-    """
-    Numba‑accelerated Three White Soldiers pattern with optional strict filtering
+    """Numba‑accelerated Three White Soldiers pattern with optional strict filtering
     and optional symmetric bearish variant.
 
     Returns:
         1.0 → bullish Three White Soldiers
        -1.0 → bearish mirrored variant (only if symmetric=True)
         0.0 → no pattern
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
 
     for i in range(2, n):
         # Extract OHLC for three candles
-        o2, c2 = open_[i-2], close[i-2]
-        o1, c1 = open_[i-1], close[i-1]
-        o0, c0 = open_[i],   close[i]
+        o2, c2 = open_[i - 2], close[i - 2]
+        o1, c1 = open_[i - 1], close[i - 1]
+        o0, c0 = open_[i], close[i]
 
-        h2, l2 = high[i-2], low[i-2]
-        h1, l1 = high[i-1], low[i-1]
-        h0, l0 = high[i],   low[i]
+        h2, l2 = high[i - 2], low[i - 2]
+        h1, l1 = high[i - 1], low[i - 1]
+        h0, l0 = high[i], low[i]
 
         direction = 0.0
 
@@ -120,8 +120,7 @@ def cdl_3whitesoldiers(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """
-    Universal Three White Soldiers pattern with optional strict mode and
+    """Universal Three White Soldiers pattern with optional strict mode and
     optional symmetric bearish variant.
 
     If symmetric=False and TA‑Lib is available, TA‑Lib is used.
@@ -161,21 +160,19 @@ def cdl_3whitesoldiers(
 
 def cdl_3whitesoldiers_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col="CDL_3WHITESOLDIERS",
+    output_col='CDL_3WHITESOLDIERS',
 ):
-    """
-    Add Three White Soldiers column to a Polars DataFrame.
-    """
+    """Add Three White Soldiers column to a Polars DataFrame."""
     out = cdl_3whitesoldiers(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

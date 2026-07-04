@@ -26,13 +26,13 @@ def _cdl_gapsidesidewhite_nb(
     strict: bool,
     symmetric: bool,  # для совместимости
 ) -> np.ndarray:
-    """
-    Optimized Gap Side-by-Side White Lines pattern.
+    """Optimized Gap Side-by-Side White Lines pattern.
 
     Returns:
         1.0 → bullish gap side-by-side white lines
        -1.0 → bearish gap side-by-side white lines
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -74,8 +74,6 @@ def _cdl_gapsidesidewhite_nb(
         bull1 = c1 > o1
         bull0 = c0 > o0
         bear2 = c2 < o2
-        bear1 = c1 < o1
-        bear0 = c0 < o0
 
         direction = 0.0
 
@@ -146,9 +144,7 @@ def cdl_gapsidesidewhite(
     min_body_factor: float = 0.3,
     max_shadow_factor: float = 0.5,
 ) -> np.ndarray:
-    """
-    Gap Side-by-Side White Lines pattern with strict support.
-    """
+    """Gap Side-by-Side White Lines pattern with strict support."""
     if isinstance(open_, pl.Series): open_ = open_.to_numpy()
     if isinstance(high, pl.Series): high = high.to_numpy()
     if isinstance(low, pl.Series): low = low.to_numpy()
@@ -174,17 +170,17 @@ def cdl_gapsidesidewhite(
 
 def cdl_gapsidesidewhite_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.3,
     max_shadow_factor: float = 0.5,
-    output_col: str = "CDL_GAPSIDESIDEWHITE",
+    output_col: str = 'CDL_GAPSIDESIDEWHITE',
 ) -> pl.DataFrame:
     out = cdl_gapsidesidewhite(
         df[open_col].to_numpy(),

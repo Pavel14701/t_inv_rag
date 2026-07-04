@@ -18,8 +18,7 @@ def _cdl_xsidegap3methods_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba-accelerated Upside/Downside Gap 3 Methods pattern.
+    """Numba-accelerated Upside/Downside Gap 3 Methods pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     Detects both Upside Gap 3 Methods (bullish continuation)
     and Downside Gap 3 Methods (bearish continuation).
@@ -75,8 +74,7 @@ def cdl_xsidegap3methods(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Upside/Downside Gap 3 Methods pattern.
+    """Universal Upside/Downside Gap 3 Methods pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series):
@@ -105,17 +103,15 @@ def cdl_xsidegap3methods(
 
 def cdl_xsidegap3methods_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_XSIDEGAP3METHODS",
+    output_col: str = 'CDL_XSIDEGAP3METHODS',
 ) -> pl.DataFrame:
-    """
-    Add Upside/Downside Gap 3 Methods pattern column to Polars DataFrame.
-    """
+    """Add Upside/Downside Gap 3 Methods pattern column to Polars DataFrame."""
     out = cdl_xsidegap3methods(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

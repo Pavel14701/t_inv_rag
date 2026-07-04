@@ -21,26 +21,26 @@ def _cdl_advanceblock_nb(
     strict,
     symmetric
 ):
-    """
-    Numba-accelerated Advance Block pattern with optional strict filtering
+    """Numba-accelerated Advance Block pattern with optional strict filtering
     and optional symmetric bullish variant.
 
     Returns:
         -1.0 → bearish Advance Block (canonical TA-Lib version)
          1.0 → bullish mirrored variant (only if symmetric=True)
          0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
 
     for i in range(2, n):
         # Extract OHLC for three candles
-        o2, c2 = open_[i-2], close[i-2]
-        o1, c1 = open_[i-1], close[i-1]
+        o2, c2 = open_[i - 2], close[i - 2]
+        o1, c1 = open_[i - 1], close[i - 1]
         o0, c0 = open_[i], close[i]
 
-        h2, l2 = high[i-2], low[i-2]
-        h1, l1 = high[i-1], low[i-1]
+        h2, l2 = high[i - 2], low[i - 2]
+        h1, l1 = high[i - 1], low[i - 1]
         h0, l0 = high[i], low[i]
 
         direction = 0.0
@@ -124,8 +124,7 @@ def cdl_advanceblock(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """
-    Universal Advance Block pattern with strict mode and optional symmetric variant.
+    """Universal Advance Block pattern with strict mode and optional symmetric variant.
 
     If symmetric=False and TA-Lib is available → TA-Lib is used.
     If symmetric=True → TA-Lib is skipped and Numba is always used.
@@ -164,17 +163,17 @@ def cdl_advanceblock(
 
 def cdl_advanceblock_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col="CDL_ADVANCEBLOCK",
+    output_col='CDL_ADVANCEBLOCK',
 ):
     out = cdl_advanceblock(
         df[open_col].to_numpy(),

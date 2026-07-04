@@ -16,7 +16,7 @@ def atr_numba(
     low: np.ndarray,
     close: np.ndarray,
     length: int = 14,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
@@ -24,8 +24,7 @@ def atr_numba(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Average True Range using Numba for TR and smoothing.
+    """Average True Range using Numba for TR and smoothing.
 
     Parameters
     ----------
@@ -43,18 +42,19 @@ def atr_numba(
     -------
     np.ndarray
         ATR values.
+
     """
     if length < 1:
-        raise ValueError("length must be >= 1")
+        raise ValueError('length must be >= 1')
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
-    for name, arr in [("high", high), ("low", low), ("close", close)]:
+    for name, arr in [('high', high), ('low', low), ('close', close)]:
         if np.isinf(arr).any():
-            raise ValueError(f"Input {name} contains non-finite values (inf or -inf).")
-    high = _handle_nan_policy(high, nan_policy, "high")
-    low = _handle_nan_policy(low, nan_policy, "low")
-    close = _handle_nan_policy(close, nan_policy, "close")
+            raise ValueError(f'Input {name} contains non-finite values (inf or -inf).')
+    high = _handle_nan_policy(high, nan_policy, 'high')
+    low = _handle_nan_policy(low, nan_policy, 'low')
+    close = _handle_nan_policy(close, nan_policy, 'close')
     # Ensure C-contiguous
     high = np.ascontiguousarray(high)
     low = np.ascontiguousarray(low)
@@ -63,14 +63,14 @@ def atr_numba(
     tr = true_range_ind(high, low, close, drift)
     # Smooth TR with selected MA
     mamode = mamode.lower()
-    if mamode == "rma":
+    if mamode == 'rma':
         atr = rma_ind(tr, length, nan_policy=nan_policy)
-    elif mamode == "sma":
+    elif mamode == 'sma':
         atr = sma_ind(tr, length, nan_policy=nan_policy)
-    elif mamode == "ema":
+    elif mamode == 'ema':
         atr = ema_ind(tr, length, nan_policy=nan_policy)
     else:
-        raise ValueError(f"Unsupported mamode: {mamode}")
+        raise ValueError(f'Unsupported mamode: {mamode}')
     # Convert to percent if requested
     if percent:
         atr = atr * 100.0 / close
@@ -98,24 +98,22 @@ def atr_talib(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    ATR using TA-Lib (C implementation) with pre‑processing.
-    """
+    """ATR using TA-Lib (C implementation) with pre‑processing."""
     if not talib_available:
-        raise ImportError("TA-Lib is not available")
+        raise ImportError('TA-Lib is not available')
     if length < 1:
-        raise ValueError("length must be >= 1")
+        raise ValueError('length must be >= 1')
 
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
 
-    for name, arr in [("high", high), ("low", low), ("close", close)]:
+    for name, arr in [('high', high), ('low', low), ('close', close)]:
         if np.isinf(arr).any():
-            raise ValueError(f"Input {name} contains non-finite values (inf or -inf).")
-    high = _handle_nan_policy(high, nan_policy, "high")
-    low = _handle_nan_policy(low, nan_policy, "low")
-    close = _handle_nan_policy(close, nan_policy, "close")
+            raise ValueError(f'Input {name} contains non-finite values (inf or -inf).')
+    high = _handle_nan_policy(high, nan_policy, 'high')
+    low = _handle_nan_policy(low, nan_policy, 'low')
+    close = _handle_nan_policy(close, nan_policy, 'close')
 
     high = np.ascontiguousarray(high)
     low = np.ascontiguousarray(low)
@@ -139,7 +137,7 @@ def atr_ind(
     low: np.ndarray | pl.Series,
     close: np.ndarray | pl.Series,
     length: int = 14,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
@@ -148,9 +146,7 @@ def atr_ind(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Universal Average True Range with automatic backend selection.
-    """
+    """Universal Average True Range with automatic backend selection."""
     # Convert Polars Series to numpy
     if isinstance(high, pl.Series):
         high = high.to_numpy()
@@ -188,11 +184,11 @@ def atr_ind(
 # ----------------------------------------------------------------------
 def atr_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     length: int = 14,
-    mamode: str = "rma",
+    mamode: str = 'rma',
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
@@ -201,9 +197,7 @@ def atr_polars(
     nan_policy: str = 'raise',
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    ATR for Polars DataFrame (returns same length, no trim).
-    """
+    """ATR for Polars DataFrame (returns same length, no trim)."""
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
@@ -219,5 +213,5 @@ def atr_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars всегда возвращает полную длину
     )
-    out_name = output_col or f"ATR_{length}"
+    out_name = output_col or f'ATR_{length}'
     return df.with_columns([pl.Series(out_name, result)])

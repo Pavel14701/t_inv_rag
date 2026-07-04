@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import Any, Tuple, cast
 
 import numpy as np
-import pandas as pd # type: ignore
-import pandas_ta as ta # type: ignore
+import pandas as pd  # type: ignore
+import pandas_ta as ta  # type: ignore
 from numpy.typing import NDArray
-from scipy.signal import find_peaks # type: ignore
+from scipy.signal import find_peaks  # type: ignore
 
 from domain.entities import OrderBlockDetectorDM
 from infrastructure._types import PriceDataFrame
@@ -22,8 +22,7 @@ class OrderBlock:
 
 
 class OrderBlockDetector:
-    """
-    Detects supply and demand zones (order blocks) using ZigZag peaks/valleys,
+    """Detects supply and demand zones (order blocks) using ZigZag peaks/valleys,
     breakout logic, volume confirmation, ATR sizing, and liquidity clustering.
     """
 
@@ -39,8 +38,7 @@ class OrderBlockDetector:
         liquidity_window: int = 10,
         liquidity_tolerance: float = 0.001
     ) -> pd.DataFrame:
-        """
-        Full pipeline for detecting and confirming order blocks.
+        """Full pipeline for detecting and confirming order blocks.
 
         Args:
             data: Price data with OHLCV.
@@ -55,6 +53,7 @@ class OrderBlockDetector:
 
         Returns:
             pd.DataFrame of confirmed blocks.
+
         """
         zigzag_df = self._zigzag_indicator(data, config)
         indicators = self._precompute_indicators(
@@ -84,8 +83,7 @@ class OrderBlockDetector:
         data: PriceDataFrame, 
         config: OrderBlockDetectorDM
     ) -> pd.DataFrame:
-        """
-        Detects local peaks and valleys using ZigZag logic via scipy.signal.find_peaks.
+        """Detects local peaks and valleys using ZigZag logic via scipy.signal.find_peaks.
 
         Args:
             data: PriceDataFrame with high and low price series.
@@ -95,12 +93,13 @@ class OrderBlockDetector:
             pd.DataFrame with two columns:
                 - peaks: high price values at detected peaks, NaN elsewhere
                 - valleys: low price values at detected valleys, NaN elsewhere
+
         """
         peaks = self._detect_peaks(data.high_prices, config, is_peak=True)
         valleys = self._detect_peaks(data.low_prices, config, is_peak=False)
         return pd.DataFrame({
-            "peaks": self._mark_extremes(data.high_prices, peaks),
-            "valleys": self._mark_extremes(data.low_prices, valleys)
+            'peaks': self._mark_extremes(data.high_prices, peaks),
+            'valleys': self._mark_extremes(data.low_prices, valleys)
         }, index=data.index)
 
     def _precompute_indicators(
@@ -110,8 +109,7 @@ class OrderBlockDetector:
         volume_window: int, 
         liquidity_window: int
     ) -> dict:
-        """
-        Computes supporting indicators used for zone sizing and validation.
+        """Computes supporting indicators used for zone sizing and validation.
 
         Returns:
             Dictionary with:
@@ -121,15 +119,16 @@ class OrderBlockDetector:
                 - local_lows: rolling min of low prices
                 - zone_low: lower bound of zone (close - ATR)
                 - zone_high: upper bound of zone (close + ATR)
+
         """
         atr = self._calculate_atr(data, atr_period)
         return {
-            "atr": atr,
-            "avg_volume": data.volume.rolling(window=volume_window).mean(),
-            "local_highs": data.high_prices.rolling(window=liquidity_window).max(),
-            "local_lows": data.low_prices.rolling(window=liquidity_window).min(),
-            "zone_low": data.close_prices - atr,
-            "zone_high": data.close_prices + atr
+            'atr': atr,
+            'avg_volume': data.volume.rolling(window=volume_window).mean(),
+            'local_highs': data.high_prices.rolling(window=liquidity_window).max(),
+            'local_lows': data.low_prices.rolling(window=liquidity_window).min(),
+            'zone_low': data.close_prices - atr,
+            'zone_high': data.close_prices + atr
         }
 
     def _generate_block_candidates(
@@ -140,8 +139,7 @@ class OrderBlockDetector:
         lookback: int, 
         liquidity_tolerance: float
     ) -> list[dict]:
-        """
-        Generates potential order block candidates based on ZigZag extrema and 
+        """Generates potential order block candidates based on ZigZag extrema and
         liquidity proximity.
 
         Returns:
@@ -149,6 +147,7 @@ class OrderBlockDetector:
                 - type: "supply" or "demand"
                 - idx: index of peak/valley
                 - break_idx: index of breakout
+
         """
         candidates = []
         for i in range(lookback, len(data)):
@@ -157,28 +156,28 @@ class OrderBlockDetector:
                 if self._has_liquidity_cluster(
                     data.low_prices, 
                     idx, 
-                    indicators["local_lows"], 
+                    indicators['local_lows'], 
                     liquidity_tolerance
                 ):
                     candidates.append(
                         {
-                            "block_type": "supply", 
-                            "idx": idx, 
-                            "break_idx": i
+                            'block_type': 'supply', 
+                            'idx': idx, 
+                            'break_idx': i
                         }
                     )
             elif not np.isnan(zigzag_df.valleys.iloc[idx]):
                 if self._has_liquidity_cluster(
                     data.high_prices, 
                     idx, 
-                    indicators["local_highs"], 
+                    indicators['local_highs'], 
                     liquidity_tolerance
                 ):
                     candidates.append(
                         {
-                            "block_type": "demand", 
-                            "idx": idx, 
-                            "break_idx": i
+                            'block_type': 'demand', 
+                            'idx': idx, 
+                            'break_idx': i
                         }
                     )
         return candidates
@@ -191,24 +190,24 @@ class OrderBlockDetector:
         confirmation_window: int, 
         min_reaction_size: float
     ) -> list[OrderBlock]:
-        """
-        Validates each candidate by checking breakout, retest, and reaction strength.
+        """Validates each candidate by checking breakout, retest, and reaction strength.
 
         Returns:
             List of confirmed block dictionaries with full zone metadata.
+
         """
         confirmed = []
         for c in candidates:
-            idx = c["idx"]
-            breakout_idx = c["break_idx"]
-            is_supply = c["block_type"] == "supply"
-            direction = "down" if is_supply else "up"
+            idx = c['idx']
+            breakout_idx = c['break_idx']
+            is_supply = c['block_type'] == 'supply'
+            direction = 'down' if is_supply else 'up'
 
             if not self._is_valid_breakout(
                 data, 
                 idx, 
                 breakout_idx, 
-                indicators["avg_volume"], 
+                indicators['avg_volume'], 
                 direction
             ):
                 continue
@@ -218,9 +217,9 @@ class OrderBlockDetector:
                 idx=idx,
                 breakout_idx=breakout_idx,
                 window=confirmation_window,
-                zone_low=indicators["zone_low"].iloc[idx],
-                zone_high=indicators["zone_high"].iloc[idx],
-                avg_volume=indicators["avg_volume"],
+                zone_low=indicators['zone_low'].iloc[idx],
+                zone_high=indicators['zone_high'].iloc[idx],
+                avg_volume=indicators['avg_volume'],
                 min_reaction_size=min_reaction_size,
                 is_supply=is_supply,
             )
@@ -240,8 +239,7 @@ class OrderBlockDetector:
         min_reaction_size: float, 
         is_supply: bool
     ) -> OrderBlock | None:
-        """
-        Confirms a block by checking for valid retest and reaction within the zone.
+        """Confirms a block by checking for valid retest and reaction within the zone.
 
         Args:
             idx: Index of peak/valley.
@@ -255,11 +253,12 @@ class OrderBlockDetector:
 
         Returns:
             dict with block metadata if confirmed, else None.
+
         """
         test_series = data.low_prices if is_supply else data.high_prices
         close = data.close_prices
         volume = data.volume
-        block_type = "supply" if is_supply else "demand"
+        block_type = 'supply' if is_supply else 'demand'
 
         end_idx = min(breakout_idx + window, len(data))
         for j in range(breakout_idx + 1, end_idx):
@@ -291,8 +290,7 @@ class OrderBlockDetector:
         config: OrderBlockDetectorDM, 
         is_peak: bool
     ) -> NDArray[np.intp]:
-        """
-        Applies scipy.signal.find_peaks to detect local extrema in a price series.
+        """Applies scipy.signal.find_peaks to detect local extrema in a price series.
 
         Args:
             series: The price series to analyze (typically high or low prices).
@@ -301,6 +299,7 @@ class OrderBlockDetector:
 
         Returns:
             Array of integer indices where peaks or valleys were detected.
+
         """
         prominence = config.peak_prominance if is_peak else config.valley_prominance
         result = find_peaks(
@@ -321,8 +320,7 @@ class OrderBlockDetector:
         series: pd.Series, 
         indices: NDArray[np.intp]
     ) -> NDArray[np.float64]:
-        """
-        Creates a NaN-filled array with values only at specified indices.
+        """Creates a NaN-filled array with values only at specified indices.
 
         Args:
             series: Original price series.
@@ -331,6 +329,7 @@ class OrderBlockDetector:
         Returns:
             NumPy array with NaNs everywhere except at the specified indices,
             where the original price values are retained.
+
         """
         arr = np.full_like(series.to_numpy(), np.nan, dtype=np.float64)
         arr[indices] = series.iloc[indices]
@@ -341,8 +340,7 @@ class OrderBlockDetector:
         data: PriceDataFrame, 
         period: int
     ) -> pd.Series:
-        """
-        Calculates the Average True Range (ATR) using pandas_ta with TA-Lib backend.
+        """Calculates the Average True Range (ATR) using pandas_ta with TA-Lib backend.
 
         ATR is a volatility indicator that measures the average range between
         high and low prices over a specified period, accounting for gaps.
@@ -353,8 +351,9 @@ class OrderBlockDetector:
 
         Returns:
             A pandas Series containing the ATR values.
+
         """
-        return ta.atr( # type: ignore
+        return ta.atr(  # type: ignore
             high=data.high_prices,
             low=data.low_prices,
             close=data.close_prices,
@@ -370,8 +369,7 @@ class OrderBlockDetector:
         avg_volume: pd.Series, 
         direction: str
     ) -> bool:
-        """
-        Determines whether a breakout is valid based on price movement and volume.
+        """Determines whether a breakout is valid based on price movement and volume.
 
         Args:
             data: Price data.
@@ -382,8 +380,9 @@ class OrderBlockDetector:
 
         Returns:
             True if the breakout is valid; otherwise, False.
+
         """
-        if direction == "down":
+        if direction == 'down':
             return data.low_prices.iloc[i] < data.low_prices.iloc[idx] \
                 and data.volume.iloc[i] > avg_volume.iloc[i]
         else:
@@ -397,8 +396,7 @@ class OrderBlockDetector:
         local_extremes: pd.Series, 
         tolerance: float
     ) -> bool:
-        """
-        Checks whether a price point is near a local high/low, indicating a 
+        """Checks whether a price point is near a local high/low, indicating a
         liquidity cluster.
 
         Args:
@@ -409,5 +407,6 @@ class OrderBlockDetector:
 
         Returns:
             True if the price is within the tolerance of a local extreme.
+
         """
         return abs(local_extremes.iloc[idx] - series.iloc[idx]) < tolerance

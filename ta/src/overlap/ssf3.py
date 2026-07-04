@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Ehlers 3‑Pole Super Smoother Filter (SSF3) – Numba‑accelerated with Polars integration.
-"""
+"""Ehlers 3‑Pole Super Smoother Filter (SSF3) – Numba‑accelerated with Polars integration."""
 
 from typing import Optional
 
@@ -22,9 +20,7 @@ def _ssf3_numba_core(
     pi: float,
     sqrt3: float
 ) -> np.ndarray:
-    """
-    John F. Ehlers' 3‑pole Super Smoother Filter (Everget variant).
-    """
+    """John F. Ehlers' 3‑pole Super Smoother Filter (Everget variant)."""
     n = len(close)
     out = np.empty(n, dtype=np.float64)
     # First three values are just the input (no filtering yet)
@@ -59,8 +55,7 @@ def ssf3_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    3‑pole Super Smoother Filter using Numba.
+    """3‑pole Super Smoother Filter using Numba.
 
     Parameters
     ----------
@@ -81,6 +76,7 @@ def ssf3_numba(
     -------
     np.ndarray
         SSF3 values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -101,9 +97,7 @@ def ssf3_ind(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Universal 3‑pole Super Smoother Filter (always uses Numba).
-    """
+    """Universal 3‑pole Super Smoother Filter (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return ssf3_numba(close, length, pi, sqrt3, offset, fillna)
@@ -114,7 +108,7 @@ def ssf3_ind(
 # ----------------------------------------------------------------------
 def ssf3_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 20,
     pi: float = 3.14159,
     sqrt3: float = 1.732,
@@ -122,8 +116,7 @@ def ssf3_polars(
     fillna: Optional[float] = None,
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
-    """
-    Add SSF3 column to Polars DataFrame.
+    """Add SSF3 column to Polars DataFrame.
 
     Parameters
     ----------
@@ -139,8 +132,9 @@ def ssf3_polars(
     -------
     pl.DataFrame
         Original DataFrame with SSF3 column.
+
     """
     close = df[close_col].to_numpy()
     result = ssf3_ind(close, length, pi, sqrt3, offset, fillna)
-    out_name = output_col or f"SSF3_{length}"
+    out_name = output_col or f'SSF3_{length}'
     return df.with_columns([pl.Series(out_name, result)])

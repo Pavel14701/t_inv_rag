@@ -13,8 +13,7 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @lru_cache(maxsize=128)
 def _get_fib_weights(length: int, asc: bool) -> np.ndarray:
-    """
-    Generate normalized Fibonacci weights for given length and direction.
+    """Generate normalized Fibonacci weights for given length and direction.
     Results are cached.
     """
     w = np.zeros(length, dtype=np.float64)
@@ -31,8 +30,7 @@ def _get_fib_weights(length: int, asc: bool) -> np.ndarray:
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _fwma_numba_cached(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
-    """
-    FWMA core loop with precomputed weights (Numba).
+    """FWMA core loop with precomputed weights (Numba).
 
     Parameters
     ----------
@@ -45,6 +43,7 @@ def _fwma_numba_cached(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
     -------
     np.ndarray
         FWMA values; first (len(weights)-1) positions are NaN.
+
     """
     n = len(arr)
     length = len(weights)
@@ -67,8 +66,7 @@ def fwma_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Fibonacci Weighted Moving Average using Numba (with cached weights).
+    """Fibonacci Weighted Moving Average using Numba (with cached weights).
 
     Parameters
     ----------
@@ -87,6 +85,7 @@ def fwma_numba(
     -------
     np.ndarray
         FWMA values.
+
     """
     close = close.astype(np.float64)
     weights = _get_fib_weights(length, asc)          # from cache or compute
@@ -101,8 +100,7 @@ def fwma_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal FWMA (always uses Numba, no TA-Lib equivalent).
+    """Universal FWMA (always uses Numba, no TA-Lib equivalent).
 
     Parameters
     ----------
@@ -121,6 +119,7 @@ def fwma_ind(
     -------
     np.ndarray
         FWMA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -129,15 +128,14 @@ def fwma_ind(
 
 def fwma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    FWMA for Polars DataFrame.
+    """FWMA for Polars DataFrame.
 
     Parameters
     ----------
@@ -160,6 +158,7 @@ def fwma_polars(
     -------
     pl.DataFrame
         The original DataFrame with added columns.
+
     """
     close = df[close_col].to_numpy()
     result = fwma_ind(
@@ -169,5 +168,5 @@ def fwma_polars(
         offset=offset,
         fillna=fillna
     )
-    out_name = output_col or f"FWMA_{length}"
+    out_name = output_col or f'FWMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

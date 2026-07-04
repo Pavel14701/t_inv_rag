@@ -10,12 +10,12 @@ def rsi_clouds_signals_numpy(
     macd_signal_line: np.ndarray,
     macd_hist: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Generate buy/sell signals based on MACD crossovers.
+    """Generate buy/sell signals based on MACD crossovers.
 
     Returns
     -------
     (macd_cross_signal, hist_cross_zero)
+
     """
     n = len(macd_line)
     macd_cross = np.zeros(n, dtype=int)
@@ -54,16 +54,14 @@ def get_last_rsi_clouds_signal(
     macd_fast: int = 12,
     macd_slow: int = 26,
     macd_signal: int = 9,
-    macd_mamode: str = "ema",
+    macd_mamode: str = 'ema',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> str | None:
-    """
-    Get last MACD crossover signal: 'buy', 'sell' or None.
-    """
+    """Get last MACD crossover signal: 'buy', 'sell' or None."""
     rsi, macd_line, macd_signal_line, macd_hist = rsi_clouds_ind(
         open_,
         high,
@@ -87,7 +85,7 @@ def get_last_rsi_clouds_signal(
     macd_cross, _ = rsi_clouds_signals_numpy(macd_line, macd_signal_line, macd_hist)
     last = macd_cross[-1]
     if last == 1:
-        return "buy"
+        return 'buy'
     if last == -1:
-        return "sell"
+        return 'sell'
     return None

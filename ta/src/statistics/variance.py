@@ -11,8 +11,7 @@ from ..utils import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _variance_numba_core(close: np.ndarray, length: int, ddof: int) -> np.ndarray:
-    """
-    Скользящая дисперсия через суммы и суммы квадратов (Numba).
+    """Скользящая дисперсия через суммы и суммы квадратов (Numba).
 
     Параметры
     ---------
@@ -59,9 +58,7 @@ def variance_numba(
     offset: int = 0,
     fillna: Optional[float] = None,
 ) -> np.ndarray:
-    """
-    Скользящая дисперсия через Numba (чистая версия).
-    """
+    """Скользящая дисперсия через Numba (чистая версия)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -75,11 +72,9 @@ def variance_talib(
     offset: int = 0,
     fillna: Optional[float] = None,
 ) -> np.ndarray:
-    """
-    Скользящая дисперсия через TA-Lib (ddof=0).
-    """
+    """Скользящая дисперсия через TA-Lib (ddof=0)."""
     if not talib_available:
-        raise ImportError("TA-Lib not available")
+        raise ImportError('TA-Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -95,8 +90,7 @@ def variance_ind(
     fillna: Optional[float] = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Универсальная функция скользящей дисперсии.
+    """Универсальная функция скользящей дисперсии.
 
     Параметры
     ---------
@@ -128,7 +122,7 @@ def variance_ind(
 
 def variance_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 30,
     ddof: int = 1,
     offset: int = 0,
@@ -136,9 +130,7 @@ def variance_polars(
     use_talib: bool = True,
     output_col: Optional[str] = None,
 ) -> pl.Series:
-    """
-    Добавляет колонку со скользящей дисперсией в Polars DataFrame.
-    """
+    """Добавляет колонку со скользящей дисперсией в Polars DataFrame."""
     close = df[close_col].to_numpy()
     result = variance_ind(
         close,
@@ -148,5 +140,5 @@ def variance_polars(
         fillna=fillna,
         use_talib=use_talib,
     )
-    out_name = output_col or f"VAR_{length}"
+    out_name = output_col or f'VAR_{length}'
     return pl.Series(out_name, result)

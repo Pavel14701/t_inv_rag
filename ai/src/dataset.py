@@ -6,9 +6,8 @@ from .datatypes import OrderBlock
 
 
 class TradingDataset(Dataset):
-    """
-    data: (total_bars, total_feats) в порядке:
-        [price_feats][ind_feats][sig_feats][tp_sl_feats]
+    """data: (total_bars, total_feats) в порядке:
+    [price_feats][ind_feats][sig_feats][tp_sl_feats].
     """
 
     def __init__(

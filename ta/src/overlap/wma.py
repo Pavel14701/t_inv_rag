@@ -14,8 +14,7 @@ from ..utils import _apply_offset_fillna, _handle_nan_policy
 # ----------------------------------------------------------------------
 @lru_cache(maxsize=128)
 def _get_wma_weights(length: int, asc: bool) -> np.ndarray:
-    """
-    Generate normalized linear weights for WMA.
+    """Generate normalized linear weights for WMA.
     If asc=True, weights increase from 1 to length (most recent heaviest).
     If asc=False, weights decrease (most recent lightest).
     Weights are normalized so that sum = 1.
@@ -32,8 +31,7 @@ def _get_wma_weights(length: int, asc: bool) -> np.ndarray:
 # ----------------------------------------------------------------------
 @njit((float64[:], float64[:]), fastmath=True, cache=True)
 def _wma_numba_core(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
-    """
-    Weighted Moving Average core loop.
+    """Weighted Moving Average core loop.
 
     Parameters
     ----------
@@ -46,6 +44,7 @@ def _wma_numba_core(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
     -------
     np.ndarray
         WMA values; first (len(weights)-1) positions are NaN.
+
     """
     n = len(arr)
     length = len(weights)
@@ -73,8 +72,7 @@ def wma_numba(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Weighted Moving Average using Numba.
+    """Weighted Moving Average using Numba.
 
     Parameters
     ----------
@@ -91,23 +89,24 @@ def wma_numba(
     -------
     np.ndarray
         WMA values.
+
     """
     # ---- Input validation ----
     if length < 1:
-        raise ValueError("WMA length must be >= 1")
+        raise ValueError('WMA length must be >= 1')
     close = np.asarray(close, dtype=np.float64)
     if np.isinf(close).any():
-        raise ValueError("Input contains non-finite values (inf or -inf).")
+        raise ValueError('Input contains non-finite values (inf or -inf).')
     # Apply NaN policy
-    close = _handle_nan_policy(close, nan_policy, "close")
+    close = _handle_nan_policy(close, nan_policy, 'close')
     # Ensure C-contiguous
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     # Check length
     if len(close) < length:
         raise ValueError(
-            f"Input series too short: need at least \
-                {length} elements, got {len(close)}."
+            f'Input series too short: need at least \
+                {length} elements, got {len(close)}.'
             )
     # Get weights and compute WMA
     weights = _get_wma_weights(length, asc)
@@ -134,8 +133,7 @@ def wma_talib(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Weighted Moving Average via TA-Lib (asc=True only).
+    """Weighted Moving Average via TA-Lib (asc=True only).
 
     Parameters
     ----------
@@ -144,20 +142,21 @@ def wma_talib(
     length : int
         WMA period (>= 1).
     offset, fillna, nan_policy, trim : as usual.
+
     """
     if not talib_available:
-        raise ImportError("TA-Lib is not available")
+        raise ImportError('TA-Lib is not available')
     if length < 1:
-        raise ValueError("WMA length must be >= 1")
+        raise ValueError('WMA length must be >= 1')
     close = np.asarray(close, dtype=np.float64)
     if np.isinf(close).any():
-        raise ValueError("Input contains non-finite values (inf or -inf).")
+        raise ValueError('Input contains non-finite values (inf or -inf).')
     # TA‑Lib doesn't handle NaNs, so pre-process
-    close = _handle_nan_policy(close, nan_policy, "close")
+    close = _handle_nan_policy(close, nan_policy, 'close')
     if len(close) < length:
         raise ValueError(
-            f"Input series too short: need at least \
-                {length} elements, got {len(close)}."
+            f'Input series too short: need at least \
+                {length} elements, got {len(close)}.'
             )
     wma = talib.WMA(close, timeperiod=length)
     if trim:
@@ -182,8 +181,7 @@ def wma_ind(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> np.ndarray:
-    """
-    Universal Weighted Moving Average with automatic backend selection.
+    """Universal Weighted Moving Average with automatic backend selection.
 
     Parameters
     ----------
@@ -200,6 +198,7 @@ def wma_ind(
     -------
     np.ndarray
         WMA values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -229,7 +228,7 @@ def wma_ind(
 # ----------------------------------------------------------------------
 def wma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
@@ -238,8 +237,7 @@ def wma_polars(
     nan_policy: str = 'raise',
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    WMA for Polars DataFrame.
+    """WMA for Polars DataFrame.
 
     Parameters
     ----------
@@ -255,6 +253,7 @@ def wma_polars(
     -------
     pl.DataFrame
         The original DataFrame with added column (same length).
+
     """
     close = df[close_col].to_numpy()
     result = wma_ind(
@@ -267,5 +266,5 @@ def wma_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars всегда возвращает полную длину
     )
-    out_name = output_col or f"WMA_{length}"
+    out_name = output_col or f'WMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

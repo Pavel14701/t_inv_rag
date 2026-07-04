@@ -26,13 +26,13 @@ def _cdl_highwave_nb(
     strict: bool,
     symmetric: bool,  # API consistency
 ) -> np.ndarray:
-    """
-    Optimized High-Wave pattern.
+    """Optimized High-Wave pattern.
 
     Returns:
         1.0 → bullish high-wave (symmetric mode)
        -1.0 → bearish high-wave (symmetric mode)
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -83,9 +83,7 @@ def cdl_highwave(
     min_body_factor: float = 0.1,
     max_shadow_factor: float = 0.3,
 ) -> np.ndarray:
-    """
-    High-Wave pattern with strict support.
-    """
+    """High-Wave pattern with strict support."""
     if isinstance(open_, pl.Series): 
         open_ = open_.to_numpy()
     if isinstance(high, pl.Series): 
@@ -113,17 +111,17 @@ def cdl_highwave(
 
 def cdl_highwave_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.1,
     max_shadow_factor: float = 0.3,
-    output_col: str = "CDL_HIGHWAVE",
+    output_col: str = 'CDL_HIGHWAVE',
 ) -> pl.DataFrame:
     out = cdl_highwave(
         df[open_col].to_numpy(),

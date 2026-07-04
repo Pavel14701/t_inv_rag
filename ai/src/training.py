@@ -40,8 +40,8 @@ def build_loader_from_parquet(
         df[tp_sl_cols].to_numpy(),
     ])
 
-    action = df["action"].to_numpy()
-    outcome = df["outcome"].to_numpy()
+    action = df['action'].to_numpy()
+    outcome = df['outcome'].to_numpy()
 
     dataset = TradingDataset(
         data=data,
@@ -70,13 +70,13 @@ def train_one_round(
     val_loader: DataLoader,
     epochs: int,
     device: torch.device,
-    outcome_mode: str = "binary",
+    outcome_mode: str = 'binary',
     lambda_outcome: float = 0.3,
     lr: float = 1e-4,
 ):
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", patience=2, factor=0.5
+        optimizer, mode='min', patience=2, factor=0.5
     )
 
     for epoch in range(epochs):
@@ -143,7 +143,7 @@ def train_one_round(
                 val_batches += 1
 
         avg_val_loss = val_loss / max(val_batches, 1)
-        print(f"Epoch {epoch + 1}/{epochs} | Train Loss: {avg_loss:.4f} | Val Loss: {avg_val_loss:.4f}")  # noqa: E501
+        print(f'Epoch {epoch + 1}/{epochs} | Train Loss: {avg_loss:.4f} | Val Loss: {avg_val_loss:.4f}')  # noqa: E501
         scheduler.step(avg_val_loss)
 
     return model
@@ -165,9 +165,8 @@ def _generate_pseudo_labels_batch(
     batch_size: int,
     seq_len: int,
 ) -> list[tuple[int, int, float]]:
-    """
-    Обрабатывает один батч и возвращает список псевдо-меток:
-    (global_index, pseudo_action, pseudo_outcome)
+    """Обрабатывает один батч и возвращает список псевдо-меток:
+    (global_index, pseudo_action, pseudo_outcome).
     """
     prices, indicators, signals, tp, sl, order_blocks_batch, action_targets, outcome_targets = batch
     prices = prices.to(device)
@@ -207,7 +206,7 @@ def _generate_pseudo_labels_batch(
                 continue
 
         # Определение псевдо-исхода
-        if outcome_mode == "binary":
+        if outcome_mode == 'binary':
             outcome_prob = torch.sigmoid(outcome_logits[b, t])
             if outcome_prob > outcome_threshold:
                 pseudo_outcome = 1.0
@@ -215,13 +214,13 @@ def _generate_pseudo_labels_batch(
                 pseudo_outcome = 0.0
             else:
                 continue
-        elif outcome_mode == "multiclass":
+        elif outcome_mode == 'multiclass':
             probs = F.softmax(outcome_logits[b, t], dim=-1)
             max_prob, cls = probs.max(dim=-1)
             if max_prob < outcome_threshold:
                 continue
             pseudo_outcome = float(cls.item())
-        elif outcome_mode == "regression":
+        elif outcome_mode == 'regression':
             pred_value = outcome_logits[b, t].item()
             if abs(pred_value) >= outcome_threshold:
                 pseudo_outcome = float(pred_value)
@@ -248,14 +247,14 @@ def _update_labels_parquet(
     df_lbl = load_labels_parquet(labels_path)
 
     # Если колонок нет, создаём с игнор-значениями
-    if "action" not in df_lbl.columns:
+    if 'action' not in df_lbl.columns:
         df_lbl = df_lbl.with_columns([
-            pl.lit(-100).alias("action"),
-            pl.lit(float("nan")).alias("outcome"),
+            pl.lit(-100).alias('action'),
+            pl.lit(float('nan')).alias('outcome'),
         ])
 
-    action_arr = df_lbl["action"].to_numpy()
-    outcome_arr = df_lbl["outcome"].to_numpy()
+    action_arr = df_lbl['action'].to_numpy()
+    outcome_arr = df_lbl['outcome'].to_numpy()
 
     for global_idx, pseudo_action, pseudo_outcome in new_pseudo:
         if 0 <= global_idx < len(action_arr):
@@ -263,8 +262,8 @@ def _update_labels_parquet(
             outcome_arr[global_idx] = pseudo_outcome
 
     df_lbl = df_lbl.with_columns([
-        pl.Series("action", action_arr),
-        pl.Series("outcome", outcome_arr),
+        pl.Series('action', action_arr),
+        pl.Series('outcome', outcome_arr),
     ])
     save_labels_parquet(df_lbl, labels_path)
 
@@ -284,7 +283,7 @@ def self_training_loop(
     seq_len: int,
     batch_size: int,
     device: torch.device,
-    outcome_mode: str = "binary",
+    outcome_mode: str = 'binary',
     lambda_outcome: float = 0.3,
     lr: float = 1e-4,
     epochs_per_round: int = 3,
@@ -303,7 +302,7 @@ def self_training_loop(
     unlabeled_loader = labeled_loader
 
     for round_idx in range(num_rounds):
-        print(f"Self-training round {round_idx + 1}/{num_rounds}")
+        print(f'Self-training round {round_idx + 1}/{num_rounds}')
 
         # Шаг 1: обучаем модель на текущем labelled-наборе
         model = train_one_round(
@@ -329,10 +328,10 @@ def self_training_loop(
                 )
                 all_new_pseudo.extend(batch_pseudo)
         if not all_new_pseudo:
-            print("No new pseudo-labels, stopping self-training.")
+            print('No new pseudo-labels, stopping self-training.')
             break
         print(
-            f"Generated {len(all_new_pseudo)} pseudo-labels. Updating labels.parquet..."
+            f'Generated {len(all_new_pseudo)} pseudo-labels. Updating labels.parquet...'
         )
         # Шаг 3: обновляем файл с метками
         _update_labels_parquet(labels_path, all_new_pseudo)

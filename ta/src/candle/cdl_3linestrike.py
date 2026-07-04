@@ -20,8 +20,7 @@ def _cdl_3linestrike_nb(
     max_shadow_factor,
     strict
 ):
-    """
-    Numba‑accelerated Three‑Line Strike pattern with optional strict filtering.
+    """Numba‑accelerated Three‑Line Strike pattern with optional strict filtering.
 
     Parameters
     ----------
@@ -39,6 +38,7 @@ def _cdl_3linestrike_nb(
     -------
     np.ndarray
         1.0 (bullish), -1.0 (bearish), 0.0 (none).
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -136,8 +136,7 @@ def cdl_3linestrike(
     min_body_factor: float = 0.0,
     max_shadow_factor: float = 1.0,
 ) -> np.ndarray:
-    """
-    Universal Three‑Line Strike pattern with optional strict mode.
+    """Universal Three‑Line Strike pattern with optional strict mode.
 
     Parameters
     ----------
@@ -155,6 +154,7 @@ def cdl_3linestrike(
     -------
     np.ndarray
         1.0 (bullish), -1.0 (bearish), 0.0 (none).
+
     """
     # Convert Polars Series to numpy
     if isinstance(open_, pl.Series):
@@ -189,20 +189,18 @@ def cdl_3linestrike(
 
 def cdl_3linestrike_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     min_body_factor: float = 0.0,
     max_shadow_factor: float = 1.0,
-    output_col: str = "CDL_3LINESTRIKE",
+    output_col: str = 'CDL_3LINESTRIKE',
 ) -> pl.DataFrame:
-    """
-    Add Three‑Line Strike column to Polars DataFrame.
-    """
+    """Add Three‑Line Strike column to Polars DataFrame."""
     out = cdl_3linestrike(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

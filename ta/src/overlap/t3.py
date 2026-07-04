@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-T3 Moving Average – Numba‑accelerated with TA‑Lib fallback.
-"""
+"""T3 Moving Average – Numba‑accelerated with TA‑Lib fallback."""
 
 from typing import Optional
 
@@ -23,8 +21,7 @@ def t3_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    T3 moving average using Numba (raw numpy version).
+    """T3 moving average using Numba (raw numpy version).
 
     Parameters
     ----------
@@ -40,6 +37,7 @@ def t3_numba(
     -------
     np.ndarray
         T3 values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -72,11 +70,9 @@ def t3_talib(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    T3 using TA‑Lib (C implementation).
-    """
+    """T3 using TA‑Lib (C implementation)."""
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -95,8 +91,7 @@ def t3_ind(
     fillna: Optional[float] = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal T3 moving average.
+    """Universal T3 moving average.
 
     Parameters
     ----------
@@ -114,6 +109,7 @@ def t3_ind(
     -------
     np.ndarray
         T3 values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -128,7 +124,7 @@ def t3_ind(
 # ----------------------------------------------------------------------
 def t3_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     a: float = 0.7,
     offset: int = 0,
@@ -136,8 +132,7 @@ def t3_polars(
     use_talib: bool = True,
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
-    """
-    Add T3 column to Polars DataFrame.
+    """Add T3 column to Polars DataFrame.
 
     Parameters
     ----------
@@ -153,8 +148,9 @@ def t3_polars(
     -------
     pl.DataFrame
         Original DataFrame with T3 column.
+
     """
     close = df[close_col].to_numpy()
     result = t3_ind(close, length, a, offset, fillna, use_talib)
-    out_name = output_col or f"T3_{length}_{a}"
+    out_name = output_col or f'T3_{length}_{a}'
     return df.with_columns([pl.Series(out_name, result)])

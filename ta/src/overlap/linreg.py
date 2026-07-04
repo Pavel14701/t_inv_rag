@@ -19,8 +19,7 @@ def _linreg_numba_core(
     mode: str,
     degrees: bool
 ) -> np.ndarray:
-    """
-    Linear regression core for all modes.
+    """Linear regression core for all modes.
 
     Parameters
     ----------
@@ -37,6 +36,7 @@ def _linreg_numba_core(
     -------
     np.ndarray
         Result series; first (length-1) values are NaN.
+
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -99,12 +99,11 @@ def linreg_talib(
     mode: str,
     degrees: bool = False
 ) -> np.ndarray:
-    """
-    Linear regression using TA‑Lib (
+    """Linear regression using TA‑Lib (
     only for modes where TA‑Lib has dedicated functions).
     """
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -136,8 +135,7 @@ def linreg_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Linear regression using Numba.
+    """Linear regression using Numba.
 
     Parameters
     ----------
@@ -156,6 +154,7 @@ def linreg_numba(
     -------
     np.ndarray
         Result series.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
@@ -177,8 +176,7 @@ def linreg_ind(
     fillna: Optional[float] = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal Linear Regression.
+    """Universal Linear Regression.
 
     Parameters
     ----------
@@ -196,10 +194,12 @@ def linreg_ind(
         Fill NaN with this value.
     use_talib : bool
         Use TA‑Lib if available and mode is supported.
+
     Returns
     -------
     np.ndarray
         Result series.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -216,7 +216,7 @@ def linreg_ind(
 # ----------------------------------------------------------------------
 def linreg_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 14,
     mode: Literal['line', 'tsf', 'slope', 'intercept', 'angle', 'r'] = 'line',
     degrees: bool = False,
@@ -225,8 +225,7 @@ def linreg_polars(
     use_talib: bool = True,
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
-    """
-    Add linear regression column to Polars DataFrame.
+    """Add linear regression column to Polars DataFrame.
 
     Parameters
     ----------
@@ -250,8 +249,9 @@ def linreg_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     close = df[close_col].to_numpy()
     result = linreg_ind(close, length, mode, degrees, offset, fillna, use_talib)
-    out_name = output_col or f"LINREG_{mode}_{length}"
+    out_name = output_col or f'LINREG_{mode}_{length}'
     return df.with_columns([pl.Series(out_name, result)])

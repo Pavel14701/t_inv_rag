@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Optimized Trend Tracker (OTT) – Numba‑accelerated with Polars integration.
+"""Optimized Trend Tracker (OTT) – Numba‑accelerated with Polars integration.
 Добавлены функции для генерации сигналов напрямую из Polars DataFrame.
 """
 
@@ -10,13 +9,12 @@ import polars as pl
 
 def ott_signals_polars(
     df: pl.DataFrame,
-    price_col: str = "close",
-    ott_col: str = "OTT",
-    ma_col: str = "OTT_MA",
-    suffix: str = "",
+    price_col: str = 'close',
+    ott_col: str = 'OTT',
+    ma_col: str = 'OTT_MA',
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Generate OTT trading signals and add them as columns to the Polars DataFrame.
+    """Generate OTT trading signals and add them as columns to the Polars DataFrame.
 
     Parameters
     ----------
@@ -35,6 +33,7 @@ def ott_signals_polars(
     -------
     pl.DataFrame
         Original DataFrame with added signal columns.
+
     """
     price = df[price_col].to_numpy()
     ott = df[ott_col].to_numpy()
@@ -63,35 +62,34 @@ def ott_signals_polars(
         sell_color_change,
     ]
     choices = [
-        "buy_price_cross",
-        "buy_support_cross",
-        "buy_color_change",
-        "sell_price_cross",
-        "sell_support_cross",
-        "sell_color_change",
+        'buy_price_cross',
+        'buy_support_cross',
+        'buy_color_change',
+        'sell_price_cross',
+        'sell_support_cross',
+        'sell_color_change',
     ]
-    signal = np.select(conditions, choices, default="")
+    signal = np.select(conditions, choices, default='')
     # Add columns
-    suffix_str = f"{suffix}" if suffix else ""
+    suffix_str = f'{suffix}' if suffix else ''
     return df.with_columns([
-        pl.Series(f"buy_price_cross{suffix_str}", buy_price_cross),
-        pl.Series(f"sell_price_cross{suffix_str}", sell_price_cross),
-        pl.Series(f"buy_support_cross{suffix_str}", buy_support_cross),
-        pl.Series(f"sell_support_cross{suffix_str}", sell_support_cross),
-        pl.Series(f"buy_color_change{suffix_str}", buy_color_change),
-        pl.Series(f"sell_color_change{suffix_str}", sell_color_change),
-        pl.Series(f"signal{suffix_str}", signal),
+        pl.Series(f'buy_price_cross{suffix_str}', buy_price_cross),
+        pl.Series(f'sell_price_cross{suffix_str}', sell_price_cross),
+        pl.Series(f'buy_support_cross{suffix_str}', buy_support_cross),
+        pl.Series(f'sell_support_cross{suffix_str}', sell_support_cross),
+        pl.Series(f'buy_color_change{suffix_str}', buy_color_change),
+        pl.Series(f'sell_color_change{suffix_str}', sell_color_change),
+        pl.Series(f'signal{suffix_str}', signal),
     ])
 
 
 def get_last_ott_signal(
     df: pl.DataFrame,
-    price_col: str = "close",
-    ott_col: str = "OTT",
-    ma_col: str = "OTT_MA",
+    price_col: str = 'close',
+    ott_col: str = 'OTT',
+    ma_col: str = 'OTT_MA',
 ) -> str | None:
-    """
-    Quickly get the last trading signal without computing all columns.
+    """Quickly get the last trading signal without computing all columns.
 
     Parameters
     ----------
@@ -103,6 +101,7 @@ def get_last_ott_signal(
     -------
     str or None
         Signal name ('buy_price_cross', etc.) or None.
+
     """
     price = df[price_col].to_numpy()
     ott = df[ott_col].to_numpy()
@@ -115,15 +114,15 @@ def get_last_ott_signal(
     m2, m1 = ma[-2], ma[-1]
 
     if (p1 > o1) and (p2 <= o2):
-        return "buy_price_cross"
+        return 'buy_price_cross'
     if (p1 < o1) and (p2 >= o2):
-        return "sell_price_cross"
+        return 'sell_price_cross'
     if (m1 > o1) and (m2 <= o2):
-        return "buy_support_cross"
+        return 'buy_support_cross'
     if (m1 < o1) and (m2 >= o2):
-        return "sell_support_cross"
+        return 'sell_support_cross'
     if o1 > o2:
-        return "buy_color_change"
+        return 'buy_color_change'
     if o1 < o2:
-        return "sell_color_change"
+        return 'sell_color_change'
     return None

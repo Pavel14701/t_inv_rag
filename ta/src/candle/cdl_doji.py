@@ -21,9 +21,7 @@ def cdl_doji_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based Doji detection with optional TA‑Lib CDLDOJI.
-    """
+    """Numpy‑based Doji detection with optional TA‑Lib CDLDOJI."""
     # Ensure contiguous float64 arrays
     open_ = np.asarray(open_, dtype=np.float64, copy=False)
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -83,9 +81,7 @@ def cdl_doji_pat(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Doji detection (accepts numpy arrays or Polars Series).
-    """
+    """Universal Doji detection (accepts numpy arrays or Polars Series)."""
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
     if isinstance(high, pl.Series):
@@ -109,10 +105,10 @@ def cdl_doji_pat(
 
 def cdl_doji_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     length: int = 10,
     factor: float = 10.0,
     scalar: float = 100.0,
@@ -123,9 +119,7 @@ def cdl_doji_polars(
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add Doji signal column to Polars DataFrame.
-    """
+    """Add Doji signal column to Polars DataFrame."""
     open_arr = df[open_col].to_numpy()
     high_arr = df[high_col].to_numpy()
     low_arr = df[low_col].to_numpy()
@@ -141,5 +135,5 @@ def cdl_doji_polars(
         fillna=fillna,
         use_talib=use_talib,
     )
-    out_name = output_col or f"CDL_DOJI_{length}_{factor / 100:.2f}"
+    out_name = output_col or f'CDL_DOJI_{length}_{factor / 100:.2f}'
     return df.with_columns([pl.Series(out_name, result)])

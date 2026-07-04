@@ -12,8 +12,7 @@ from . import rsi_ind
 # ----------------------------------------------------------------------
 @jit((float64[:],), nopython=True, fastmath=True, cache=True)
 def _streak_numba(close: np.ndarray) -> np.ndarray:
-    """
-    Calculate streak: length of consecutive up/down moves.
+    """Calculate streak: length of consecutive up/down moves.
     Returns array of cumulative counts (positive for up, negative for down).
     """
     n = len(close)
@@ -38,8 +37,7 @@ def _streak_numba(close: np.ndarray) -> np.ndarray:
 # ----------------------------------------------------------------------
 @jit((float64[:], int64), nopython=True, fastmath=True, cache=True)
 def _percent_rank_numba(close: np.ndarray, length: int) -> np.ndarray:
-    """
-    Rolling Percent Rank: for each window, compute percentage of values
+    """Rolling Percent Rank: for each window, compute percentage of values
     strictly less than the current value.
     Uses direct indexing (no temporary window slices).
     Result in range 0..100.
@@ -76,8 +74,7 @@ def crsi_numpy(
     nan_policy: str = 'raise',          # 'raise', 'ffill', 'bfill', 'both'
     normalize: bool = False,             # if True, replace NaN in result with 50.0
 ) -> np.ndarray:
-    """
-    Numpy‑based Connors RSI calculation with NaN handling.
+    """Numpy‑based Connors RSI calculation with NaN handling.
 
     Parameters
     ----------
@@ -105,15 +102,16 @@ def crsi_numpy(
     -------
     np.ndarray
         CRSI values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     # ---- Input validation ----
     if rsi_length < 1:
-        raise ValueError("rsi_length must be >= 1")
+        raise ValueError('rsi_length must be >= 1')
     if streak_length < 1:
-        raise ValueError("streak_length must be >= 1")
+        raise ValueError('streak_length must be >= 1')
     if rank_length < 2:
-        raise ValueError("rank_length must be >= 2 for percent rank")
+        raise ValueError('rank_length must be >= 2 for percent rank')
     # ---- NaN handling on input ----
     if np.isnan(close).any():
         if nan_policy == 'raise':
@@ -178,9 +176,7 @@ def crsi_ind(
     nan_policy: str = 'raise',
     normalize: bool = False,
 ) -> np.ndarray:
-    """
-    Universal Connors RSI (accepts numpy array or Polars Series).
-    """
+    """Universal Connors RSI (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return crsi_numpy(close, rsi_length, streak_length, rank_length,
@@ -189,7 +185,7 @@ def crsi_ind(
 
 def crsi_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     rsi_length: int = 3,
     streak_length: int = 2,
     rank_length: int = 100,
@@ -201,8 +197,7 @@ def crsi_polars(
     normalize: bool = False,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add CRSI column to Polars DataFrame.
+    """Add CRSI column to Polars DataFrame.
 
     Parameters
     ----------
@@ -219,9 +214,10 @@ def crsi_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     close = df[close_col].to_numpy()
     result = crsi_numpy(close, rsi_length, streak_length, rank_length,
                         scalar, offset, fillna, use_talib, nan_policy, normalize)
-    out_name = output_col or f"CRSI_{rsi_length}_{streak_length}_{rank_length}"
+    out_name = output_col or f'CRSI_{rsi_length}_{streak_length}_{rank_length}'
     return df.with_columns([pl.Series(out_name, result)])

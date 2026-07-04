@@ -15,8 +15,7 @@ def ao_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based Awesome Oscillator calculation.
+    """Numpy‑based Awesome Oscillator calculation.
 
     Parameters
     ----------
@@ -32,6 +31,7 @@ def ao_numpy(
     -------
     np.ndarray
         AO values.
+
     """
     # Ensure arrays are contiguous
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -58,9 +58,7 @@ def ao_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Awesome Oscillator (accepts numpy arrays or Polars Series).
-    """
+    """Universal Awesome Oscillator (accepts numpy arrays or Polars Series)."""
     if isinstance(high, pl.Series):
         high = high.to_numpy()
     if isinstance(low, pl.Series):
@@ -70,9 +68,9 @@ def ao_ind(
 
 def ao_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    date_col: str = "date",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    date_col: str = 'date',
     fast: int = 5,
     slow: int = 34,
     offset: int = 0,
@@ -80,8 +78,7 @@ def ao_polars(
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -94,11 +91,12 @@ def ao_polars(
     Returns
     -------
     pl.DataFrame
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     result = ao_numpy(high, low, fast, slow, offset, fillna, use_talib)
-    out_name = output_col or f"AO_{fast}_{slow}"
+    out_name = output_col or f'AO_{fast}_{slow}'
     return pl.DataFrame({
         date_col: df[date_col],
         out_name: result

@@ -14,8 +14,7 @@ def vwma_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Numpy‑based VWMA calculation.
+    """Numpy‑based VWMA calculation.
 
     Parameters
     ----------
@@ -29,6 +28,7 @@ def vwma_numpy(
     -------
     np.ndarray
         VWMA values.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     volume = np.asarray(volume, dtype=np.float64, copy=False)
@@ -54,9 +54,7 @@ def vwma_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal VWMA (accepts numpy arrays or Polars Series).
-    """
+    """Universal VWMA (accepts numpy arrays or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     if isinstance(volume, pl.Series):
@@ -66,16 +64,15 @@ def vwma_ind(
 
 def vwma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
-    volume_col: str = "volume",
+    close_col: str = 'close',
+    volume_col: str = 'volume',
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add VWMA column to Polars DataFrame.
+    """Add VWMA column to Polars DataFrame.
 
     Parameters
     ----------
@@ -91,9 +88,10 @@ def vwma_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     close = df[close_col].to_numpy()
     volume = df[volume_col].to_numpy()
     result = vwma_numpy(close, volume, length, offset, fillna, use_talib)
-    out_name = output_col or f"VWMA_{length}"
+    out_name = output_col or f'VWMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

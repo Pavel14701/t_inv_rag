@@ -25,16 +25,16 @@ def _cdl_3outside_nb(
 
     for i in range(2, n):
         # --- Candle 1 ---
-        o2 = open_[i-2]
-        c2 = close[i-2]
-        h2 = high[i-2]
-        l2 = low[i-2]
+        o2 = open_[i - 2]
+        c2 = close[i - 2]
+        h2 = high[i - 2]
+        l2 = low[i - 2]
 
         # --- Candle 2 ---
-        o1 = open_[i-1]
-        c1 = close[i-1]
-        h1 = high[i-1]
-        l1 = low[i-1]
+        o1 = open_[i - 1]
+        c1 = close[i - 1]
+        h1 = high[i - 1]
+        l1 = low[i - 1]
 
         # --- Candle 3 ---
         o0 = open_[i]
@@ -120,11 +120,9 @@ def cdl_3outside(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
+    """Universal Three Outside pattern with optional strict mode.
+    Returns float64 array: 1.0, -1.0, 0.0.
     """
-    Universal Three Outside pattern with optional strict mode.
-    Returns float64 array: 1.0, -1.0, 0.0
-    """
-
     # Polars → NumPy
     if isinstance(open_, pl.Series): open_ = open_.to_numpy()
     if isinstance(high, pl.Series): high = high.to_numpy()
@@ -156,20 +154,18 @@ def cdl_3outside(
 
 def cdl_3outside_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col="CDL_3OUTSIDE",
+    output_col='CDL_3OUTSIDE',
 ):
-    """
-    Add Three Outside column to Polars DataFrame.
-    """
+    """Add Three Outside column to Polars DataFrame."""
     out = cdl_3outside(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

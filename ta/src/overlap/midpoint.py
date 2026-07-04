@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Midpoint indicator – Numba‑accelerated with TA‑Lib fallback.
-"""
+"""Midpoint indicator – Numba‑accelerated with TA‑Lib fallback."""
 
 from typing import Optional
 
@@ -18,9 +16,7 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=True, cache=True)
 def _midpoint_numba_core(close: np.ndarray, length: int) -> np.ndarray:
-    """
-    Compute midpoint = (rolling_min + rolling_max) / 2 in one pass.
-    """
+    """Compute midpoint = (rolling_min + rolling_max) / 2 in one pass."""
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < length:
@@ -48,9 +44,7 @@ def midpoint_numba(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Midpoint using Numba (raw numpy version).
-    """
+    """Midpoint using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -67,11 +61,9 @@ def midpoint_talib(
     offset: int = 0,
     fillna: Optional[float] = None
 ) -> np.ndarray:
-    """
-    Midpoint using TA‑Lib.
-    """
+    """Midpoint using TA‑Lib."""
     if not talib_available:
-        raise ImportError("TA‑Lib not available")
+        raise ImportError('TA‑Lib not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -89,8 +81,7 @@ def midpoint_ind(
     fillna: Optional[float] = None,
     use_talib: bool = True
 ) -> np.ndarray:
-    """
-    Universal Midpoint with backend selection.
+    """Universal Midpoint with backend selection.
 
     Parameters
     ----------
@@ -109,6 +100,7 @@ def midpoint_ind(
     -------
     np.ndarray
         Midpoint values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -123,15 +115,14 @@ def midpoint_ind(
 # ----------------------------------------------------------------------
 def midpoint_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 2,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
-    """
-    Add Midpoint column to Polars DataFrame.
+    """Add Midpoint column to Polars DataFrame.
 
     Parameters
     ----------
@@ -154,8 +145,9 @@ def midpoint_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     close = df[close_col].to_numpy()
     result = midpoint_ind(close, length, offset, fillna, use_talib)
-    out_name = output_col or f"MIDPOINT_{length}"
+    out_name = output_col or f'MIDPOINT_{length}'
     return df.with_columns([pl.Series(out_name, result)])

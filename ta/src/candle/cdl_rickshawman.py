@@ -18,8 +18,7 @@ def _cdl_rickshawman_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Rickshaw Man pattern.
+    """Numba‑accelerated Rickshaw Man pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -57,8 +56,7 @@ def cdl_rickshawman(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Rickshaw Man pattern.
+    """Universal Rickshaw Man pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series):
@@ -87,17 +85,15 @@ def cdl_rickshawman(
 
 def cdl_rickshawman_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_RICKSHAWMAN",
+    output_col: str = 'CDL_RICKSHAWMAN',
 ) -> pl.DataFrame:
-    """
-    Add Rickshaw Man column to Polars DataFrame.
-    """
+    """Add Rickshaw Man column to Polars DataFrame."""
     out = cdl_rickshawman(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

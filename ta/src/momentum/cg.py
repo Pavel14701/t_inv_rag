@@ -11,8 +11,7 @@ def _cg_numba_core(
     close: np.ndarray, 
     length: int
 ) -> np.ndarray:
-    """
-    Center of Gravity core with O(1) sliding window update.
+    """Center of Gravity core with O(1) sliding window update.
 
     Parameters
     ----------
@@ -25,6 +24,7 @@ def _cg_numba_core(
     -------
     np.ndarray
         CG values; first `length-1` positions are NaN.
+
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -61,9 +61,7 @@ def cg_numba(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Center of Gravity using Numba (raw numpy version).
-    """
+    """Center of Gravity using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -77,8 +75,7 @@ def cg_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Universal Center of Gravity (always uses Numba).
+    """Universal Center of Gravity (always uses Numba).
 
     Parameters
     ----------
@@ -95,6 +92,7 @@ def cg_ind(
     -------
     np.ndarray
         CG values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -103,15 +101,14 @@ def cg_ind(
 
 def cg_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
-    date_col: str = "date", 
+    close_col: str = 'close',
+    date_col: str = 'date', 
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Add Center of Gravity column to Polars DataFrame.
+    """Add Center of Gravity column to Polars DataFrame.
 
     Parameters
     ----------
@@ -132,10 +129,11 @@ def cg_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     close = df[close_col].to_numpy()
     result = cg_ind(close, length, offset, fillna)
-    out_name = output_col or f"CG_{length}"
+    out_name = output_col or f'CG_{length}'
     return pl.DataFrame({
         date_col: df[date_col],
         out_name: result

@@ -13,8 +13,7 @@ from ..utils import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @lru_cache(maxsize=128)
 def _pascal_weights(length: int, asc: bool) -> np.ndarray:
-    """
-    Generate normalized Pascal's triangle weights.
+    """Generate normalized Pascal's triangle weights.
     Uses binomial coefficients from row (length-1) of Pascal's triangle.
     If asc=True, weights increase (most recent highest weight).
     """
@@ -36,8 +35,7 @@ def _pascal_weights(length: int, asc: bool) -> np.ndarray:
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=True, cache=True)
 def _pwma_numba_core(close: np.ndarray, weights: np.ndarray) -> np.ndarray:
-    """
-    PWMA core loop.
+    """PWMA core loop.
 
     Parameters
     ----------
@@ -50,6 +48,7 @@ def _pwma_numba_core(close: np.ndarray, weights: np.ndarray) -> np.ndarray:
     -------
     np.ndarray
         PWMA values; first (len(weights)-1) positions are NaN.
+
     """
     n = len(close)
     length = len(weights)
@@ -76,9 +75,7 @@ def pwma_numba(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    PWMA using Numba (raw numpy version).
-    """
+    """PWMA using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -99,9 +96,7 @@ def pwma_ind(
     offset: int = 0,
     fillna: float | None = None
 ) -> np.ndarray:
-    """
-    Universal PWMA (always uses Numba).
-    """
+    """Universal PWMA (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return pwma_numba(close, length, asc, offset, fillna)
@@ -112,15 +107,14 @@ def pwma_ind(
 # ----------------------------------------------------------------------
 def pwma_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None
 ) -> pl.DataFrame:
-    """
-    Add PWMA column to Polars DataFrame.
+    """Add PWMA column to Polars DataFrame.
 
     Parameters
     ----------
@@ -143,8 +137,9 @@ def pwma_polars(
     -------
     pl.DataFrame
         Original DataFrame with PWMA column.
+
     """
     close = df[close_col].to_numpy()
     result = pwma_ind(close, length, asc, offset, fillna)
-    out_name = output_col or f"PWMA_{length}"
+    out_name = output_col or f'PWMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

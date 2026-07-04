@@ -8,8 +8,7 @@ from ..utils import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=True, cache=True)
 def _kurtosis_numba_core(close: np.ndarray, length: int) -> np.ndarray:
-    """
-    Rolling kurtosis (Fisher's) using sliding sums of powers (Numba).
+    """Rolling kurtosis (Fisher's) using sliding sums of powers (Numba).
 
     Parameters
     ----------
@@ -23,6 +22,7 @@ def _kurtosis_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     np.ndarray
         Kurtosis values; first `length-1` positions are NaN.
         For windows with length < 4, the result is NaN.
+
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -73,9 +73,7 @@ def kurtosis_numba(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Rolling kurtosis using Numba (raw numpy version).
-    """
+    """Rolling kurtosis using Numba (raw numpy version)."""
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -89,8 +87,7 @@ def kurtosis_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """
-    Universal rolling kurtosis (always uses Numba).
+    """Universal rolling kurtosis (always uses Numba).
 
     Parameters
     ----------
@@ -107,6 +104,7 @@ def kurtosis_ind(
     -------
     np.ndarray
         Kurtosis values.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -115,14 +113,13 @@ def kurtosis_ind(
 
 def kurtosis_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 30,
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Parameters
+    """Parameters
     ----------
     df : pl.DataFrame
         Input data.
@@ -141,8 +138,9 @@ def kurtosis_polars(
     -------
     pl.DataFrame
         Original DataFrame with new column.
+
     """
     close = df[close_col].to_numpy()
     result = kurtosis_ind(close, length, offset, fillna)
-    out_name = output_col or f"KURT_{length}"
+    out_name = output_col or f'KURT_{length}'
     return df.with_columns([pl.Series(out_name, result)])

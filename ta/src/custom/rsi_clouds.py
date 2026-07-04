@@ -23,15 +23,14 @@ def rsi_clouds_numpy(
     macd_fast: int = 12,
     macd_slow: int = 26,
     macd_signal: int = 9,
-    macd_mamode: str = "ema",
+    macd_mamode: str = 'ema',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Numpy-based RSI Clouds calculation.
+    """Numpy-based RSI Clouds calculation.
 
     Parameters
     ----------
@@ -61,6 +60,7 @@ def rsi_clouds_numpy(
     Returns
     -------
     (rsi, macd_line, macd_signal_line, macd_hist)
+
     """
     # ---- Input to float64 ----
     open_ = np.asarray(open_, dtype=np.float64)
@@ -69,22 +69,22 @@ def rsi_clouds_numpy(
     close = np.asarray(close, dtype=np.float64)
 
     # ---- Inf check ----
-    for name, arr in (("open", open_), ("high", high), ("low", low), ("close", close)):
+    for name, arr in (('open', open_), ('high', high), ('low', low), ('close', close)):
         if np.isinf(arr).any():
-            raise ValueError(f"Input {name} contains non-finite values (inf or -inf).")
+            raise ValueError(f'Input {name} contains non-finite values (inf or -inf).')
 
     # ---- NaN handling ----
-    open_ = _handle_nan_policy(open_, nan_policy, "open")
-    high = _handle_nan_policy(high, nan_policy, "high")
-    low = _handle_nan_policy(low, nan_policy, "low")
-    close = _handle_nan_policy(close, nan_policy, "close")
+    open_ = _handle_nan_policy(open_, nan_policy, 'open')
+    high = _handle_nan_policy(high, nan_policy, 'high')
+    low = _handle_nan_policy(low, nan_policy, 'low')
+    close = _handle_nan_policy(close, nan_policy, 'close')
 
     # ---- Length check ----
     n = len(close)
     if not (len(open_) == len(high) == len(low) == n):
-        raise ValueError("OHLC arrays must have the same length.")
+        raise ValueError('OHLC arrays must have the same length.')
     if rsi_length < 1 or macd_fast < 1 or macd_slow < 1 or macd_signal < 1:
-        raise ValueError("All periods must be >= 1.")
+        raise ValueError('All periods must be >= 1.')
 
     # ---- Average price ----
     avg = (open_ + high + low + close) / 4.0
@@ -173,15 +173,14 @@ def rsi_clouds_ind(
     macd_fast: int = 12,
     macd_slow: int = 26,
     macd_signal: int = 9,
-    macd_mamode: str = "ema",
+    macd_mamode: str = 'ema',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
+    nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Universal RSI Clouds (accepts numpy arrays or Polars Series).
+    """Universal RSI Clouds (accepts numpy arrays or Polars Series).
     Returns (rsi, macd_line, macd_signal_line, macd_hist).
     """
     if isinstance(open_, pl.Series):
@@ -218,25 +217,24 @@ def rsi_clouds_ind(
 # ----------------------------------------------------------------------
 def rsi_clouds_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     rsi_length: int = 14,
     rsi_scalar: float = 100.0,
     rsi_drift: int = 1,
     macd_fast: int = 12,
     macd_slow: int = 26,
     macd_signal: int = 9,
-    macd_mamode: str = "ema",
+    macd_mamode: str = 'ema',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = "raise",
-    suffix: str = "",
+    nan_policy: str = 'raise',
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    RSI Clouds for Polars DataFrame.
+    """RSI Clouds for Polars DataFrame.
 
     Adds columns:
         RSI_CLOUDS_RSI{suffix}
@@ -269,11 +267,11 @@ def rsi_clouds_polars(
     )
 
     if not suffix:
-        suffix = f"_{rsi_length}_{macd_fast}_{macd_slow}_{macd_signal}"
+        suffix = f'_{rsi_length}_{macd_fast}_{macd_slow}_{macd_signal}'
 
     return df.with_columns([
-        pl.Series(f"RSI_CLOUDS_RSI{suffix}", rsi),
-        pl.Series(f"RSI_CLOUDS_MACD{suffix}", macd_line),
-        pl.Series(f"RSI_CLOUDS_SIGNAL{suffix}", macd_signal_line),
-        pl.Series(f"RSI_CLOUDS_HIST{suffix}", macd_hist),
+        pl.Series(f'RSI_CLOUDS_RSI{suffix}', rsi),
+        pl.Series(f'RSI_CLOUDS_MACD{suffix}', macd_line),
+        pl.Series(f'RSI_CLOUDS_SIGNAL{suffix}', macd_signal_line),
+        pl.Series(f'RSI_CLOUDS_HIST{suffix}', macd_hist),
     ])

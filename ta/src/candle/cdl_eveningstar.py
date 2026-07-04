@@ -17,12 +17,12 @@ def _cdl_eveningstar_nb(
     strict: bool,
     symmetric: bool,  # kept for API consistency
 ) -> np.ndarray:
-    """
-    Optimized Evening Star pattern.
+    """Optimized Evening Star pattern.
 
     Returns:
         -1.0 → bearish evening star
          0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -117,9 +117,7 @@ def cdl_eveningstar(
     min_body_factor: float = 0.3,
     max_shadow_factor: float = 0.5,
 ) -> np.ndarray:
-    """
-    Evening Star pattern with strict support.
-    """
+    """Evening Star pattern with strict support."""
     if isinstance(open_, pl.Series): open_ = open_.to_numpy()
     if isinstance(high, pl.Series): high = high.to_numpy()
     if isinstance(low, pl.Series): low = low.to_numpy()
@@ -145,17 +143,17 @@ def cdl_eveningstar(
 
 def cdl_eveningstar_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.3,
     max_shadow_factor: float = 0.5,
-    output_col: str = "CDL_EVENINGSTAR",
+    output_col: str = 'CDL_EVENINGSTAR',
 ) -> pl.DataFrame:
     out = cdl_eveningstar(
         df[open_col].to_numpy(),

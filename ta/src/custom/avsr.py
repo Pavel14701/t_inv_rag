@@ -23,8 +23,7 @@ def avsr_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Adaptive Volume Resistance Level (AVSR) – Numpy version.
+    """Adaptive Volume Resistance Level (AVSR) – Numpy version.
     Returns resistance line as numpy array.
     """
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -60,9 +59,7 @@ def avsr_ind(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal AVSR (accepts numpy arrays or Polars Series).
-    """
+    """Universal AVSR (accepts numpy arrays or Polars Series)."""
     if isinstance(high, pl.Series):
         high = high.to_numpy()
     if isinstance(close, pl.Series):
@@ -80,20 +77,18 @@ def avsr_polars(
     df: pl.DataFrame,
     fast: int,
     slow: int,
-    high_col: str = "high",
-    close_col: str = "low",
-    volume_col: str = "volume",
-    date_col: str = "date",
+    high_col: str = 'high',
+    close_col: str = 'low',
+    volume_col: str = 'volume',
+    date_col: str = 'date',
     stand_div: float = 1.0,
     max_deviation: float | None = None,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    output_col: str = "avsr",
+    output_col: str = 'avsr',
 ) -> pl.DataFrame:
-    """
-    Add AVSR column to Polars DataFrame.
-    """
+    """Add AVSR column to Polars DataFrame."""
     high = df[high_col].to_numpy()
     close = df[close_col].to_numpy()
     volume = df[volume_col].to_numpy()

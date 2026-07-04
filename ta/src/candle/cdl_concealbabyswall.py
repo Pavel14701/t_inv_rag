@@ -21,31 +21,31 @@ def _cdl_concealbabyswall_nb(
     strict,
     symmetric
 ):
-    """
-    Optimized Concealing Baby Swallow pattern.
+    """Optimized Concealing Baby Swallow pattern.
 
     Returns:
         1.0 → bullish concealing baby swallow
         0.0 → none
+
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
 
     for i in range(3, n):
-        o3 = open_[i-3]
-        c3 = close[i-3]
-        h3 = high[i-3]
-        l3 = low[i-3]
+        o3 = open_[i - 3]
+        c3 = close[i - 3]
+        h3 = high[i - 3]
+        l3 = low[i - 3]
 
-        o2 = open_[i-2]
-        c2 = close[i-2]
-        h2 = high[i-2]
-        l2 = low[i-2]
+        o2 = open_[i - 2]
+        c2 = close[i - 2]
+        h2 = high[i - 2]
+        l2 = low[i - 2]
 
-        o1 = open_[i-1]
-        c1 = close[i-1]
-        h1 = high[i-1]
-        l1 = low[i-1]
+        o1 = open_[i - 1]
+        c1 = close[i - 1]
+        h1 = high[i - 1]
+        l1 = low[i - 1]
 
         o0 = open_[i]
         c0 = close[i]
@@ -120,8 +120,7 @@ def cdl_concealbabyswall(
     min_body_factor=0.5,
     max_shadow_factor=0.3,
 ):
-    """
-    Concealing Baby Swallow pattern with strict support.
+    """Concealing Baby Swallow pattern with strict support.
 
     TA-Lib has only bullish variant; symmetric flag is kept for API consistency
     but does not enable a bearish mirror.
@@ -154,17 +153,17 @@ def cdl_concealbabyswall(
 
 def cdl_concealbabyswall_polars(
     df: pl.DataFrame,
-    open_col="open",
-    high_col="high",
-    low_col="low",
-    close_col="close",
+    open_col='open',
+    high_col='high',
+    low_col='low',
+    close_col='close',
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.5,
     max_shadow_factor=0.3,
-    output_col="CDL_CONCEALBABYSWALL",
+    output_col='CDL_CONCEALBABYSWALL',
 ):
     out = cdl_concealbabyswall(
         df[open_col].to_numpy(),

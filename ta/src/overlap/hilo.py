@@ -8,35 +8,35 @@ from ..utils import _apply_offset_fillna
 from . import ema_ind, sma_ind
 
 
-def ma_numba(arr: np.ndarray, length: int, mamode: str = "sma") -> np.ndarray:
+def ma_numba(arr: np.ndarray, length: int, mamode: str = 'sma') -> np.ndarray:
     """Unified moving average using Numba (supports 'sma', 'ema')."""
     arr = arr.astype(np.float64)
-    if mamode.lower() == "sma":
+    if mamode.lower() == 'sma':
         return sma_ind(arr, length)
-    elif mamode.lower() == "ema":
+    elif mamode.lower() == 'ema':
         return ema_ind(arr, length)
     else:
-        raise ValueError(f"Unsupported mamode: {mamode}")
+        raise ValueError(f'Unsupported mamode: {mamode}')
 
 
-def ma_talib(arr: np.ndarray, length: int, mamode: str = "sma") -> np.ndarray:
+def ma_talib(arr: np.ndarray, length: int, mamode: str = 'sma') -> np.ndarray:
     """Unified moving average using TA-Lib."""
     if not talib_available:
-        raise ImportError("TA-Lib not available")
+        raise ImportError('TA-Lib not available')
     arr = arr.astype(np.float64)
     mamode = mamode.lower()
-    if mamode == "sma":
+    if mamode == 'sma':
         return talib.SMA(arr, timeperiod=length)
-    elif mamode == "ema":
+    elif mamode == 'ema':
         return talib.EMA(arr, timeperiod=length)
     else:
-        raise ValueError(f"Unsupported mamode: {mamode}")
+        raise ValueError(f'Unsupported mamode: {mamode}')
 
 
 def ma(
     arr: np.ndarray,
     length: int,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     use_talib: bool = True
 ) -> np.ndarray:
     """Universal moving average with automatic backend selection."""
@@ -58,8 +58,7 @@ def _hilo_numba_core(
     high_ma: np.ndarray,
     low_ma: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Numba-ядро для HiLo Activator.
+    """Numba-ядро для HiLo Activator.
     Возвращает три массива: hilo, long, short.
     """
     n = len(close)
@@ -94,12 +93,11 @@ def _hilo_numba(
     close: np.ndarray,
     high_length: int = 13,
     low_length: int = 21,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    HiLo Activator полностью на Numba (включая MA).
+    """HiLo Activator полностью на Numba (включая MA).
     Возвращает (hilo, long, short).
     """
     high = high.astype(np.float64)
@@ -122,15 +120,13 @@ def _hilo_talib(
     close: np.ndarray,
     high_length: int = 13,
     low_length: int = 21,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    HiLo Activator с использованием TA-Lib для MA и Numba для логики.
-    """
+    """HiLo Activator с использованием TA-Lib для MA и Numba для логики."""
     if not talib_available:
-        raise ImportError("TA-Lib not available")
+        raise ImportError('TA-Lib not available')
     high = high.astype(np.float64)
     low = low.astype(np.float64)
     close = close.astype(np.float64)
@@ -151,13 +147,12 @@ def hilo_ind(
     close: np.ndarray | pl.Series,
     high_length: int = 13,
     low_length: int = 21,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Универсальная функция HiLo Activator.
+    """Универсальная функция HiLo Activator.
     Возвращает кортеж из трёх numpy массивов (hilo, long, short).
     """
     # Преобразование Polars Series в numpy
@@ -182,19 +177,18 @@ def hilo_ind(
 # ----------------------------------------------------------------------
 def hilo_polars(
     df: pl.DataFrame,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     high_length: int = 13,
     low_length: int = 21,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = ""
+    suffix: str = ''
 ) -> pl.DataFrame:
-    """
-    Adds columns HILO, HILOl, HILOs to Polars DataFrame.
+    """Adds columns HILO, HILOl, HILOs to Polars DataFrame.
 
     Parameters
     ----------
@@ -219,6 +213,7 @@ def hilo_polars(
     -------
     pl.DataFrame
         The original DataFrame with added columns.
+
     """
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
@@ -232,9 +227,9 @@ def hilo_polars(
         fillna=fillna,
         use_talib=use_talib
     )
-    suffix = suffix or f"_{high_length}_{low_length}"
+    suffix = suffix or f'_{high_length}_{low_length}'
     return df.with_columns([
-        pl.Series(f"HILO{suffix}", hilo_arr),
-        pl.Series(f"HILOl{suffix}", long_arr),
-        pl.Series(f"HILOs{suffix}", short_arr)
+        pl.Series(f'HILO{suffix}', hilo_arr),
+        pl.Series(f'HILOl{suffix}', long_arr),
+        pl.Series(f'HILOs{suffix}', short_arr)
     ])

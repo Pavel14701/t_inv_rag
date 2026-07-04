@@ -6,45 +6,65 @@ readme = "README.md"
 requires-python = ">=3.12"
 
 dependencies = [
-    "aio-pika>=9.5.8",
-    "aiogram>=3.24.0",
-    "alembic>=1.18.4",
-    "dishka>=1.7.2",
-    "faststream[rabbit]>=0.6.6",
-    "llama-index>=0.14.14",
-    "llama-index-llms-ollama>=0.9.1",
-    "numba>=0.64.0",
-    "polars>=1.38.1",
-    "psycopg>=3.3.2",
+    "aio-pika>=9.6.2",
+    "aiogram>=3.29.1",
+    "alembic>=1.18.5",
+    "dishka>=1.10.1",
+    "faststream[rabbit]>=0.7.1",
+    "llama-index>=0.14.23",
+    "llama-index-llms-ollama>=0.10.1",
+    "numba>=0.66.0",
+    "polars>=1.42.1",
+    "psycopg>=3.3.4",
     "pyyaml>=6.0.3",
-    "qdrant-client>=1.16.2",
-    "redis>=7.1.1",
-    "sentence-transformers>=5.2.2",
-    "sqlalchemy>=2.0.46",
+    "qdrant-client>=1.18.0",
+    "redis>=8.0.1",
+    "sentence-transformers>=5.6.0",
+    "sqlalchemy>=2.0.51",
     "t-tech-investments>=0.3.3",
-    "ta-lib>=0.6.8",
+    "ta-lib>=0.7.0",
     "uuid6>=2025.0.1",
-    "yfinance>=1.2.0",
+    "yfinance>=1.5.1",
 ]
 
 [dependency-groups]
 dev = [
-    "types-pyyaml>=6.0.12.20250915",
+    "types-pyyaml>=6.0.12.20260518",
+    "mypy==2.1.0",
+    "pytest==9.1.1",
+    "pytest-mock>=3.15.1",
+    "flake8==7.3.0",
+    "flake8-docstrings==1.7.0",
+    "pep8-naming==0.15.1",
+    "pycodestyle==2.14.0",
+    "ruff==0.15.20",
+    "isort==8.0.1",
+    "flake8-pyproject==1.2.4",
+    "flake8-pie>=0.16.0",
 ]
-
-[tool.ruff]
-line-length = 88
-target-version = "py313"
-exclude = ["migrations/*", "tests/*"]
-fix = true
 
 [[tool.uv.index]]
 url = "https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple"
 default = true
 
+[tool.ruff]
+line-length = 79
+target-version = "py312"
+exclude = ["tests/*", ".venv/", "**/migrations/*"]
+fix = true
+
 [tool.ruff.lint]
-select = ["E", "F", "I", "N"]
-ignore = ["E203"]
+select = ["E","F","Q","D","N"]
+ignore = [
+    "E203",
+    "D100",
+    "D107",
+    "D203",
+    "D205",
+    "D213",
+    "D400",
+    "D401",
+]
 preview = true
 
 [tool.ruff.format]
@@ -54,7 +74,59 @@ skip-magic-trailing-comma = false
 docstring-code-format = true
 docstring-code-line-length = 88
 
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+multiline-quotes = "double"
+docstring-quotes = "double"
+
+[tool.ruff.lint.isort]
+force-single-line = false
+force-wrap-aliases = true
+lines-after-imports = 2
+lines-between-types = 1
+combine-as-imports = true
+
+[tool.isort]
+profile = "black"
+line_length = 79
+lines_after_imports = 2
+lines_between_types = 1
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+combine_as_imports = true
+force_single_line = false
+
+[tool.flake8]
+max-line-length = 79
+max-complexity = 10
+ignore = [
+    "W503",
+    "F811",
+    "D100",
+    "D107",
+    "D203",
+    "D205",
+    "D213",
+    "D400",
+    "D401",
+    "N806",
+    "N818",
+]
+exclude = [
+    "tests/",
+    "venv/",
+    "env/",
+    ".venv/",
+    "src/",
+    "node_modules/"
+]
+
+
 [tool.mypy]
 ignore_missing_imports = true
 explicit_package_bases = true 
 namespace_packages = true
+

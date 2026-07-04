@@ -18,8 +18,7 @@ def _cdl_thrusting_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """
-    Numba‑accelerated Thrusting pattern.
+    """Numba‑accelerated Thrusting pattern.
     Returns boolean mask where pattern completes (True at the 2nd candle).
     """
     n = len(open_)
@@ -63,8 +62,7 @@ def cdl_thrusting(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """
-    Universal Thrusting pattern.
+    """Universal Thrusting pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
     if isinstance(open_, pl.Series): 
@@ -93,17 +91,15 @@ def cdl_thrusting(
 
 def cdl_thrusting_polars(
     df: pl.DataFrame,
-    open_col: str = "open",
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = "CDL_THRUSTING",
+    output_col: str = 'CDL_THRUSTING',
 ) -> pl.DataFrame:
-    """
-    Add Thrusting pattern column to Polars DataFrame.
-    """
+    """Add Thrusting pattern column to Polars DataFrame."""
     out = cdl_thrusting(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

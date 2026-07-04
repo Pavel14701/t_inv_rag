@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Bollinger Bands (BBANDS) – Numba‑accelerated with Polars integration.
-"""
+"""Bollinger Bands (BBANDS) – Numba‑accelerated with Polars integration."""
 
 from typing import Optional, cast
 
@@ -19,13 +17,12 @@ def bbands_numpy(
     lower_std: float = 2.0,
     upper_std: float = 2.0,
     ddof: int = 1,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Numpy‑based Bollinger Bands calculation.
+    """Numpy‑based Bollinger Bands calculation.
 
     Returns (lower, mid, upper, bandwidth, percent_b) as numpy arrays.
     """
@@ -59,13 +56,12 @@ def bbands(
     lower_std: float = 2.0,
     upper_std: float = 2.0,
     ddof: int = 1,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Universal Bollinger Bands (accepts numpy array or Polars Series).
+    """Universal Bollinger Bands (accepts numpy array or Polars Series).
 
     Returns (lower, mid, upper, bandwidth, percent_b) as numpy arrays.
     """
@@ -86,19 +82,18 @@ def bbands(
 
 def bbands_polars(
     df: pl.DataFrame,
-    close_col: str = "close",
+    close_col: str = 'close',
     length: int = 20,
     lower_std: float = 2.0,
     upper_std: float = 2.0,
     ddof: int = 1,
-    mamode: str = "sma",
+    mamode: str = 'sma',
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    suffix: str = "",
+    suffix: str = '',
 ) -> pl.DataFrame:
-    """
-    Add Bollinger Bands columns to Polars DataFrame.
+    """Add Bollinger Bands columns to Polars DataFrame.
 
     Columns added:
         BBL_{length}_{lower_std}_{upper_std}
@@ -121,6 +116,7 @@ def bbands_polars(
     -------
     pl.DataFrame
         Original DataFrame with five new columns.
+
     """
     close = df[close_col].to_numpy()
     lower, mid, upper, bandwidth, percent_b = bbands_numpy(
@@ -135,11 +131,11 @@ def bbands_polars(
         use_talib=use_talib,
     )
 
-    suffix = suffix or f"_{length}_{lower_std}_{upper_std}"
+    suffix = suffix or f'_{length}_{lower_std}_{upper_std}'
     return df.with_columns([
-        pl.Series(f"BBL{suffix}", lower),
-        pl.Series(f"BBM{suffix}", mid),
-        pl.Series(f"BBU{suffix}", upper),
-        pl.Series(f"BBB{suffix}", bandwidth),
-        pl.Series(f"BBP{suffix}", percent_b),
+        pl.Series(f'BBL{suffix}', lower),
+        pl.Series(f'BBM{suffix}', mid),
+        pl.Series(f'BBU{suffix}', upper),
+        pl.Series(f'BBB{suffix}', bandwidth),
+        pl.Series(f'BBP{suffix}', percent_b),
     ])
