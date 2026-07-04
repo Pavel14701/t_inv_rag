@@ -11,3 +11,5 @@ wheels/
 .mypy_cache
 .ruff_cache
 .env
+
+to_do.txt

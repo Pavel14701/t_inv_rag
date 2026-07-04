@@ -1033,5 +1033,4 @@ def identify_order_blocks(
         "structure_label": [b.structure_label for b in confirmed],
         "trend_direction": [b.trend_direction for b in confirmed],
     }
-    out = pl.DataFrame(data).sort("start")
-    return out
+    return pl.DataFrame(data).sort("start")
