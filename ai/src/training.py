@@ -1,11 +1,19 @@
 """Training and self-training pipelines for the EntryExitTransformer.
 
-Provides:
-- DataLoader builders for labeled and unlabeled Parquet data.
-- A single-round supervised training function with validation split,
-    metrics, checkpointing, and early stopping.
-- Pseudo-label generation and self-training loop with correct global
-    bar index alignment.
+Provides
+--------
+- :func:`build_loader_from_parquet` - DataLoader for labeled Parquet data.
+- :func:`build_unlabeled_loader_from_parquet` - DataLoader for unlabeled
+    Parquet data (targets set to ignore).
+- :func:`train_one_round` - supervised training loop with validation,
+    metrics, checkpointing, TensorBoard logging, and early stopping.
+- :func:`self_training_loop` - iterative self-training that pseudo-labels
+    an unlabeled pool and adds confident predictions to the training set.
+
+All functions are designed to work with batches of 11 elements (see
+:func:`collate_ob` for details).  The training loop supports optional
+class weighting, multi-task loss (action + outcome + pattern), and
+handles the absence of a validation set gracefully.
 """
 
 from __future__ import annotations
@@ -45,25 +53,39 @@ def build_loader_from_parquet(
     shuffle: bool,
     pattern_cols: list[str] | None = None,
 ) -> tuple[DataLoader, pl.DataFrame]:
-    """Create a DataLoader from feature and label Parquet files.
+    """Create a DataLoader from labeled Parquet files.
+
+    Reads feature and label Parquet files, merges them, stacks the
+    columns into a single 2D array, and wraps everything in a
+    :class:`TradingDataset`.
 
     Args:
-        features_path: Path to features.parquet.
-        labels_path: Path to labels.parquet.
-        order_blocks: List of all order blocks.
-        seq_len: Sequence length for windows.
-        price_cols: Names of price columns.
-        ind_cols: Names of indicator columns.
-        sig_cols: Names of signal columns.
-        tp_sl_cols: Names of TP/SL columns.
-        batch_size: Batch size.
+        features_path: Path to ``features.parquet``.  The file must
+            contain at least the columns listed in ``price_cols``,
+            ``sig_cols``, and ``tp_sl_cols``.  Indicator columns
+            (``ind_cols``) are optional.
+        labels_path: Path to ``labels.parquet``.  Must contain the
+            columns ``'action'`` (int) and ``'outcome'`` (float).
+            If ``pattern_cols`` is given, those columns are expected
+            here as well (or in the features file - they will be merged).
+        order_blocks: List of all order blocks.  They are filtered
+            per window by the dataset.
+        seq_len: Number of bars in each sliding window.
+        price_cols: Names of the price columns (e.g. OHLCV).
+        ind_cols: Names of indicator columns.  Can be empty.
+        sig_cols: Names of signal columns (e.g. OB distances).
+        tp_sl_cols: Names of the two TP/SL columns.
+        batch_size: Batch size for the returned DataLoader.
         shuffle: Whether to shuffle the dataset.
         pattern_cols: Optional list of pattern label column names.
-            If provided, they are extracted as multi-label targets.
+            If provided, they are extracted as a multi-label target
+            tensor.
 
     Returns:
-        A tuple (loader, merged_df) where merged_df is the joined
-        features+labels DataFrame.
+        A tuple ``(loader, merged_df)`` where ``loader`` is a
+        PyTorch DataLoader yielding 11-element batches and
+        ``merged_df`` is the full joined DataFrame (useful for
+        inspecting or computing class weights).
 
     """
     df_feat = load_features_parquet(features_path)
@@ -119,26 +141,37 @@ def build_unlabeled_loader_from_parquet(
     outcome_mode: str = 'binary',
     bar_index_col: str | None = 'bar_index',
 ) -> DataLoader:
-    """Create a DataLoader for unlabeled data (all targets set to ignore).
+    """Create a DataLoader for **unlabeled** data.
+
+    The returned loader yields batches where all action targets are
+    ``-100`` (ignore) and outcome targets are ``2`` (or ``NaN`` for
+    regression).  No pattern targets are included.
+
+    If the features Parquet file contains a column with the name given
+    by ``bar_index_col``, its values are passed to
+    :class:`TradingDataset` as stable bar identifiers.  This enables
+    safe pseudo-label alignment during self-training, even when the
+    unlabeled pool differs from the labeled pool.
 
     Args:
-        features_path: Path to features.parquet (no labels required).
+        features_path: Path to the unlabeled features Parquet file.
         order_blocks: List of all order blocks.
         seq_len: Sequence length.
         price_cols: Names of price columns.
-        ind_cols: Names of indicator columns.
+        ind_cols: Names of indicator columns (can be empty).
         sig_cols: Names of signal columns.
         tp_sl_cols: Names of TP/SL columns.
         batch_size: Batch size.
-        outcome_mode: Used to decide the ignore value for outcomes.
-        bar_index_col: Column name containing a stable bar identifier.
-            If present in the data, it is used for safe pseudo-label
-            alignment in self-training. If ``None`` or missing,
-            positional indices are used.
+        outcome_mode: Determines the ignore value for outcome targets
+            (``2`` for binary/multiclass, ``NaN`` for regression).
+        bar_index_col: Name of a column that holds a stable bar
+            identifier.  If the column exists, its values are used
+            for pseudo-label alignment; otherwise positional indices
+            are used.
 
     Returns:
-        A DataLoader yielding batches with -100 actions and appropriate
-        ignore values for outcomes. Pattern targets are empty.
+        A DataLoader yielding 11-element batches suitable for
+        pseudo-label generation.
 
     """
     df = load_features_parquet(features_path)
@@ -185,14 +218,17 @@ def build_unlabeled_loader_from_parquet(
 
 
 def _compute_class_weights(action_targets: np.ndarray) -> torch.Tensor:
-    """Compute inverse-frequency weights for action classes (ignore -100).
+    """Compute inverse-frequency weights for the three action classes.
+
+    Bars with label ``-100`` (ignore) are excluded from the frequency
+    calculation.  The returned weights are normalised so that their
+    mean is 1.
 
     Args:
-        action_targets: 1D array of integer labels.
+        action_targets: 1D integer array of action labels.
 
     Returns:
-        Float tensor of shape (3,) with class weights normalised so
-        that the mean weight is 1.
+        Float tensor of shape ``(3,)``.
 
     """
     unique, counts = np.unique(
@@ -207,14 +243,24 @@ def _compute_class_weights(action_targets: np.ndarray) -> torch.Tensor:
 
 
 def _prepare_batch(batch, device: torch.device):
-    """Unpack a 10-element batch and move tensors to device.
+    """Unpack an 11-element batch and move tensors to the given device.
 
-    Returns a dict with all tensor fields + order_blocks (list).
+    The batch must be in the format returned by :func:`collate_ob`:
+    ``(prices, indicators, signals, tp, sl, order_blocks,
+    action_tgt, outcome_tgt, pattern_tgt, start_indices,
+    bar_indices)``.
+
+    The ``order_blocks`` element (a list of lists) is **not** moved
+    to the device; it stays on the CPU.
+
+    Returns:
+        A dictionary with keys matching the batch components.
+
     """
     (
         prices, indicators, signals, tp, sl,
         order_blocks, action_tgt, outcome_tgt,
-        pattern_tgt, start_indices,
+        pattern_tgt, start_indices, bar_indices,
     ) = batch
     return {
         'prices': prices.to(device),
@@ -222,11 +268,12 @@ def _prepare_batch(batch, device: torch.device):
         'signals': signals.to(device),
         'tp': tp.to(device),
         'sl': sl.to(device),
-        'order_blocks': order_blocks,          # list of lists, stays on CPU
+        'order_blocks': order_blocks,
         'action_tgt': action_tgt.to(device),
         'outcome_tgt': outcome_tgt.to(device),
         'pattern_tgt': pattern_tgt.to(device),
         'start_indices': start_indices,
+        'bar_indices': bar_indices,
     }
 
 
@@ -238,9 +285,19 @@ def _model_forward_loss(
     lambda_pattern: float,
     class_weight: torch.Tensor | None,
 ):
-    """Run forward pass and compute loss.
+    """Execute a forward pass and compute the combined loss.
 
-    Returns (loss, action_logits, outcome_logits).
+    Args:
+        model: The transformer model.
+        batch_data: Dictionary returned by :func:`_prepare_batch`.
+        outcome_mode: Passed to :func:`dual_loss`.
+        lambda_outcome: Passed to :func:`dual_loss`.
+        lambda_pattern: Passed to :func:`dual_loss`.
+        class_weight: Optional class weights for the action head.
+
+    Returns:
+        A tuple ``(loss, action_logits, outcome_logits)``.
+
     """
     action_logits, outcome_logits, pattern_logits = model(
         batch_data['prices'],
@@ -268,50 +325,30 @@ def _model_forward_loss(
 def _compute_val_metrics(
     all_action_logits: list[torch.Tensor],
     all_action_targets: list[torch.Tensor],
-    all_outcome_logits: list[torch.Tensor],
     all_outcome_targets: list[torch.Tensor],
-    all_prices: list[torch.Tensor],
-    all_tp: list[torch.Tensor],
-    all_sl: list[torch.Tensor],
-    outcome_mode: str,
-    close_idx: int,
 ) -> tuple[dict[str, float], dict[str, float]]:
-    """Concatenate accumulated tensors and compute
-    action accuracy & trade metrics.
+    """Concatenate accumulated tensors and compute action
+        accuracy & trade metrics.
+
+    Args:
+        all_action_logits: List of flattened ``(N, 3)`` tensors.
+        all_action_targets: List of flattened ``(N,)`` long tensors.
+        all_outcome_targets: List of flattened ``(N,)`` float tensors.
 
     Returns:
-        (action_acc_dict, trade_metrics_dict)
+        A tuple ``(action_acc_dict, trade_metrics_dict)``.
 
     """
     cat_action_logits = torch.cat(all_action_logits)
     cat_action_targets = torch.cat(all_action_targets)
     action_acc = compute_action_accuracy(cat_action_logits, cat_action_targets)
 
-    # Trade metrics – may fail if no entry bars, handle gracefully
-    try:
-        cat_prices = torch.cat(all_prices, dim=0)
-        cat_tp = torch.cat(all_tp, dim=0)
-        cat_sl = torch.cat(all_sl, dim=0)
-        cat_outcome_logits = torch.cat(all_outcome_logits, dim=0)
-        cat_outcome_targets = torch.cat(all_outcome_targets, dim=0)
-
-        trade_metrics = compute_trade_metrics(
-            cat_prices.unsqueeze(0),
-            cat_outcome_logits.unsqueeze(0),
-            cat_action_targets.reshape(1, -1),
-            cat_outcome_targets.reshape(1, -1),
-            cat_tp.unsqueeze(0),
-            cat_sl.unsqueeze(0),
-            cat_prices.unsqueeze(0),
-            close_idx=close_idx,
-        )
-    except RuntimeError:
-        # Typically happens when shapes cannot be concatenated
-        trade_metrics = {
-            'win_rate': 0.0,
-            'profit_factor': 0.0,
-            'num_trades': 0
-        }
+    cat_outcome_targets = torch.cat(all_outcome_targets)
+    trade_metrics = compute_trade_metrics(
+        cat_action_logits,
+        cat_action_targets,
+        cat_outcome_targets,
+    )
     return action_acc, trade_metrics
 
 
@@ -325,7 +362,15 @@ def _run_train_epoch(
     lambda_pattern: float,
     class_weight: torch.Tensor | None,
 ) -> float:
-    """Train for one epoch, return average loss."""
+    """Train the model for one epoch.
+
+    Iterates over the DataLoader, calls :func:`_model_forward_loss`,
+    and updates parameters.
+
+    Returns:
+        Average training loss across all batches.
+
+    """
     model.train()
     total_loss = 0.0
     num_batches = 0
@@ -350,21 +395,20 @@ def _run_val_epoch(
     outcome_mode: str,
     lambda_outcome: float,
     lambda_pattern: float,
-    close_idx: int,
 ) -> tuple[float, dict[str, float], dict[str, float]]:
-    """Validate for one epoch.
+    """Validate the model for one epoch.
+
+    Computes loss without gradient and accumulates the logits, action
+    targets, and outcome targets needed for metric computation.
 
     Returns:
-        avg_val_loss, action_acc, trade_metrics
+        A tuple ``(avg_val_loss, action_acc, trade_metrics)``.
 
     """
     model.eval()
     total_loss = 0.0
     num_batches = 0
-    # Accumulators
-    a_logits, a_targets = [], []
-    o_logits, o_targets = [], []
-    prices_list, tp_list, sl_list = [], [], []
+    a_logits, a_targets, o_targets = [], [], []
 
     with torch.no_grad():
         for batch in loader:
@@ -376,30 +420,13 @@ def _run_val_epoch(
             total_loss += loss.item()
             num_batches += 1
 
-            # Flatten and store
             a_logits.append(action_logits.reshape(-1, 3))
             a_targets.append(data['action_tgt'].reshape(-1))
-            o_logits.append(
-                outcome_logits.reshape(
-                    -1,
-                    (
-                        outcome_logits.size(-1)
-                        if outcome_mode == 'multiclass'
-                        else 1
-                    )
-                )
-            )
             o_targets.append(data['outcome_tgt'].reshape(-1))
-            prices_list.append(data['prices'])
-            tp_list.append(data['tp'])
-            sl_list.append(data['sl'])
 
     avg_loss = total_loss / max(num_batches, 1)
     action_acc, trade_metrics = _compute_val_metrics(
-        a_logits, a_targets,
-        o_logits, o_targets,
-        prices_list, tp_list, sl_list,
-        outcome_mode, close_idx,
+        a_logits, a_targets, o_targets
     )
     return avg_loss, action_acc, trade_metrics
 
@@ -413,7 +440,14 @@ def _log_epoch(
     action_acc: dict[str, float],
     trade_metrics: dict[str, float],
 ):
-    """Print console message and write TensorBoard scalars."""
+    """Print a one-line epoch summary and, if a writer is given,
+    log scalars to TensorBoard.
+
+    Scalars logged:
+        - ``Loss/train``, ``Loss/val``
+        - ``Acc/overall``, ``Acc/entry``
+        - ``Trades/win_rate``, ``Trades/profit_factor``
+    """
     msg = (
         f'Epoch {epoch + 1}/{total_epochs} | '
         f'Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | '
@@ -444,10 +478,10 @@ def _checkpoint_and_stop(
     best_model_path: str | None,
     early_stopping_patience: int,
 ) -> tuple[float, int, bool]:
-    """Update best loss, save model, and decide whether to stop.
+    """Update best loss, save model if improved, and signal early stop.
 
     Returns:
-        (updated_best_val_loss, updated_no_improve_count, should_stop)
+        A tuple ``(best_val_loss, no_improve_count, should_stop)``.
 
     """
     if save_best and val_loss < best_val_loss:
@@ -471,7 +505,7 @@ def _checkpoint_and_stop(
 def train_one_round(
     model: torch.nn.Module,
     train_loader: DataLoader,
-    val_loader: DataLoader,
+    val_loader: DataLoader | None,
     epochs: int,
     device: torch.device,
     outcome_mode: str = 'binary',
@@ -483,9 +517,44 @@ def train_one_round(
     save_best: bool = True,
     best_model_path: str | None = None,
     early_stopping_patience: int = 0,
-    close_idx: int = 3,
+    close_idx: int = 3,  # kept for API compatibility, not used currently
 ):
-    """Train the model, now with minimal code in the main loop."""
+    """Run a full supervised training loop.
+
+    The loop performs ``epochs`` passes over ``train_loader``.
+    After each training epoch, if ``val_loader`` is not ``None``,
+    validation metrics are computed, logged, and used for learning
+    rate scheduling and early stopping.  If ``val_loader`` is ``None``,
+    only the training loss is reported.
+
+    Args:
+        model: The transformer model to train.
+        train_loader: DataLoader for training data.
+        val_loader: DataLoader for validation data.  If ``None``,
+            validation, checkpointing, and early stopping are disabled.
+        epochs: Total number of epochs.
+        device: PyTorch device.
+        outcome_mode: One of ``'binary'``, ``'multiclass'``,
+            ``'regression'``.
+        lambda_outcome: Weight of the outcome loss.
+        lr: Initial learning rate for AdamW.
+        lambda_pattern: Weight of the pattern loss.
+        class_weight: Optional (3,) tensor of class weights for the
+            action cross-entropy loss.
+        log_dir: If not ``None``, TensorBoard logs are written here.
+        save_best: If ``True`` and ``val_loader`` is provided, the
+            model with the lowest validation loss is saved.
+        best_model_path: File path for the best checkpoint.  Required
+            when ``save_best=True``.
+        early_stopping_patience: Number of epochs without improvement
+            after which training stops.  ``0`` disables early stopping.
+        close_idx: **Not used** in the current version; kept for
+            API compatibility.
+
+    Returns:
+        The trained model (same object as ``model``).
+
+    """
     writer = SummaryWriter(log_dir) if log_dir else None
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -499,23 +568,28 @@ def train_one_round(
             model, train_loader, device, optimizer,
             outcome_mode, lambda_outcome, lambda_pattern, class_weight
         )
-        val_loss, action_acc, trade_metrics = _run_val_epoch(
-            model, val_loader, device,
-            outcome_mode, lambda_outcome, lambda_pattern, close_idx
-        )
-        _log_epoch(
-            writer, epoch, epochs,
-            train_loss, val_loss, action_acc,
-            trade_metrics
-        )
-        scheduler.step(val_loss)
 
-        best_val_loss, no_improve_count, stop = _checkpoint_and_stop(
-            val_loss, best_val_loss, no_improve_count, model,
-            save_best, best_model_path, early_stopping_patience
-        )
-        if stop:
-            break
+        if val_loader is not None:
+            val_loss, action_acc, trade_metrics = _run_val_epoch(
+                model, val_loader, device,
+                outcome_mode, lambda_outcome, lambda_pattern
+            )
+            _log_epoch(
+                writer, epoch, epochs, train_loss, val_loss,
+                action_acc, trade_metrics
+            )
+            scheduler.step(val_loss)
+
+            best_val_loss, no_improve_count, stop = _checkpoint_and_stop(
+                val_loss, best_val_loss, no_improve_count, model,
+                save_best, best_model_path, early_stopping_patience
+            )
+            if stop:
+                break
+        else:
+            print(f'Epoch {epoch + 1}/{epochs} | Train Loss: {train_loss:.4f}')
+            if writer:
+                writer.add_scalar('Loss/train', train_loss, epoch)
 
     if writer:
         writer.close()
@@ -528,7 +602,11 @@ def _check_rr_valid(
     sl_price: float,
     min_rr: float,
 ) -> bool:
-    """Check if a potential entry meets the minimum risk-reward ratio."""
+    """Return ``True`` if the risk-reward ratio meets ``min_rr``.
+
+    The direction (long/short) is inferred from the relative positions
+    of the entry, TP, and SL levels.
+    """
     if entry_price > sl_price:  # long
         if not (sl_price < entry_price < tp_price):
             return False
@@ -545,7 +623,17 @@ def _determine_pseudo_outcome(
     outcome_mode: str,
     outcome_threshold: float,
 ) -> float | None:
-    """Convert raw outcome logit to pseudo-outcome if confident."""
+    """Convert a raw outcome logit into a pseudo-outcome if confident.
+
+    The confidence threshold is applied symmetrically for binary mode
+    (probability > threshold → win, < 1-threshold → loss).  For
+    multiclass and regression modes the logic is mode-specific.
+
+    Returns:
+        A float outcome value, or ``None`` if the model is not
+        confident enough.
+
+    """
     if outcome_mode == 'binary':
         prob = torch.sigmoid(outcome_logit)
         if prob > outcome_threshold:
@@ -572,6 +660,40 @@ def _generate_pseudo_labels_batch(
     close_idx: int,
     seq_len: int,
 ) -> list[tuple[int, int, float]]:
+    """Generate pseudo-labels for one batch of unlabeled data.
+
+    For every bar whose action target is ``-100`` (i.e. unlabeled),
+    the model's prediction is evaluated:
+
+    - The predicted action class must have a probability above
+        ``action_threshold`` and be either ``entry`` (1) or ``exit`` (2).
+    - For ``entry`` predictions, the trade must satisfy the
+        risk-reward ratio ``min_rr`` (using the bar's TP/SL levels).
+    - The predicted outcome must meet the ``outcome_threshold``
+        confidence criterion.
+
+    The stable bar identifier from the batch (``bar_indices[bi] + ti``)
+    is used as the global index, ensuring that the pseudo-label can be
+    safely written to the original ``labels.parquet`` even when the
+    unlabeled pool differs from the labeled pool.
+
+    Args:
+        model: Model in evaluation mode.
+        batch: 11-element tuple as returned by the DataLoader.
+        device: PyTorch device.
+        outcome_mode: Prediction mode.
+        action_threshold: Minimum probability for a predicted action.
+        outcome_threshold: Minimum confidence for the outcome.
+        min_rr: Minimum required reward-to-risk ratio for entries.
+        close_idx: Index of the close price within the price tensor
+            (usually 3 for OHLCV).
+        seq_len: Length of the temporal window (T).
+
+    Returns:
+        A list of ``(global_bar, pseudo_action, pseudo_outcome)``
+        tuples.
+
+    """
     (
         prices, indicators, signals, tp, sl,
         order_blocks_batch, action_tgt, outcome_tgt,
@@ -615,7 +737,6 @@ def _generate_pseudo_labels_batch(
             continue
 
         pseudo_action = int(pred_action[bi, ti].item())
-        # Глобальный индекс берётся из стабильного bar_indices
         global_bar = int(bar_indices[bi].item()) + ti
         new_pseudo.append((global_bar, pseudo_action, pseudo_outcome))
 
@@ -627,12 +748,17 @@ def _update_labels_parquet(
     new_pseudo: list[tuple[int, int, float]],
     outcome_mode: str = 'binary',
 ) -> None:
-    """Update the labels Parquet file with new pseudo-labels.
+    """Persist pseudo-labels into the existing labels Parquet file.
+
+    The file is loaded, modified in memory, and overwritten.  Rows
+    that fall outside the length of the file are ignored.
 
     Args:
-        labels_path: Path to labels.parquet.
-        new_pseudo: List of (global_bar_index, action, outcome) tuples.
-        outcome_mode: Used to determine default outcome fill value.
+        labels_path: Path to ``labels.parquet``.
+        new_pseudo: List of ``(global_bar, action, outcome)`` tuples
+            as returned by :func:`_generate_pseudo_labels_batch`.
+        outcome_mode: Used to choose the fill value for missing
+            outcome columns.
 
     """
     df_lbl = load_labels_parquet(labels_path)
@@ -665,25 +791,25 @@ def _split_train_val(
     loader: DataLoader,
     val_split: float,
     batch_size: int,
-) -> tuple[DataLoader, DataLoader]:
-    """Split the dataset of a loader into training and validation loaders.
+) -> tuple[DataLoader, DataLoader | None]:
+    """Create a training and optional validation loader from a single dataset.
 
     Args:
-        loader: Loader whose dataset is a TradingDataset.
-        val_split: Fraction of data to use for validation (0 < val_split < 1).
+        loader: DataLoader whose ``.dataset`` is a :class:`TradingDataset`.
+        val_split: Fraction of data to use for validation.
         batch_size: Batch size for both returned loaders.
 
     Returns:
-        train_loader, val_loader
+        ``(train_loader, val_loader)`` where ``val_loader`` is ``None``
+        if ``val_split <= 0``.
 
     """
     dataset = loader.dataset
-    # Explicitly confirm it's a TradingDataset so that len() is safe.
     assert isinstance(dataset, TradingDataset), (
         'loader.dataset must be a TradingDataset'
     )
     if val_split <= 0:
-        return loader, loader
+        return loader, None
 
     n_val = int(len(dataset) * val_split)
     n_train = len(dataset) - n_val
@@ -710,7 +836,7 @@ def _self_training_round(
     round_idx: int,
     num_rounds: int,
     train_loader: DataLoader,
-    val_loader: DataLoader,
+    val_loader: DataLoader | None,
     unlabeled_loader: DataLoader,
     device: torch.device,
     outcome_mode: str,
@@ -728,10 +854,15 @@ def _self_training_round(
     best_model_path: str | None,
     early_stopping_patience: int,
 ) -> list[tuple[int, int, float]] | None:
-    """Execute one round of self-training.
+    """Perform one round of self-training.
+
+    1. Fine-tune the model on the current labeled set.
+    2. Run inference on the unlabeled pool and collect pseudo-labels.
+    3. Return the list of pseudo-labels (or ``None`` if none were
+        generated).
 
     Returns:
-        List of newly generated pseudo-labels, or None if no new labels.
+        List of pseudo-labels, or ``None``.
 
     """
     print(f'\n=== Self-training round {round_idx + 1}/{num_rounds} ===')
@@ -807,7 +938,54 @@ def self_training_loop(
     log_dir: str | None = None,
     early_stopping_patience: int = 0,
 ):
-    """Run iterative self-training using a separate pool of unlabeled data."""
+    """Run iterative self-training.
+
+    The pipeline alternates between supervised training on the current
+    labeled data and pseudo-labeling of a separate unlabeled pool.
+    Confident pseudo-labels are merged back into the labels file, and
+    the labeled loaders are rebuilt for the next round.
+
+    If ``val_split > 0``, a validation set is carved out of the
+    labeled data and used to monitor performance and to keep the best
+    model.  When ``val_split <= 0``, no validation is performed.
+
+    Args:
+        model: Initialised transformer model.
+        features_path: Path to the labeled features Parquet file.
+        labels_path: Path to the labels Parquet file (will be updated
+            in-place).
+        features_path_unlabeled: Path to the unlabeled features
+            Parquet file.
+        order_blocks: List of all order blocks.
+        price_cols: Names of price columns.
+        ind_cols: Names of indicator columns.
+        sig_cols: Names of signal columns.
+        tp_sl_cols: Names of TP/SL columns.
+        seq_len: Sequence length.
+        batch_size: Batch size for all loaders.
+        device: PyTorch device.
+        outcome_mode: Outcome prediction mode.
+        lambda_outcome: Outcome loss weight.
+        lr: Learning rate.
+        epochs_per_round: Number of training epochs per round.
+        num_rounds: Maximum number of self-training rounds.
+        action_threshold: Confidence threshold for action.
+        outcome_threshold: Confidence threshold for outcome.
+        min_rr: Minimum risk-reward ratio for entry pseudo-labels.
+        close_idx: Index of the close price in the price features.
+        save_model_path: If set, per-round checkpoints are saved
+            with suffix ``_roundN.pt``.  Additionally, the best model
+            (if validation is enabled) is saved as ``_best.pt``.
+        val_split: Fraction of labeled data used for validation.
+            ``0`` disables validation.
+        log_dir: TensorBoard log directory (optional).
+        early_stopping_patience: Patience for early stopping during
+            each training round.
+
+    Returns:
+        The trained model.
+
+    """
     # ---------- Initial labeled loader ----------
     loader, df = build_loader_from_parquet(
         features_path, labels_path, order_blocks,
