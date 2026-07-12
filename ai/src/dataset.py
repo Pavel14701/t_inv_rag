@@ -1,8 +1,9 @@
 """Trading dataset that produces sliding windows of market data.
 
 Each sample includes price, indicator, signal, TP/SL tensors,
-a list of relevant order blocks, action/outcome targets, and
-optionally pattern targets, plus the global start index.
+a list of relevant order blocks, action/outcome targets,
+optionally pattern targets, the global positional start index,
+and a stable bar identifier for safe pseudo-label alignment.
 """
 
 from __future__ import annotations
@@ -34,6 +35,9 @@ class TradingDataset(Dataset):
         pattern_targets: Optional 2D array (total_bars, n_patterns)
             with multi-label pattern indicators. If None, a zero-sized
             tensor is returned for each window.
+        bar_index: Optional 1D array of stable bar identifiers (e.g. a
+            timestamp or custom index). If None, the positional index is
+            used as the identifier.
 
     """
 
@@ -49,6 +53,7 @@ class TradingDataset(Dataset):
         sig_feats: int = 2,
         tp_sl_feats: int = 2,
         pattern_targets: np.ndarray | None = None,
+        bar_index: np.ndarray | None = None,
     ):
         self.data = torch.tensor(data, dtype=torch.float32)
         self.order_blocks = order_blocks
@@ -62,12 +67,16 @@ class TradingDataset(Dataset):
         self.sig_feats = sig_feats
         self.tp_sl_feats = tp_sl_feats
 
-        # Explicitly declare the type to avoid type-checker confusion
         self.pattern_targets: torch.Tensor | None = None
         if pattern_targets is not None:
             self.pattern_targets = torch.tensor(
                 pattern_targets, dtype=torch.float32
             )
+
+        # stable bar identifier (e.g. original bar_index column)
+        self.bar_index: torch.Tensor | None = None
+        if bar_index is not None:
+            self.bar_index = torch.tensor(bar_index, dtype=torch.long)
 
     def __len__(self) -> int:
         """Return the number of possible windows."""
@@ -82,7 +91,7 @@ class TradingDataset(Dataset):
         Returns:
             tuple: (prices, indicators, signals, tp, sl, ob_window,
                     action_target, outcome_target, pattern_target,
-                    start_bar)
+                    start_bar, bar_idx)
 
         """
         window = self.data[idx: idx + self.seq_len]
@@ -118,6 +127,12 @@ class TradingDataset(Dataset):
         else:
             pattern_target = torch.zeros(self.seq_len, 0)
 
+        # stable identifier for the first bar of the window
+        bar_idx = (
+            self.bar_index[idx]
+            if self.bar_index is not None
+            else idx
+        )
         return (
             prices,
             indicators,
@@ -128,7 +143,8 @@ class TradingDataset(Dataset):
             action_target,
             outcome_target,
             pattern_target,
-            start_bar,
+            start_bar,   # positional index (idx)
+            bar_idx,     # stable identifier (or idx if not provided)
         )
 
 
@@ -136,8 +152,8 @@ def collate_ob(batch):
     """Collate function for DataLoader.
 
     Stacks all tensors and collects order block lists.
-    The batch now contains 10 elements: the 10th is a tensor of
-    global start indices for each window.
+    The batch now contains 11 elements: the 11th is a tensor of
+    stable bar identifiers for each window.
 
     Args:
         batch: List of samples as returned by TradingDataset.__getitem__.
@@ -158,6 +174,9 @@ def collate_ob(batch):
     start_indices = torch.tensor(
         [item[9] for item in batch], dtype=torch.long
     )
+    bar_indices = torch.tensor(
+        [item[10] for item in batch], dtype=torch.long
+    )
     return (
         prices,
         indicators,
@@ -169,4 +188,5 @@ def collate_ob(batch):
         outcome_targets,
         pattern_targets,
         start_indices,
+        bar_indices,
     )

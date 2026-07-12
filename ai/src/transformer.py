@@ -6,9 +6,6 @@ Consists of:
 - Three heads: action (hold/entry/exit), outcome, and pattern (unused in
     current training).
 """
-
-from typing import List, Tuple
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as functional
@@ -209,8 +206,8 @@ class EntryExitTransformer(nn.Module):
         signals: torch.Tensor,
         tp_levels: torch.Tensor,
         sl_levels: torch.Tensor,
-        order_blocks: List[List[OrderBlock]],
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        order_blocks: list[list[OrderBlock]],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward pass.
 
         Args:

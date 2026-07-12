@@ -117,6 +117,7 @@ def build_unlabeled_loader_from_parquet(
     tp_sl_cols: list[str],
     batch_size: int,
     outcome_mode: str = 'binary',
+    bar_index_col: str | None = 'bar_index',
 ) -> DataLoader:
     """Create a DataLoader for unlabeled data (all targets set to ignore).
 
@@ -130,6 +131,10 @@ def build_unlabeled_loader_from_parquet(
         tp_sl_cols: Names of TP/SL columns.
         batch_size: Batch size.
         outcome_mode: Used to decide the ignore value for outcomes.
+        bar_index_col: Column name containing a stable bar identifier.
+            If present in the data, it is used for safe pseudo-label
+            alignment in self-training. If ``None`` or missing,
+            positional indices are used.
 
     Returns:
         A DataLoader yielding batches with -100 actions and appropriate
@@ -152,6 +157,11 @@ def build_unlabeled_loader_from_parquet(
         df[tp_sl_cols].to_numpy(),
     ])
 
+    if bar_index_col and bar_index_col in df.columns:
+        bar_index = df[bar_index_col].to_numpy().astype(np.int64)
+    else:
+        bar_index = None
+
     dataset = TradingDataset(
         data=data,
         order_blocks=order_blocks,
@@ -163,6 +173,7 @@ def build_unlabeled_loader_from_parquet(
         sig_feats=len(sig_cols),
         tp_sl_feats=len(tp_sl_cols),
         pattern_targets=None,
+        bar_index=bar_index,
     )
 
     return DataLoader(
@@ -254,10 +265,6 @@ def _model_forward_loss(
     return loss, action_logits, outcome_logits
 
 
-# ---------------------------------------------------------------------------
-# Helper: validation metrics collection and computation
-# ---------------------------------------------------------------------------
-
 def _compute_val_metrics(
     all_action_logits: list[torch.Tensor],
     all_action_targets: list[torch.Tensor],
@@ -308,11 +315,6 @@ def _compute_val_metrics(
     return action_acc, trade_metrics
 
 
-# ---------------------------------------------------------------------------
-# Main training loop (now clean and short)
-# ---------------------------------------------------------------------------
-
-# ─── ОБУЧЕНИЕ ОДНОЙ ЭПОХИ ─────────────────────────────────────────────
 def _run_train_epoch(
     model: torch.nn.Module,
     loader: DataLoader,
@@ -402,7 +404,6 @@ def _run_val_epoch(
     return avg_loss, action_acc, trade_metrics
 
 
-# ─── ЛОГИРОВАНИЕ ───────────────────────────────────────────────────────
 def _log_epoch(
     writer: SummaryWriter | None,
     epoch: int,
@@ -434,7 +435,6 @@ def _log_epoch(
         )
 
 
-# ─── ПРОВЕРКА BEST / EARLY STOPPING ───────────────────────────────────
 def _checkpoint_and_stop(
     val_loss: float,
     best_val_loss: float,
@@ -468,7 +468,6 @@ def _checkpoint_and_stop(
     return best_val_loss, no_improve_count, should_stop
 
 
-# ─── ГЛАВНАЯ ФУНКЦИЯ (КОРОТКАЯ) ──────────────────────────────────────
 def train_one_round(
     model: torch.nn.Module,
     train_loader: DataLoader,
@@ -573,36 +572,10 @@ def _generate_pseudo_labels_batch(
     close_idx: int,
     seq_len: int,
 ) -> list[tuple[int, int, float]]:
-    """Generate pseudo-labels for one batch of unlabeled data.
-
-    Uses the global bar index from the batch for label alignment.
-
-    Args:
-        model: The model in eval mode.
-        batch: Tuple as returned by DataLoader (10 elements).
-        device: Torch device.
-        outcome_mode: See ``_determine_pseudo_outcome``.
-        action_threshold: Minimum probability for a predicted action.
-        outcome_threshold: Minimum confidence for outcome.
-        min_rr: Minimum RR for entry pseudo-labels.
-        close_idx: Index of close price within price tensor.
-        seq_len: Sequence length (T).
-
-    Returns:
-        List of (global_bar_index, pseudo_action, pseudo_outcome) tuples.
-
-    """
     (
-        prices,
-        indicators,
-        signals,
-        tp,
-        sl,
-        order_blocks_batch,
-        action_tgt,
-        outcome_tgt,
-        _pattern_tgt,
-        start_indices,
+        prices, indicators, signals, tp, sl,
+        order_blocks_batch, action_tgt, outcome_tgt,
+        _pattern_tgt, start_indices, bar_indices,
     ) = batch
     prices = prices.to(device)
     indicators = indicators.to(device)
@@ -622,7 +595,6 @@ def _generate_pseudo_labels_batch(
     for bi, ti in itertools.product(range(b), range(t)):
         if action_tgt[bi, ti] != -100:
             continue
-
         if (
             max_action_probs[bi, ti] <= action_threshold
             or pred_action[bi, ti] not in (1, 2)
@@ -633,9 +605,7 @@ def _generate_pseudo_labels_batch(
             entry_price = prices[bi, ti, close_idx].item()
             tp_price = tp[bi, ti, 0].item()
             sl_price = sl[bi, ti, 0].item()
-            if not _check_rr_valid(
-                entry_price, tp_price, sl_price, min_rr
-            ):
+            if not _check_rr_valid(entry_price, tp_price, sl_price, min_rr):
                 continue
 
         pseudo_outcome = _determine_pseudo_outcome(
@@ -645,7 +615,8 @@ def _generate_pseudo_labels_batch(
             continue
 
         pseudo_action = int(pred_action[bi, ti].item())
-        global_bar = int(start_indices[bi].item()) + ti
+        # Глобальный индекс берётся из стабильного bar_indices
+        global_bar = int(bar_indices[bi].item()) + ti
         new_pseudo.append((global_bar, pseudo_action, pseudo_outcome))
 
     return new_pseudo
