@@ -2,19 +2,23 @@
 
 Provides:
 - DataLoader builders for labeled and unlabeled Parquet data.
-- A single-round supervised training function.
-- Pseudo-label generation and self-training loop.
+- A single-round supervised training function with validation split,
+    metrics, checkpointing, and early stopping.
+- Pseudo-label generation and self-training loop with correct global
+    bar index alignment.
 """
 
 from __future__ import annotations
 
 import itertools
+import math
 
 import numpy as np
 import polars as pl
 import torch
 import torch.nn.functional as functional
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
+from torch.utils.tensorboard import SummaryWriter
 
 from .dataset import TradingDataset, collate_ob
 from .datatypes import OrderBlock
@@ -25,6 +29,7 @@ from .io import (
     save_labels_parquet,
 )
 from .losses import dual_loss
+from .metrics import compute_action_accuracy, compute_trade_metrics
 
 
 def build_loader_from_parquet(
@@ -168,6 +173,302 @@ def build_unlabeled_loader_from_parquet(
     )
 
 
+def _compute_class_weights(action_targets: np.ndarray) -> torch.Tensor:
+    """Compute inverse-frequency weights for action classes (ignore -100).
+
+    Args:
+        action_targets: 1D array of integer labels.
+
+    Returns:
+        Float tensor of shape (3,) with class weights normalised so
+        that the mean weight is 1.
+
+    """
+    unique, counts = np.unique(
+        action_targets[action_targets != -100], return_counts=True
+    )
+    weights = np.ones(3, dtype=np.float32)
+    for cls, cnt in zip(unique, counts):
+        if cls in (0, 1, 2):
+            weights[int(cls)] = 1.0 / cnt
+    weights = weights / weights.sum() * len(weights)
+    return torch.tensor(weights, dtype=torch.float32)
+
+
+def _prepare_batch(batch, device: torch.device):
+    """Unpack a 10-element batch and move tensors to device.
+
+    Returns a dict with all tensor fields + order_blocks (list).
+    """
+    (
+        prices, indicators, signals, tp, sl,
+        order_blocks, action_tgt, outcome_tgt,
+        pattern_tgt, start_indices,
+    ) = batch
+    return {
+        'prices': prices.to(device),
+        'indicators': indicators.to(device),
+        'signals': signals.to(device),
+        'tp': tp.to(device),
+        'sl': sl.to(device),
+        'order_blocks': order_blocks,          # list of lists, stays on CPU
+        'action_tgt': action_tgt.to(device),
+        'outcome_tgt': outcome_tgt.to(device),
+        'pattern_tgt': pattern_tgt.to(device),
+        'start_indices': start_indices,
+    }
+
+
+def _model_forward_loss(
+    model: torch.nn.Module,
+    batch_data: dict,
+    outcome_mode: str,
+    lambda_outcome: float,
+    lambda_pattern: float,
+    class_weight: torch.Tensor | None,
+):
+    """Run forward pass and compute loss.
+
+    Returns (loss, action_logits, outcome_logits).
+    """
+    action_logits, outcome_logits, pattern_logits = model(
+        batch_data['prices'],
+        batch_data['indicators'],
+        batch_data['signals'],
+        batch_data['tp'],
+        batch_data['sl'],
+        batch_data['order_blocks'],
+    )
+    loss, _, _, _ = dual_loss(
+        action_logits,
+        outcome_logits,
+        batch_data['action_tgt'],
+        batch_data['outcome_tgt'],
+        outcome_mode,
+        lambda_outcome,
+        pattern_logits=pattern_logits,
+        pattern_targets=batch_data['pattern_tgt'],
+        lambda_pattern=lambda_pattern,
+        class_weight=class_weight,
+    )
+    return loss, action_logits, outcome_logits
+
+
+# ---------------------------------------------------------------------------
+# Helper: validation metrics collection and computation
+# ---------------------------------------------------------------------------
+
+def _compute_val_metrics(
+    all_action_logits: list[torch.Tensor],
+    all_action_targets: list[torch.Tensor],
+    all_outcome_logits: list[torch.Tensor],
+    all_outcome_targets: list[torch.Tensor],
+    all_prices: list[torch.Tensor],
+    all_tp: list[torch.Tensor],
+    all_sl: list[torch.Tensor],
+    outcome_mode: str,
+    close_idx: int,
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Concatenate accumulated tensors and compute
+    action accuracy & trade metrics.
+
+    Returns:
+        (action_acc_dict, trade_metrics_dict)
+
+    """
+    cat_action_logits = torch.cat(all_action_logits)
+    cat_action_targets = torch.cat(all_action_targets)
+    action_acc = compute_action_accuracy(cat_action_logits, cat_action_targets)
+
+    # Trade metrics – may fail if no entry bars, handle gracefully
+    try:
+        cat_prices = torch.cat(all_prices, dim=0)
+        cat_tp = torch.cat(all_tp, dim=0)
+        cat_sl = torch.cat(all_sl, dim=0)
+        cat_outcome_logits = torch.cat(all_outcome_logits, dim=0)
+        cat_outcome_targets = torch.cat(all_outcome_targets, dim=0)
+
+        trade_metrics = compute_trade_metrics(
+            cat_prices.unsqueeze(0),
+            cat_outcome_logits.unsqueeze(0),
+            cat_action_targets.reshape(1, -1),
+            cat_outcome_targets.reshape(1, -1),
+            cat_tp.unsqueeze(0),
+            cat_sl.unsqueeze(0),
+            cat_prices.unsqueeze(0),
+            close_idx=close_idx,
+        )
+    except RuntimeError:
+        # Typically happens when shapes cannot be concatenated
+        trade_metrics = {
+            'win_rate': 0.0,
+            'profit_factor': 0.0,
+            'num_trades': 0
+        }
+    return action_acc, trade_metrics
+
+
+# ---------------------------------------------------------------------------
+# Main training loop (now clean and short)
+# ---------------------------------------------------------------------------
+
+# ─── ОБУЧЕНИЕ ОДНОЙ ЭПОХИ ─────────────────────────────────────────────
+def _run_train_epoch(
+    model: torch.nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    optimizer: torch.optim.Optimizer,
+    outcome_mode: str,
+    lambda_outcome: float,
+    lambda_pattern: float,
+    class_weight: torch.Tensor | None,
+) -> float:
+    """Train for one epoch, return average loss."""
+    model.train()
+    total_loss = 0.0
+    num_batches = 0
+    for batch in loader:
+        data = _prepare_batch(batch, device)
+        loss, _, _ = _model_forward_loss(
+            model, data, outcome_mode, lambda_outcome,
+            lambda_pattern, class_weight
+        )
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+        num_batches += 1
+    return total_loss / max(num_batches, 1)
+
+
+def _run_val_epoch(
+    model: torch.nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    outcome_mode: str,
+    lambda_outcome: float,
+    lambda_pattern: float,
+    close_idx: int,
+) -> tuple[float, dict[str, float], dict[str, float]]:
+    """Validate for one epoch.
+
+    Returns:
+        avg_val_loss, action_acc, trade_metrics
+
+    """
+    model.eval()
+    total_loss = 0.0
+    num_batches = 0
+    # Accumulators
+    a_logits, a_targets = [], []
+    o_logits, o_targets = [], []
+    prices_list, tp_list, sl_list = [], [], []
+
+    with torch.no_grad():
+        for batch in loader:
+            data = _prepare_batch(batch, device)
+            loss, action_logits, outcome_logits = _model_forward_loss(
+                model, data, outcome_mode, lambda_outcome,
+                lambda_pattern, None
+            )
+            total_loss += loss.item()
+            num_batches += 1
+
+            # Flatten and store
+            a_logits.append(action_logits.reshape(-1, 3))
+            a_targets.append(data['action_tgt'].reshape(-1))
+            o_logits.append(
+                outcome_logits.reshape(
+                    -1,
+                    (
+                        outcome_logits.size(-1)
+                        if outcome_mode == 'multiclass'
+                        else 1
+                    )
+                )
+            )
+            o_targets.append(data['outcome_tgt'].reshape(-1))
+            prices_list.append(data['prices'])
+            tp_list.append(data['tp'])
+            sl_list.append(data['sl'])
+
+    avg_loss = total_loss / max(num_batches, 1)
+    action_acc, trade_metrics = _compute_val_metrics(
+        a_logits, a_targets,
+        o_logits, o_targets,
+        prices_list, tp_list, sl_list,
+        outcome_mode, close_idx,
+    )
+    return avg_loss, action_acc, trade_metrics
+
+
+# ─── ЛОГИРОВАНИЕ ───────────────────────────────────────────────────────
+def _log_epoch(
+    writer: SummaryWriter | None,
+    epoch: int,
+    total_epochs: int,
+    train_loss: float,
+    val_loss: float,
+    action_acc: dict[str, float],
+    trade_metrics: dict[str, float],
+):
+    """Print console message and write TensorBoard scalars."""
+    msg = (
+        f'Epoch {epoch + 1}/{total_epochs} | '
+        f'Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | '
+        f'Acc: {action_acc["overall"]:.3f} (entry: {action_acc["entry"]:.3f}) | '  # noqa: E501
+        f'WR: {trade_metrics["win_rate"]:.3f} PF: {trade_metrics["profit_factor"]:.2f}'  # noqa: E501
+    )
+    print(msg)
+
+    if writer is not None:
+        writer.add_scalar('Loss/train', train_loss, epoch)
+        writer.add_scalar('Loss/val', val_loss, epoch)
+        writer.add_scalar('Acc/overall', action_acc['overall'], epoch)
+        writer.add_scalar('Acc/entry', action_acc['entry'], epoch)
+        writer.add_scalar('Trades/win_rate', trade_metrics['win_rate'], epoch)
+        writer.add_scalar(
+            'Trades/profit_factor',
+            trade_metrics['profit_factor'],
+            epoch
+        )
+
+
+# ─── ПРОВЕРКА BEST / EARLY STOPPING ───────────────────────────────────
+def _checkpoint_and_stop(
+    val_loss: float,
+    best_val_loss: float,
+    no_improve_count: int,
+    model: torch.nn.Module,
+    save_best: bool,
+    best_model_path: str | None,
+    early_stopping_patience: int,
+) -> tuple[float, int, bool]:
+    """Update best loss, save model, and decide whether to stop.
+
+    Returns:
+        (updated_best_val_loss, updated_no_improve_count, should_stop)
+
+    """
+    if save_best and val_loss < best_val_loss:
+        best_val_loss = val_loss
+        no_improve_count = 0
+        if best_model_path is not None:
+            torch.save(model.state_dict(), best_model_path)
+            print(f'  -> Best model saved (val_loss={best_val_loss:.4f})')
+    else:
+        no_improve_count += 1
+
+    should_stop = (
+        early_stopping_patience > 0
+        and no_improve_count >= early_stopping_patience
+    )
+    if should_stop:
+        print('  Early stopping.')
+    return best_val_loss, no_improve_count, should_stop
+
+
+# ─── ГЛАВНАЯ ФУНКЦИЯ (КОРОТКАЯ) ──────────────────────────────────────
 def train_one_round(
     model: torch.nn.Module,
     train_loader: DataLoader,
@@ -178,128 +479,47 @@ def train_one_round(
     lambda_outcome: float = 0.3,
     lr: float = 1e-4,
     lambda_pattern: float = 0.1,
+    class_weight: torch.Tensor | None = None,
+    log_dir: str | None = None,
+    save_best: bool = True,
+    best_model_path: str | None = None,
+    early_stopping_patience: int = 0,
+    close_idx: int = 3,
 ):
-    """Run a standard supervised training round.
-
-    Args:
-        model: The EntryExitTransformer model.
-        train_loader: DataLoader for training data.
-        val_loader: DataLoader for validation data.
-        epochs: Number of epochs.
-        device: Torch device.
-        outcome_mode: Passed to the loss function.
-        lambda_outcome: Weight of the outcome loss.
-        lr: Learning rate.
-        lambda_pattern: Weight of the pattern loss (default 0.1).
-            Ignored if pattern targets are empty.
-
-    Returns:
-        The trained model.
-
-    """
+    """Train the model, now with minimal code in the main loop."""
+    writer = SummaryWriter(log_dir) if log_dir else None
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', patience=2, factor=0.5
     )
+    best_val_loss = math.inf
+    no_improve_count = 0
 
     for epoch in range(epochs):
-        model.train()
-        total_loss = 0.0
-        num_batches = 0
-
-        for batch in train_loader:
-            (
-                prices,
-                indicators,
-                signals,
-                tp,
-                sl,
-                order_blocks,
-                action_tgt,
-                outcome_tgt,
-                pattern_tgt,
-            ) = batch
-            prices = prices.to(device)
-            indicators = indicators.to(device)
-            signals = signals.to(device)
-            tp = tp.to(device)
-            sl = sl.to(device)
-            action_tgt = action_tgt.to(device)
-            outcome_tgt = outcome_tgt.to(device)
-            pattern_tgt = pattern_tgt.to(device)
-
-            optimizer.zero_grad()
-            action_logits, outcome_logits, pattern_logits = model(
-                prices, indicators, signals, tp, sl, order_blocks
-            )
-            loss, _, _, _ = dual_loss(
-                action_logits,
-                outcome_logits,
-                action_tgt,
-                outcome_tgt,
-                outcome_mode,
-                lambda_outcome,
-                pattern_logits=pattern_logits,
-                pattern_targets=pattern_tgt,
-                lambda_pattern=lambda_pattern,
-            )
-            loss.backward()
-            optimizer.step()
-
-            total_loss += loss.item()
-            num_batches += 1
-
-        avg_loss = total_loss / max(num_batches, 1)
-
-        model.eval()
-        val_loss = 0.0
-        val_batches = 0
-        with torch.no_grad():
-            for batch in val_loader:
-                (
-                    prices,
-                    indicators,
-                    signals,
-                    tp,
-                    sl,
-                    order_blocks,
-                    action_tgt,
-                    outcome_tgt,
-                    pattern_tgt,
-                ) = batch
-                prices = prices.to(device)
-                indicators = indicators.to(device)
-                signals = signals.to(device)
-                tp = tp.to(device)
-                sl = sl.to(device)
-                action_tgt = action_tgt.to(device)
-                outcome_tgt = outcome_tgt.to(device)
-                pattern_tgt = pattern_tgt.to(device)
-
-                action_logits, outcome_logits, pattern_logits = model(
-                    prices, indicators, signals, tp, sl, order_blocks
-                )
-                loss, _, _, _ = dual_loss(
-                    action_logits,
-                    outcome_logits,
-                    action_tgt,
-                    outcome_tgt,
-                    outcome_mode,
-                    lambda_outcome,
-                    pattern_logits=pattern_logits,
-                    pattern_targets=pattern_tgt,
-                    lambda_pattern=lambda_pattern,
-                )
-                val_loss += loss.item()
-                val_batches += 1
-
-        avg_val_loss = val_loss / max(val_batches, 1)
-        print(
-            f'Epoch {epoch + 1}/{epochs} | '
-            f'Train Loss: {avg_loss:.4f} | Val Loss: {avg_val_loss:.4f}'
+        train_loss = _run_train_epoch(
+            model, train_loader, device, optimizer,
+            outcome_mode, lambda_outcome, lambda_pattern, class_weight
         )
-        scheduler.step(avg_val_loss)
+        val_loss, action_acc, trade_metrics = _run_val_epoch(
+            model, val_loader, device,
+            outcome_mode, lambda_outcome, lambda_pattern, close_idx
+        )
+        _log_epoch(
+            writer, epoch, epochs,
+            train_loss, val_loss, action_acc,
+            trade_metrics
+        )
+        scheduler.step(val_loss)
 
+        best_val_loss, no_improve_count, stop = _checkpoint_and_stop(
+            val_loss, best_val_loss, no_improve_count, model,
+            save_best, best_model_path, early_stopping_patience
+        )
+        if stop:
+            break
+
+    if writer:
+        writer.close()
     return model
 
 
@@ -309,20 +529,7 @@ def _check_rr_valid(
     sl_price: float,
     min_rr: float,
 ) -> bool:
-    """Check if a potential entry meets the minimum risk-reward ratio.
-
-    The direction (long/short) is inferred from relative TP/SL positions.
-
-    Args:
-        entry_price: Close price used as entry.
-        tp_price: Take-profit level (absolute).
-        sl_price: Stop-loss level (absolute).
-        min_rr: Minimum required reward-to-risk ratio.
-
-    Returns:
-        True if the trade setup is valid and RR >= min_rr.
-
-    """
+    """Check if a potential entry meets the minimum risk-reward ratio."""
     if entry_price > sl_price:  # long
         if not (sl_price < entry_price < tp_price):
             return False
@@ -339,19 +546,7 @@ def _determine_pseudo_outcome(
     outcome_mode: str,
     outcome_threshold: float,
 ) -> float | None:
-    """Convert raw outcome logit to a pseudo-outcome value if confident.
-
-    Args:
-        outcome_logit: The outcome logits tensor for a single bar
-            (shape depends on mode).
-        outcome_mode: 'binary', 'multiclass', or 'regression'.
-        outcome_threshold: Confidence threshold.
-
-    Returns:
-        A float outcome value if the model is confident enough,
-        otherwise None.
-
-    """
+    """Convert raw outcome logit to pseudo-outcome if confident."""
     if outcome_mode == 'binary':
         prob = torch.sigmoid(outcome_logit)
         if prob > outcome_threshold:
@@ -376,37 +571,25 @@ def _generate_pseudo_labels_batch(
     outcome_threshold: float,
     min_rr: float,
     close_idx: int,
-    batch_idx: int,
-    batch_size: int,
     seq_len: int,
 ) -> list[tuple[int, int, float]]:
     """Generate pseudo-labels for one batch of unlabeled data.
 
-    For each bar where the current action label is ignore (-100),
-    the model's prediction is examined.  If the action probability
-    exceeds ``action_threshold`` and the outcome confidence meets
-    ``outcome_threshold``, a pseudo-label is created.
-
-    For entry actions (class 1), an additional risk-reward check
-    is performed using the bar's TP/SL levels.
+    Uses the global bar index from the batch for label alignment.
 
     Args:
         model: The model in eval mode.
-        batch: A tuple as returned by the unlabeled DataLoader
-            (9 elements, last is pattern_targets ignored here).
+        batch: Tuple as returned by DataLoader (10 elements).
         device: Torch device.
         outcome_mode: See ``_determine_pseudo_outcome``.
         action_threshold: Minimum probability for a predicted action.
         outcome_threshold: Minimum confidence for outcome.
         min_rr: Minimum RR for entry pseudo-labels.
-        close_idx: Index of the close price within the price tensor
-            (usually 3 for OHLCV).
-        batch_idx: Zero-based index of this batch.
-        batch_size: Actual batch size (B).
+        close_idx: Index of close price within price tensor.
         seq_len: Sequence length (T).
 
     Returns:
-        A list of (global_index, pseudo_action, pseudo_outcome) tuples.
+        List of (global_bar_index, pseudo_action, pseudo_outcome) tuples.
 
     """
     (
@@ -419,6 +602,7 @@ def _generate_pseudo_labels_batch(
         action_tgt,
         outcome_tgt,
         _pattern_tgt,
+        start_indices,
     ) = batch
     prices = prices.to(device)
     indicators = indicators.to(device)
@@ -461,8 +645,8 @@ def _generate_pseudo_labels_batch(
             continue
 
         pseudo_action = int(pred_action[bi, ti].item())
-        global_idx = batch_idx * batch_size * t + bi * t + ti
-        new_pseudo.append((global_idx, pseudo_action, pseudo_outcome))
+        global_bar = int(start_indices[bi].item()) + ti
+        new_pseudo.append((global_bar, pseudo_action, pseudo_outcome))
 
     return new_pseudo
 
@@ -474,12 +658,9 @@ def _update_labels_parquet(
 ) -> None:
     """Update the labels Parquet file with new pseudo-labels.
 
-    Loads the existing labels file, modifies the action and outcome
-    arrays at the specified global indices, and saves the result.
-
     Args:
         labels_path: Path to labels.parquet.
-        new_pseudo: List of (global_idx, action, outcome) pseudo-labels.
+        new_pseudo: List of (global_bar_index, action, outcome) tuples.
         outcome_mode: Used to determine default outcome fill value.
 
     """
@@ -495,17 +676,137 @@ def _update_labels_parquet(
 
     action_arr = df_lbl['action'].to_numpy()
     outcome_arr = df_lbl['outcome'].to_numpy()
+    n_rows = len(action_arr)
 
-    for global_idx, pseudo_action, pseudo_outcome in new_pseudo:
-        if 0 <= global_idx < len(action_arr):
-            action_arr[global_idx] = pseudo_action
-            outcome_arr[global_idx] = pseudo_outcome
+    for global_bar, pseudo_action, pseudo_outcome in new_pseudo:
+        if 0 <= global_bar < n_rows:
+            action_arr[global_bar] = pseudo_action
+            outcome_arr[global_bar] = pseudo_outcome
 
     df_lbl = df_lbl.with_columns([
         pl.Series('action', action_arr),
         pl.Series('outcome', outcome_arr),
     ])
     save_labels_parquet(df_lbl, labels_path)
+
+
+def _split_train_val(
+    loader: DataLoader,
+    val_split: float,
+    batch_size: int,
+) -> tuple[DataLoader, DataLoader]:
+    """Split the dataset of a loader into training and validation loaders.
+
+    Args:
+        loader: Loader whose dataset is a TradingDataset.
+        val_split: Fraction of data to use for validation (0 < val_split < 1).
+        batch_size: Batch size for both returned loaders.
+
+    Returns:
+        train_loader, val_loader
+
+    """
+    dataset = loader.dataset
+    # Explicitly confirm it's a TradingDataset so that len() is safe.
+    assert isinstance(dataset, TradingDataset), (
+        'loader.dataset must be a TradingDataset'
+    )
+    if val_split <= 0:
+        return loader, loader
+
+    n_val = int(len(dataset) * val_split)
+    n_train = len(dataset) - n_val
+    if n_val == 0:
+        raise ValueError('val_split too small, validation set is empty')
+    train_ds, val_ds = random_split(dataset, [n_train, n_val])
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=collate_ob,
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=collate_ob,
+    )
+    return train_loader, val_loader
+
+
+def _self_training_round(
+    model: torch.nn.Module,
+    round_idx: int,
+    num_rounds: int,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    unlabeled_loader: DataLoader,
+    device: torch.device,
+    outcome_mode: str,
+    lambda_outcome: float,
+    lr: float,
+    epochs_per_round: int,
+    action_threshold: float,
+    outcome_threshold: float,
+    min_rr: float,
+    close_idx: int,
+    seq_len: int,
+    class_weight: torch.Tensor | None,
+    log_dir: str | None,
+    save_best: bool,
+    best_model_path: str | None,
+    early_stopping_patience: int,
+) -> list[tuple[int, int, float]] | None:
+    """Execute one round of self-training.
+
+    Returns:
+        List of newly generated pseudo-labels, or None if no new labels.
+
+    """
+    print(f'\n=== Self-training round {round_idx + 1}/{num_rounds} ===')
+    model = train_one_round(
+        model,
+        train_loader,
+        val_loader,
+        epochs_per_round,
+        device,
+        outcome_mode,
+        lambda_outcome,
+        lr,
+        lambda_pattern=0.1,  # pattern loss unused in self-training
+        class_weight=class_weight,
+        log_dir=log_dir,
+        save_best=save_best,
+        best_model_path=best_model_path,
+        early_stopping_patience=early_stopping_patience,
+        close_idx=close_idx,
+    )
+
+    model.eval()
+    all_new_pseudo = []
+    with torch.no_grad():
+        for batch in unlabeled_loader:
+            batch_pseudo = _generate_pseudo_labels_batch(
+                model,
+                batch,
+                device,
+                outcome_mode,
+                action_threshold,
+                outcome_threshold,
+                min_rr,
+                close_idx,
+                seq_len,
+            )
+            all_new_pseudo.extend(batch_pseudo)
+
+    if not all_new_pseudo:
+        print('No new pseudo-labels, stopping self-training.')
+        return None
+    print(
+        f'Generated {len(all_new_pseudo)} pseudo-labels. '
+        'Updating labels.parquet...'
+    )
+    return all_new_pseudo
 
 
 def self_training_loop(
@@ -531,124 +832,56 @@ def self_training_loop(
     min_rr: float = 1 / 3,
     close_idx: int = 3,
     save_model_path: str | None = None,
+    val_split: float = 0.2,
+    log_dir: str | None = None,
+    early_stopping_patience: int = 0,
 ):
-    """Run iterative self-training using a separate pool of unlabeled data.
-
-    Each round:
-    1. Train on the current labeled set.
-    2. Generate pseudo-labels on the unlabeled set.
-    3. Add confident pseudo-labels to the labeled set.
-    4. (Optionally) save a model checkpoint.
-
-    Args:
-        model: The EntryExitTransformer to train.
-        features_path: Labeled features.parquet.
-        labels_path: Labels.parquet (will be updated in-place).
-        features_path_unlabeled: Unlabeled features.parquet.
-        order_blocks: List of all order blocks.
-        price_cols: Names of price columns.
-        ind_cols: Names of indicator columns.
-        sig_cols: Names of signal columns.
-        tp_sl_cols: Names of TP/SL columns.
-        seq_len: Sequence length.
-        batch_size: Batch size for both loaders.
-        device: Torch device.
-        outcome_mode: Outcome prediction mode.
-        lambda_outcome: Outcome loss weight.
-        lr: Learning rate.
-        epochs_per_round: Training epochs per round.
-        num_rounds: Maximum number of self-training rounds.
-        action_threshold: Confidence threshold for action.
-        outcome_threshold: Confidence threshold for outcome.
-        min_rr: Minimum RR for entry pseudo-labels.
-        close_idx: Index of close price in price features.
-        save_model_path: If not None, saves model after each round with
-            suffix '_roundN.pt'.
-
-    Returns:
-        The trained model.
-
-    """
-    labeled_loader, _ = build_loader_from_parquet(
-        features_path,
-        labels_path,
-        order_blocks,
-        seq_len,
-        price_cols,
-        ind_cols,
-        sig_cols,
-        tp_sl_cols,
-        batch_size=batch_size,
-        shuffle=True,
+    """Run iterative self-training using a separate pool of unlabeled data."""
+    # ---------- Initial labeled loader ----------
+    loader, df = build_loader_from_parquet(
+        features_path, labels_path, order_blocks,
+        seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
+        batch_size=batch_size, shuffle=True,
     )
-    val_loader = labeled_loader
+    train_loader, val_loader = _split_train_val(loader, val_split, batch_size)
+    class_weight = _compute_class_weights(df['action'].to_numpy())
 
+    # ---------- Unlabeled loader ----------
     unlabeled_loader = build_unlabeled_loader_from_parquet(
-        features_path_unlabeled,
-        order_blocks,
-        seq_len,
-        price_cols,
-        ind_cols,
-        sig_cols,
-        tp_sl_cols,
-        batch_size=batch_size,
-        outcome_mode=outcome_mode,
+        features_path_unlabeled, order_blocks,
+        seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
+        batch_size=batch_size, outcome_mode=outcome_mode,
     )
 
+    # ---------- Self-training rounds ----------
     for round_idx in range(num_rounds):
-        print(f'Self-training round {round_idx + 1}/{num_rounds}')
-
-        model = train_one_round(
-            model,
-            labeled_loader,
-            val_loader,
-            epochs_per_round,
-            device,
-            outcome_mode,
-            lambda_outcome,
-            lr,
+        pseudo_labels = _self_training_round(
+            model, round_idx, num_rounds,
+            train_loader, val_loader, unlabeled_loader,
+            device, outcome_mode, lambda_outcome, lr,
+            epochs_per_round, action_threshold, outcome_threshold,
+            min_rr, close_idx, seq_len, class_weight, log_dir,
+            save_best=True,
+            best_model_path=(
+                f'{save_model_path}_best.pt'
+                if save_model_path
+                else None
+            ),
+            early_stopping_patience=early_stopping_patience,
         )
-
-        model.eval()
-        all_new_pseudo = []
-        with torch.no_grad():
-            for batch_idx, batch in enumerate(unlabeled_loader):
-                batch_pseudo = _generate_pseudo_labels_batch(
-                    model,
-                    batch,
-                    device,
-                    outcome_mode,
-                    action_threshold,
-                    outcome_threshold,
-                    min_rr,
-                    close_idx,
-                    batch_idx,
-                    batch_size,
-                    seq_len,
-                )
-                all_new_pseudo.extend(batch_pseudo)
-
-        if not all_new_pseudo:
-            print('No new pseudo-labels, stopping self-training.')
+        if pseudo_labels is None:
             break
-        print(
-            f'Generated {len(all_new_pseudo)} pseudo-labels. '
-            'Updating labels.parquet...'
+
+        _update_labels_parquet(labels_path, pseudo_labels, outcome_mode)
+
+        # Rebuild labeled loaders with updated labels
+        loader, df = build_loader_from_parquet(
+            features_path, labels_path, order_blocks,
+            seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
+            batch_size=batch_size, shuffle=True,
         )
-
-        _update_labels_parquet(labels_path, all_new_pseudo, outcome_mode)
-
-        labeled_loader, _ = build_loader_from_parquet(
-            features_path,
-            labels_path,
-            order_blocks,
-            seq_len,
-            price_cols,
-            ind_cols,
-            sig_cols,
-            tp_sl_cols,
-            batch_size=batch_size,
-            shuffle=True,
+        train_loader, val_loader = _split_train_val(
+            loader, val_split, batch_size
         )
 
         if save_model_path:

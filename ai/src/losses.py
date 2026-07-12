@@ -19,6 +19,7 @@ def dual_loss(
     pattern_logits: torch.Tensor | None = None,
     pattern_targets: torch.Tensor | None = None,
     lambda_pattern: float = 0.1,
+    class_weight: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """Combined loss: action + λ_outcome * outcome + λ_pattern * pattern.
 
@@ -36,6 +37,9 @@ def dual_loss(
         pattern_logits: (B, T, n_patterns) or None.
         pattern_targets: (B, T, n_patterns) or None.
         lambda_pattern: Weight for pattern loss (default 0.1).
+        class_weight: Optional class weights for action cross-entropy.
+            Tensor of shape (3,), passed to
+            ``torch.nn.functional.cross_entropy``.
 
     Returns:
         tuple of four scalar tensors:
@@ -49,6 +53,7 @@ def dual_loss(
         action_logits.reshape(-1, action_logits.size(-1)),
         action_targets.reshape(-1),
         ignore_index=-100,
+        weight=class_weight,
     )
     entry_mask = action_targets == 1
     if outcome_mode == 'binary':

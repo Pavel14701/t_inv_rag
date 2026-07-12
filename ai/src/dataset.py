@@ -2,7 +2,7 @@
 
 Each sample includes price, indicator, signal, TP/SL tensors,
 a list of relevant order blocks, action/outcome targets, and
-optionally pattern targets.
+optionally pattern targets, plus the global start index.
 """
 
 from __future__ import annotations
@@ -61,6 +61,7 @@ class TradingDataset(Dataset):
         self.ind_feats = ind_feats
         self.sig_feats = sig_feats
         self.tp_sl_feats = tp_sl_feats
+
         # Explicitly declare the type to avoid type-checker confusion
         self.pattern_targets: torch.Tensor | None = None
         if pattern_targets is not None:
@@ -80,7 +81,8 @@ class TradingDataset(Dataset):
 
         Returns:
             tuple: (prices, indicators, signals, tp, sl, ob_window,
-                    action_target, outcome_target, pattern_target)
+                    action_target, outcome_target, pattern_target,
+                    start_bar)
 
         """
         window = self.data[idx: idx + self.seq_len]
@@ -126,6 +128,7 @@ class TradingDataset(Dataset):
             action_target,
             outcome_target,
             pattern_target,
+            start_bar,
         )
 
 
@@ -133,7 +136,8 @@ def collate_ob(batch):
     """Collate function for DataLoader.
 
     Stacks all tensors and collects order block lists.
-    The batch now contains 9 elements: the 9th is pattern_targets.
+    The batch now contains 10 elements: the 10th is a tensor of
+    global start indices for each window.
 
     Args:
         batch: List of samples as returned by TradingDataset.__getitem__.
@@ -151,6 +155,9 @@ def collate_ob(batch):
     action_targets = torch.stack([item[6] for item in batch])
     outcome_targets = torch.stack([item[7] for item in batch])
     pattern_targets = torch.stack([item[8] for item in batch])
+    start_indices = torch.tensor(
+        [item[9] for item in batch], dtype=torch.long
+    )
     return (
         prices,
         indicators,
@@ -161,4 +168,5 @@ def collate_ob(batch):
         action_targets,
         outcome_targets,
         pattern_targets,
+        start_indices,
     )

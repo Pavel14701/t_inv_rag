@@ -26,7 +26,12 @@ import torch
 
 from .datatypes import OrderBlock
 from .io import load_order_blocks_parquet
-from .training import build_loader_from_parquet, train_one_round
+from .training import (
+    _compute_class_weights,
+    _split_train_val,
+    build_loader_from_parquet,
+    train_one_round,
+)
 from .transformer import EntryExitTransformer
 
 
@@ -49,13 +54,20 @@ def quick_train(
     num_layers: int = 4,
     num_heads: int = 8,
     device: str | None = None,
+    val_path: str | None = None,
+    val_split: float = 0.2,
+    class_weight: bool = True,
+    log_dir: str | None = None,
+    early_stopping_patience: int = 3,
+    save_best_path: str | None = None,
     **model_kwargs,
 ) -> EntryExitTransformer:
     """Train the Entry‑Exit transformer in a single call.
 
     All data is read from Parquet files that must exist and be properly
-    formatted.  The function creates a model, builds a DataLoader,
-    trains for the given number of epochs, and returns the trained model.
+    formatted.  The function creates a model, builds a DataLoader
+    (optionally with a validation split), trains for the given number of
+    epochs, and returns the trained model.
 
     Args:
         features: Path to ``features.parquet``.  Must contain at least
@@ -84,6 +96,18 @@ def quick_train(
         num_heads: Number of attention heads (default 8).
         device: Torch device string (e.g. 'cuda', 'cpu').  Auto-detected
             if not provided.
+        val_path: Optional path to a separate validation Parquet file.
+            If not provided, a random split of the training data is used
+            (size controlled by ``val_split``).
+        val_split: Fraction of training data to use for validation when
+            ``val_path`` is not specified (default 0.2).
+        class_weight: If True, compute inverse-frequency class weights
+            for the action loss (default True).
+        log_dir: If set, TensorBoard logs are written there.
+        early_stopping_patience: Stop after this many epochs without
+            improvement (default 3). 0 disables.
+        save_best_path: If set, the model with the lowest validation loss
+            is saved to this path.
         **model_kwargs: Additional keyword arguments forwarded to
             :class:`EntryExitTransformer` constructor.
 
@@ -91,14 +115,16 @@ def quick_train(
         Trained :class:`EntryExitTransformer` model.
 
     """
-    # ---------- Device resolution ----------
+    # ---------- Device ----------
     if device is None:
         device_str = 'cuda' if torch.cuda.is_available() else 'cpu'
     else:
         device_str = device
     torch_device = torch.device(device_str)
+
     # ---------- Load order blocks ----------
     obs: list[OrderBlock] = load_order_blocks_parquet(order_blocks)
+
     # ---------- Build model ----------
     model = EntryExitTransformer(
         n_price_feats=len(price_cols),
@@ -111,8 +137,9 @@ def quick_train(
         outcome_mode=outcome_mode,
         **model_kwargs,
     ).to(torch_device)
-    # ---------- Build loader ----------
-    train_loader, _ = build_loader_from_parquet(
+
+    # ---------- Build labeled loader ----------
+    train_loader_all, df = build_loader_from_parquet(
         features_path=features,
         labels_path=labels,
         order_blocks=obs,
@@ -125,9 +152,39 @@ def quick_train(
         shuffle=True,
         pattern_cols=pattern_cols,
     )
-    # For simplicity we use the same loader for validation;
-    # in practice you'd want a separate validation file.
-    val_loader = train_loader
+
+    # ---------- Validation split ----------
+    if val_path:
+        # Separate validation file provided
+        val_loader, _ = build_loader_from_parquet(
+            features_path=val_path,
+            labels_path=labels,  # reuse same labels? Typically labels
+                                 # are per-bar and should be matched;
+                                 # here we assume the same labels file
+                                 # works for the validation features.
+            order_blocks=obs,
+            seq_len=seq_len,
+            price_cols=price_cols,
+            ind_cols=ind_cols or [],
+            sig_cols=sig_cols,
+            tp_sl_cols=tp_sl_cols,
+            batch_size=batch_size,
+            shuffle=False,
+            pattern_cols=pattern_cols,
+        )
+        train_loader = train_loader_all
+    else:
+        # Random split from training data
+        train_loader, val_loader = _split_train_val(
+            train_loader_all, val_split, batch_size
+        )
+
+    # ---------- Class weights (optional) ----------
+    cw = (
+        _compute_class_weights(df['action'].to_numpy())
+        if class_weight else None
+    )
+
     # ---------- Train ----------
     model = train_one_round(
         model=model,
@@ -139,10 +196,18 @@ def quick_train(
         lambda_outcome=lambda_outcome,
         lr=lr,
         lambda_pattern=0.1 if pattern_cols else 0.0,
+        class_weight=cw,
+        log_dir=log_dir,
+        save_best=True,
+        best_model_path=save_best_path,
+        early_stopping_patience=early_stopping_patience,
+        close_idx=3,  # default OHLCV
     )
-    # Ensure model is the correct type (satisfy type checker)
+
+    # Ensure the returned module is indeed an EntryExitTransformer
     assert isinstance(model, EntryExitTransformer), (
-        'train_one_round returned unexpected type'
+        'train_one_round returned an unexpected type'
     )
+
     print('Training finished.')
     return model

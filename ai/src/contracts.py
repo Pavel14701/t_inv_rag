@@ -18,15 +18,14 @@ def _check_tensor(
         torch.float64,
     ),
 ):
-    """Verify a tensor's basic properties: type, dimensionality, dtype,
-    and finiteness.
+    """Verify a tensor's basic properties.
 
     Args:
         t: Tensor to check.
         name: Human-readable name used in error messages.
         expected_dims: Expected number of dimensions.
-        allowed_dtypes: Tuple of acceptable dtypes. Defaults to
-            float32 and float64.
+        allowed_dtypes: Tuple of acceptable dtypes.
+            Defaults to float32 and float64.
 
     Raises:
         TypeError: If ``t`` is not a ``torch.Tensor`` or its dtype is
@@ -44,7 +43,7 @@ def _check_tensor(
     if t.dtype not in allowed_dtypes:
         raise TypeError(
             f'{name}: dtype must be one of {allowed_dtypes}, '
-            'got {t.dtype}. float32 is recommended.'
+            f'got {t.dtype}. float32 is recommended.'
         )
     if not torch.isfinite(t).all():
         raise ValueError(f'{name}: contains NaN or Inf')
@@ -328,9 +327,9 @@ def validate_batch(
 ):
     """Run all validations on a single batch from the DataLoader.
 
-    The batch is expected to be a tuple of 8 elements:
+    The batch is expected to be a tuple of 10 elements:
     (prices, indicators, signals, tp, sl, order_blocks,
-        action_targets, outcome_targets).
+        action_targets, outcome_targets, pattern_targets, start_indices).
 
     Args:
         batch: Tuple of tensors and lists as returned by ``collate_ob``.
@@ -342,14 +341,13 @@ def validate_batch(
         outcome_mode: Outcome prediction mode.
 
     Raises:
-        ValueError: If batch length != 8, shapes mismatch across tensors,
-            or any individual validation fails.
+        ValueError: If batch length != 10, shapes mismatch, etc.
         TypeError: From component validators.
 
     """
-    if len(batch) != 8:
+    if len(batch) != 10:
         raise ValueError(
-            f'Expected batch of 8 elements, got {len(batch)}'
+            f'Expected batch of 10 elements, got {len(batch)}'
         )
     (
         prices,
@@ -360,6 +358,8 @@ def validate_batch(
         order_blocks,
         action_tgt,
         outcome_tgt,
+        pattern_tgt,
+        start_indices,
     ) = batch
     validate_prices(prices, n_price_feats)
     validate_indicators(indicators, n_ind_feats)
@@ -368,6 +368,7 @@ def validate_batch(
     validate_order_blocks(order_blocks, expected_batch_size, seq_len)
     validate_action_targets(action_tgt)
     validate_outcome_targets(outcome_tgt, outcome_mode)
+
     b = prices.shape[0]
     t = prices.shape[1]
     if t != seq_len:
@@ -381,12 +382,23 @@ def validate_batch(
         ('sl', sl),
         ('action_targets', action_tgt),
         ('outcome_targets', outcome_tgt),
+        ('pattern_targets', pattern_tgt),
     ]:
         if tensor.shape[0] != b or tensor.shape[1] != t:
             raise ValueError(
                 f'{name} shape {tensor.shape} inconsistent '
                 f'with (B={b}, T={t})'
             )
+    # Проверка start_indices
+    if start_indices.shape != (b,):
+        raise ValueError(
+            f'start_indices shape {start_indices.shape} != ({b},)'
+        )
+    if pattern_tgt.dtype not in (torch.float32, torch.float64):
+        print(
+            'Warning: pattern_targets should be float32; '
+            f'got {pattern_tgt.dtype}.'
+        )
     if prices.dtype == torch.float64:
         print(
             'Warning: prices are float64, consider '

@@ -7,9 +7,9 @@ order blocks, then train a transformer model to predict three things per bar:
 
 * **action** - hold (0), entry (1), exit (2), or ignore (-100)
 * **outcome** - win/loss (binary), class label (multiclass), or R-multiple
-  (regression)
+    (regression)
 * **pattern** - multi-label pattern classification (optional, trained only
-  when ``pattern_cols`` are provided)
+    when ``pattern_cols`` are provided)
 
 The system supports both supervised learning on pre-labelled data and
 semi-supervised *self-training*, where the model iteratively labels an
@@ -44,13 +44,13 @@ Module overview
     from a large 2D array and filters order blocks that fall inside each
     window.  Now optionally returns pattern targets.
     :func:`collate_ob` - collate function for DataLoader that handles
-    9 elements per sample.
+    10 elements per sample (including global bar indices).
 
 **losses**
     :func:`dual_loss` - combines a cross-entropy loss on actions, an
     auxiliary outcome loss applied only to entry bars, and an optional
-    multi-label pattern loss.  Works transparently whether pattern targets
-    are provided or not.
+    multi-label pattern loss.  Supports class weighting for imbalanced
+    actions.
 
 **transformer**
     :class:`EntryExitTransformer` - the main model.  It contains:
@@ -71,18 +71,22 @@ Module overview
     :func:`build_unlabeled_loader_from_parquet`
         Creates a DataLoader with all targets set to ignore (patterns empty).
     :func:`train_one_round`
-        Standard supervised training loop with AdamW and
-        ReduceLROnPlateau.  Accepts an optional ``lambda_pattern``.
-    :func:`_generate_pseudo_labels_batch`
-        (internal) Pseudo-label generation, ignores pattern targets.
-    :func:`_update_labels_parquet`
-        (internal) Merges new pseudo-labels into the existing labels file.
+        Standard supervised training loop with AdamW, ReduceLROnPlateau,
+        validation metrics, checkpointing, early stopping, and optional
+        TensorBoard logging.
     :func:`self_training_loop`
         Iterative self-training: train → pseudo-label → update labels →
         repeat.
 
+**metrics**
+    :func:`compute_action_accuracy`
+        Per-class and overall accuracy for action predictions.
+    :func:`compute_trade_metrics`
+        Simulates trades on validation data to estimate win rate and
+        profit factor (rough monitoring, not a full backtest).
+
 **contracts**
-    :func:`validate_batch` - validates the full 9-element batch structure,
+    :func:`validate_batch` - validates the full 10-element batch structure,
     tensor properties, label ranges, and order block integrity.
 
 **quickstart**
@@ -200,6 +204,10 @@ from .io import (
     save_labels_parquet,
 )
 from .losses import dual_loss
+from .metrics import (
+    compute_action_accuracy,
+    compute_trade_metrics,
+)
 from .quickstart import quick_train
 from .training import (
     build_loader_from_parquet,
@@ -226,5 +234,7 @@ __all__ = [
     'train_one_round',
     'self_training_loop',
     'validate_batch',
+    'compute_action_accuracy',
+    'compute_trade_metrics',
     'quick_train',
 ]
