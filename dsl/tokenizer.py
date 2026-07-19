@@ -18,10 +18,10 @@ class Token(NamedTuple):
 class Tokenizer:
     """Lexical analyzer for DSL expressions.
 
-    Converts input string into a sequence of tokens.
-    Supports numbers, identifiers, keywords
-    (let, in, and, or, not, rising, falling), comparison operators,
-    arithmetic operators, parentheses, brackets, comma, dot, and assignment.
+    Converts input string into a sequence of tokens. Supports numbers,
+    identifiers, keywords (let, in, and, or, not, rising, falling),comparison
+    operators, arithmetic operators, parentheses, brackets, comma, dot
+    and assignment.
     """
 
     def __init__(self) -> None:
@@ -29,10 +29,11 @@ class Tokenizer:
 
         Order is important: longer operators (>=, <=, ==, !=) must come before
         shorter ones (<, >, =) to avoid incorrect matching.
+        Keywords must come before IDENT to be recognized as specific
+        token types.
         """
         self.spec = [
-            ('NUMBER', r'\d+(\.\d+)?'),
-            ('IDENT', r'[a-zA-Z_][a-zA-Z0-9_]*'),
+            # Keywords (must come before IDENT)
             ('LET', r'let\b'),
             ('IN', r'in\b'),
             ('AND', r'and\b'),
@@ -40,18 +41,25 @@ class Tokenizer:
             ('NOT', r'not\b'),
             ('RISING', r'rising\b'),
             ('FALLING', r'falling\b'),
+            # Identifier (must come after keywords)
+            ('IDENT', r'[a-zA-Z_][a-zA-Z0-9_]*'),
+            # Number
+            ('NUMBER', r'\d+(\.\d+)?'),
+            # Comparison operators (longer first)
             ('GE', r'>='),
             ('LE', r'<='),
             ('EQ', r'=='),
             ('NE', r'!='),
             ('LT', r'<'),
             ('GT', r'>'),
+            # Arithmetic operators
             ('PLUS', r'\+'),
             ('MINUS', r'-'),
             ('MUL', r'\*'),
             ('DIV', r'/'),
             ('MOD', r'%'),
             ('POW', r'\^'),
+            # Punctuation
             ('LPAREN', r'\('),
             ('RPAREN', r'\)'),
             ('LBRACKET', r'\['),
@@ -59,13 +67,14 @@ class Tokenizer:
             ('COMMA', r','),
             ('ASSIGN', r'='),
             ('DOT', r'\.'),
+            # Whitespace and unknown
             ('WHITESPACE', r'\s+'),
             ('UNKNOWN', r'.'),
         ]
         self.regex = re.compile(
             '|'.join(
-                f'(?P<{name}>{pattern})'
-                for name, pattern in self.spec
+                f'(?P<{name}>{pattern})' for name,
+                pattern in self.spec
             )
         )
 
@@ -92,11 +101,7 @@ class Tokenizer:
                 line += value.count('\n')
                 pos = mo.end()
                 continue
-            if kind == 'UNKNOWN':
-                raise ParseError(
-                    f"Unexpected character '{value}' at line {line}"
-                )
-            if kind is None:
+            if kind == 'UNKNOWN' or kind is None:
                 raise ParseError(
                     f"Unexpected character '{value}' at line {line}"
                 )

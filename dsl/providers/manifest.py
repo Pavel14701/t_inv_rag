@@ -163,18 +163,12 @@ class ManifestValidator:
         self,
         indicator: str,
         param_name: str,
-        value: Any,
+        value: Any
     ) -> bool:
         """Validate a single parameter against the manifest schema.
 
-        Args:
-            indicator: Name of the indicator.
-            param_name: Name of the parameter.
-            value: Value to validate.
-
-        Returns:
-            True if parameter is valid, False otherwise.
-
+        For numeric parameters (integer/float), range constraints are applied.
+        For 'any' type, only type checks are performed (no range constraints).
         """
         if indicator not in self.manifest.indicators:
             return False
@@ -182,17 +176,20 @@ class ManifestValidator:
         param_schema = schema.parameters.get(param_name)
         if not param_schema:
             return True  # Undefined parameters are allowed
-        # Type check
+        # Type checks
         if param_schema.type == 'integer' and not isinstance(value, int):
             return False
         if param_schema.type == 'float' and not isinstance(
             value, (int, float)
         ):
             return False
-        # Range checks
-        if param_schema.min is not None and value < param_schema.min:
-            return False
-        return param_schema.max is None or value <= param_schema.max
+        # Range checks only for numeric values when constraints are defined
+        if isinstance(value, (int, float)):
+            if param_schema.min is not None and value < param_schema.min:
+                return False
+            if param_schema.max is not None and value > param_schema.max:
+                return False
+        return True
 
     def validate(
         self,
