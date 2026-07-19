@@ -13,6 +13,7 @@ dependencies = [
     "faststream[rabbit]>=0.7.1",
     "llama-index>=0.14.23",
     "llama-index-llms-ollama>=0.10.1",
+    "niquests>=3.20.1",
     "numba>=0.66.0",
     "polars>=1.42.1",
     "psycopg>=3.3.4",
