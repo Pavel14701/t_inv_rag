@@ -19,7 +19,7 @@ class Tokenizer:
     """Lexical analyzer for DSL expressions.
 
     Converts input string into a sequence of tokens. Supports numbers,
-    identifiers, keywords (let, in, and, or, not, rising, falling),comparison
+    identifiers, keywords (let, in, and, or, not, rising, falling), comparison
     operators, arithmetic operators, parentheses, brackets, comma, dot
     and assignment.
     """
@@ -34,13 +34,14 @@ class Tokenizer:
         """
         self.spec = [
             # Keywords (must come before IDENT)
-            ('LET', r'let\b'),
-            ('IN', r'in\b'),
-            ('AND', r'and\b'),
-            ('OR', r'or\b'),
-            ('NOT', r'not\b'),
-            ('RISING', r'rising\b'),
-            ('FALLING', r'falling\b'),
+            # Added \b at the start to ensure whole-word matching only
+            ('LET',     r'\blet\b'),
+            ('IN',      r'\bin\b'),
+            ('AND',     r'\band\b'),
+            ('OR',      r'\bor\b'),
+            ('NOT',     r'\bnot\b'),
+            ('RISING',  r'\brising\b'),
+            ('FALLING', r'\bfalling\b'),
             # Identifier (must come after keywords)
             ('IDENT', r'[a-zA-Z_][a-zA-Z0-9_]*'),
             # Number
