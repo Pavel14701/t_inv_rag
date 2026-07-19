@@ -7,7 +7,7 @@ from .ast import (
     LogicalBinOp, LogicalNot,
     Let, HistoricalAccess, Rising, Falling,
     Add, Sub, Mul, Div, Mod, Pow, UnaryMinus,
-    Var
+    Var,
 )
 from .context import Context
 from .exceptions import EvaluationError
@@ -107,6 +107,8 @@ class Interpreter:
             case Var(name=var_name):
                 return self._get_local_as_number(var_name)
             case IndicatorAccess(indicator=ind, attributes=attrs):
+                if ind in self._locals:
+                    return self._get_local_as_number(ind)
                 return self._get_indicator_value(ind, {}, attrs, 0)
             case IndicatorWithParams(
                 indicator=ind, params=params, attributes=attrs
@@ -226,6 +228,9 @@ class Interpreter:
 
     def _visit_indicator_access(self, node: IndicatorAccess) -> bool:
         """Evaluate an indicator access without parameters."""
+        if node.indicator in self._locals:
+            value = self._locals[node.indicator]
+            return value if isinstance(value, bool) else float(value) != 0.0
         val = self._get_indicator_value(node.indicator, {}, node.attributes, 0)
         return val != 0.0
 
