@@ -35,12 +35,12 @@ class Tokenizer:
         self.spec = [
             # Keywords (must come before IDENT)
             # Added \b at the start to ensure whole-word matching only
-            ('LET',     r'\blet\b'),
-            ('IN',      r'\bin\b'),
-            ('AND',     r'\band\b'),
-            ('OR',      r'\bor\b'),
-            ('NOT',     r'\bnot\b'),
-            ('RISING',  r'\brising\b'),
+            ('LET', r'\blet\b'),
+            ('IN', r'\bin\b'),
+            ('AND', r'\band\b'),
+            ('OR', r'\bor\b'),
+            ('NOT', r'\bnot\b'),
+            ('RISING', r'\brising\b'),
             ('FALLING', r'\bfalling\b'),
             # Identifier (must come after keywords)
             ('IDENT', r'[a-zA-Z_][a-zA-Z0-9_]*'),

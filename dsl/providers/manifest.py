@@ -116,14 +116,21 @@ class ManifestValidator:
     and attribute existence.
     """
 
-    def __init__(self, manifest: Manifest) -> None:
+    def __init__(
+        self,
+        manifest: Manifest,
+        allow_undefined: bool = False
+    ) -> None:
         """Initialize with a manifest.
 
         Args:
             manifest: The Manifest to validate against.
+            allow_undefined: If True, unknown parameters are allowed
+            (pass validation). Default is False (strict).
 
         """
         self.manifest = manifest
+        self.allow_undefined = allow_undefined
 
     def validate_indicator(self, indicator: str) -> bool:
         """Check if the indicator exists in the manifest."""
@@ -169,13 +176,16 @@ class ManifestValidator:
 
         For numeric parameters (integer/float), range constraints are applied.
         For 'any' type, only type checks are performed (no range constraints).
+
+        Unknown parameters are rejected unless allow_undefined is True.
         """
         if indicator not in self.manifest.indicators:
             return False
         schema = self.manifest.indicators[indicator]
         param_schema = schema.parameters.get(param_name)
         if not param_schema:
-            return True  # Undefined parameters are allowed
+            # Strict by default: unknown parameters are not allowed.
+            return self.allow_undefined
         # Type checks
         if param_schema.type == 'integer' and not isinstance(value, int):
             return False
@@ -212,6 +222,7 @@ class ManifestValidator:
         if not self.validate_indicator(indicator):
             errors.append(f'Unknown indicator: {indicator}')
             return errors
+        # schema variable is kept for future extensibility
         schema = self.manifest.indicators[indicator]  # noqa: F841
         errors.extend(
             f"Invalid parameter '{param_name}' for indicator '{indicator}'"

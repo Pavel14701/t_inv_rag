@@ -7,6 +7,7 @@ from .ast import (
     LogicalBinOp, LogicalNot,
     Let, HistoricalAccess, Rising, Falling,
     Add, Sub, Mul, Div, Mod, Pow, UnaryMinus,
+    Var
 )
 from .context import Context
 from .exceptions import EvaluationError
@@ -56,6 +57,8 @@ class Interpreter:
         match node:
             case Number():
                 return self._visit_number(node)
+            case Var():
+                return self._visit_var(node)
             case IndicatorAccess():
                 return self._visit_indicator_access(node)
             case IndicatorWithParams():
@@ -81,6 +84,7 @@ class Interpreter:
                 return val != 0.0
             case _:
                 raise EvaluationError(f'Unknown AST node: {type(node)}')
+
     # ---------- Arithmetic evaluation ----------
 
     def _eval_arithmetic_node(self, node: ASTNode) -> float:
@@ -100,6 +104,8 @@ class Interpreter:
         match node:
             case Number(value=val):
                 return val
+            case Var(name=var_name):
+                return self._get_local_as_number(var_name)
             case IndicatorAccess(indicator=ind, attributes=attrs):
                 return self._get_indicator_value(ind, {}, attrs, 0)
             case IndicatorWithParams(
@@ -192,11 +198,31 @@ class Interpreter:
             node in params.items()
         }
 
+    def _get_local_as_number(self, name: str) -> float:
+        """Resolve a local variable as a numeric value."""
+        if name not in self._locals:
+            raise EvaluationError(f'Undefined variable: {name}')
+        value = self._locals[name]
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, bool):
+            return 1.0 if value else 0.0
+        raise EvaluationError(
+            f'Variable {name} is not a number (type {type(value)})'
+        )
+
     # ---------- Visit methods for each node type ----------
 
     def _visit_number(self, node: Number) -> bool:
         """Convert a number to boolean (non-zero is True)."""
         return node.value != 0.0
+
+    def _visit_var(self, node: Var) -> bool:
+        """Evaluate a variable lookup."""
+        if node.name not in self._locals:
+            raise EvaluationError(f'Undefined variable: {node.name}')
+        value = self._locals[node.name]
+        return value if isinstance(value, bool) else float(value) != 0.0
 
     def _visit_indicator_access(self, node: IndicatorAccess) -> bool:
         """Evaluate an indicator access without parameters."""
@@ -295,16 +321,22 @@ class Interpreter:
         The variable is bound to the computed value (numeric or boolean)
         and then the body is evaluated with the variable in scope.
         """
-        # Try to compute as numeric, fallback to boolean
+        # Compute the bound value: try numeric, then boolean
         try:
-            numeric = self._eval_arithmetic_node(node.value)
-            self._locals[node.var] = numeric
+            bound = self._eval_arithmetic_node(node.value)
         except EvaluationError:
-            self._locals[node.var] = self.visit(node.value)
+            bound = self.visit(node.value)  # boolean result
+
+        # Enter new scope: save old locals, extend with new binding
         old_locals = self._locals
-        self._locals = old_locals.copy()
-        result = self.visit(node.body)
-        self._locals = old_locals
+        new_locals = old_locals.copy()
+        new_locals[node.var] = bound
+        self._locals = new_locals
+
+        try:
+            result = self.visit(node.body)
+        finally:
+            self._locals = old_locals
         return result
 
     def _visit_historical(self, node: HistoricalAccess) -> bool:
