@@ -50,6 +50,44 @@ class Number:
 
 
 @dataclass(frozen=True, slots=True)
+class Var:
+    """Reference to a let-bound variable.
+
+    Attributes:
+        name: The variable name.
+
+    """
+
+    type: str = 'Var'
+    name: str = ''
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the Var node to a JSON-serializable dictionary.
+
+        Returns:
+            A dict with keys 'type' and 'name'.
+
+        """
+        return {'type': self.type, 'name': self.name}
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> Var:
+        """Reconstruct a Var node from a dictionary.
+
+        Args:
+            data: Dictionary containing 'name'.
+
+        Returns:
+            Var instance.
+
+        Raises:
+            KeyError: If 'name' is missing.
+
+        """
+        return Var(name=data['name'])
+
+
+@dataclass(frozen=True, slots=True)
 class IndicatorAccess:
     """Access to an indicator value without explicit parameters.
     Example: `rsi.value` or `close`.
@@ -868,7 +906,7 @@ class Falling:
 
 # ---------- AST type alias ----------
 ASTNode = (
-    Number | IndicatorAccess | IndicatorWithParams
+    Number | Var | IndicatorAccess | IndicatorWithParams
     | Comparison | MultiComparison | LogicalBinOp | LogicalNot
     | Let | HistoricalAccess | Rising | Falling
     | Add | Sub | Mul | Div | Mod | Pow | UnaryMinus
@@ -898,6 +936,8 @@ def from_dict(data: dict[str, Any]) -> ASTNode:
             return Number.from_dict(data)
         case 'IndicatorAccess':
             return IndicatorAccess.from_dict(data)
+        case 'Var':
+            return Var.from_dict(data)
         case 'IndicatorWithParams':
             return IndicatorWithParams.from_dict(data)
         case 'LogicalBinOp':

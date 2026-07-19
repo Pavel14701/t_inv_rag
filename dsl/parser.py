@@ -1,5 +1,4 @@
 """Recursive descent parser for DSL with all operators."""
-
 from .tokenizer import Tokenizer, Token
 from .ast import (
     Number, IndicatorAccess, IndicatorWithParams,
@@ -52,16 +51,9 @@ class Parser:
             )
         return result
 
-    def _peek(self) -> Token:
-        """Return the current token without consuming it.
-
-        Raises:
-            ParseError: If at the end of input.
-
-        """
-        if self.pos >= len(self.tokens):
-            raise ParseError('Unexpected end of input')
-        return self.tokens[self.pos]
+    def _peek(self) -> Token | None:
+        """Return the current token without consuming it, or None if EOF."""
+        return None if self.pos >= len(self.tokens) else self.tokens[self.pos]
 
     def _next(self) -> Token:
         """Consume and return the next token.
@@ -102,25 +94,23 @@ class Parser:
         """Parse an expression.
 
         Grammar:
-            ```
             expression = let_expr | or_expr
-            ```
 
         Returns:
             The parsed AST node (Let or logical expression).
 
         """
-        if self._peek() and self._peek().type == 'LET':
-            return self._let_expr()
-        return self._or_expr()
+        tok = self._peek()
+        return (
+            self._let_expr() if tok and tok.type == 'LET'
+            else self._or_expr()
+        )
 
     def _let_expr(self) -> ASTNode:
         """Parse a let binding expression.
 
         Grammar:
-            ```
             let_expr = 'let' IDENT '=' or_expr 'in' expression
-            ```
 
         Returns:
             A Let node with the bound variable and body.
@@ -138,53 +128,52 @@ class Parser:
         """Parse an OR expression.
 
         Grammar:
-            ```
             or_expr = and_expr ('or' and_expr)*
-            ```
 
         Returns:
             LogicalBinOp node with 'or' operator, left-associative.
 
         """
         node = self._and_expr()
-        while self._peek() and self._peek().type == 'OR':
+        tok = self._peek()
+        while tok and tok.type == 'OR':
             self._next()
             right = self._and_expr()
             node = LogicalBinOp(operator='or', left=node, right=right)
+            tok = self._peek()
         return node
 
     def _and_expr(self) -> ASTNode:
         """Parse an AND expression.
 
         Grammar:
-            ```
             and_expr = not_expr ('and' not_expr)*
-            ```
 
         Returns:
             LogicalBinOp node with 'and' operator, left-associative.
 
         """
         node = self._not_expr()
-        while self._peek() and self._peek().type == 'AND':
+        tok = self._peek()
+        while tok and tok.type == 'AND':
             self._next()
             right = self._not_expr()
             node = LogicalBinOp(operator='and', left=node, right=right)
+            tok = self._peek()
         return node
 
     def _not_expr(self) -> ASTNode:
         """Parse a NOT expression.
 
         Grammar:
-            ```
             not_expr = 'not' not_expr | comparison
-            ```
 
         Returns:
             LogicalNot node if NOT is present, otherwise a comparison node.
 
         """
-        if self._peek() and self._peek().type == 'NOT':
+        tok = self._peek()
+        if tok and tok.type == 'NOT':
             self._next()
             node = self._not_expr()
             return LogicalNot(operand=node)
@@ -194,9 +183,7 @@ class Parser:
         """Parse a comparison expression.
 
         Grammar:
-            ```
             comparison = arith_expr (comp_op arith_expr)*
-            ```
 
         Returns:
             Comparison node if a single comparison, MultiComparison if chained,
@@ -204,14 +191,16 @@ class Parser:
 
         """
         left = self._arith_expr()
-        if self._peek() and self._peek().type == 'COMP_OP':
+        tok = self._peek()
+        if tok and tok.type == 'COMP_OP':
             ops = []
             operands = [left]
-            while self._peek() and self._peek().type == 'COMP_OP':
+            while tok and tok.type == 'COMP_OP':
                 op_tok = self._next()
                 ops.append(op_tok.value)
                 right = self._arith_expr()
                 operands.append(right)
+                tok = self._peek()
             if len(ops) == 1:
                 return Comparison(
                     operator=ops[0],
@@ -225,38 +214,37 @@ class Parser:
         """Parse an arithmetic expression.
 
         Grammar:
-            ```
             arith_expr = term (('+' | '-') term)*
-            ```
 
         Returns:
             AST node with addition or subtraction operations.
 
         """
         node = self._term()
-        while self._peek() and self._peek().type in ('PLUS', 'MINUS'):
+        tok = self._peek()
+        while tok and tok.type in ('PLUS', 'MINUS'):
             op_tok = self._next()
             right = self._term()
             if op_tok.type == 'PLUS':
                 node = Add(left=node, right=right)
             else:
                 node = Sub(left=node, right=right)
+            tok = self._peek()
         return node
 
     def _term(self) -> ASTNode:
         """Parse a term expression.
 
         Grammar:
-            ```
             term = factor (('*' | '/' | '%') factor)*
-            ```
 
         Returns:
             AST node with multiplication, division, or modulo operations.
 
         """
         node = self._factor()
-        while self._peek() and self._peek().type in ('MUL', 'DIV', 'MOD'):
+        tok = self._peek()
+        while tok and tok.type in ('MUL', 'DIV', 'MOD'):
             op_tok = self._next()
             right = self._factor()
             if op_tok.type == 'MUL':
@@ -265,22 +253,22 @@ class Parser:
                 node = Div(left=node, right=right)
             else:
                 node = Mod(left=node, right=right)
+            tok = self._peek()
         return node
 
     def _factor(self) -> ASTNode:
         """Parse a factor expression.
 
         Grammar:
-            ```
             factor = unary ('^' unary)?  # right-associative
-            ```
 
         Returns:
             The parsed AST node (Unary or Pow).
 
         """
         node = self._unary()
-        if self._peek() and self._peek().type == 'POW':
+        tok = self._peek()
+        if tok and tok.type == 'POW':
             self._next()
             right = self._factor()
             return Pow(left=node, right=right)
@@ -290,15 +278,14 @@ class Parser:
         """Parse a unary expression.
 
         Grammar:
-            ```
             unary = ('-')? atom
-            ```
 
         Returns:
             UnaryMinus node if unary minus is present, otherwise the atom node.
 
         """
-        if self._peek() and self._peek().type == 'MINUS':
+        tok = self._peek()
+        if tok and tok.type == 'MINUS':
             self._next()
             operand = self._unary()
             return UnaryMinus(operand=operand)
@@ -308,13 +295,11 @@ class Parser:
         """Parse an atomic expression.
 
         Grammar:
-            ```
             atom = NUMBER
                 | indicator_access
                 | '(' expression ')'
                 | RISING '(' expression ',' NUMBER ')'
                 | FALLING '(' expression ',' NUMBER ')'
-            ```
 
         Returns:
             The parsed atom AST node.
@@ -389,61 +374,74 @@ class Parser:
         """  # noqa: E501
         ident_token = self._match('IDENT')
         base_name = ident_token.value
-
         # Check for parameters
-        if self._peek() and self._peek().type == 'LPAREN':
-            return self._extracted_from__parse_indicator_18(base_name)
-        # No parameters
+        tok = self._peek()
+        if tok and tok.type == 'LPAREN':
+            return self._parse_indicator_params_and_attrs(base_name)
+        # No parameters: collect attributes and optional history
         attrs = []
-        while self._peek() and self._peek().type == 'DOT':
+        tok = self._peek()
+        while tok and tok.type == 'DOT':
             self._next()
             attr = self._match('IDENT').value
             attrs.append(attr)
-        if self._peek() and self._peek().type == 'LBRACKET':
-            offset = self._extracted_from__parse_indicator_39()
+            tok = self._peek()
+        if tok and tok.type == 'LBRACKET':
+            offset = self._parse_history_offset()
             expr = IndicatorAccess(indicator=base_name, attributes=attrs)
             return HistoricalAccess(expr=expr, offset=offset)
         return IndicatorAccess(indicator=base_name, attributes=attrs)
 
-    # TODO Rename this here and in `_parse_indicator`
-    def _extracted_from__parse_indicator_18(self, base_name):
+    def _parse_indicator_params_and_attrs(self, base_name: str) -> ASTNode:
+        """Parse the parenthesised part of an indicator call.
+
+        Handles the opening parenthesis, named parameters, closing parenthesis,
+        optional dot-separated attributes and an optional historical offset.
+        """
         self._next()  # consume '('
         params = {}
-        if self._peek() and self._peek().type != 'RPAREN':
+        tok = self._peek()
+        if tok and tok.type != 'RPAREN':
             while True:
                 param_name = self._match('IDENT').value
                 self._match('ASSIGN')
                 param_expr = self._expression()
                 params[param_name] = param_expr
-                if self._peek() and self._peek().type == 'COMMA':
+                tok = self._peek()
+                if tok and tok.type == 'COMMA':
                     self._next()
                     continue
                 break
         self._match('RPAREN')
+
         # Collect attributes
         attrs = []
-        while self._peek() and self._peek().type == 'DOT':
+        tok = self._peek()
+        while tok and tok.type == 'DOT':
             self._next()
             attr = self._match('IDENT').value
             attrs.append(attr)
-            # Historical offset?
-        if self._peek() and self._peek().type == 'LBRACKET':
-            offset = self._extracted_from__parse_indicator_39()
+            tok = self._peek()
+
+        # Historical offset?
+        if tok and tok.type == 'LBRACKET':
+            offset = self._parse_history_offset()
             expr = IndicatorWithParams(
                 indicator=base_name,
                 params=params,
                 attributes=attrs
             )
             return HistoricalAccess(expr=expr, offset=offset)
+
         return IndicatorWithParams(
             indicator=base_name,
             params=params,
             attributes=attrs
         )
 
-    # TODO Rename this here and in `_parse_indicator`
-    def _extracted_from__parse_indicator_39(self):
-        self._next()
+    def _parse_history_offset(self) -> int:
+        """Parse a historical access offset: [NUMBER]."""
+        self._next()  # consume '['
         num_tok = self._match('NUMBER')
         result = int(num_tok.value)
         self._match('RBRACKET')
