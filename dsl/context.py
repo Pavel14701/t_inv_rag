@@ -1,87 +1,87 @@
-"""Context for evaluating indicators with manifest-based validation."""
-
-from typing import Any
+import asyncio
 
 from .providers import (
-    IndicatorProvider,
     Manifest,
     ManifestValidator,
-    IndicatorSchema
+    IndicatorSchema,
+    IndicatorProvider,
+    AsyncIndicatorProvider
 )
 from .exceptions import ProviderError
 
 
 class Context:
-    """Context that orchestrates indicator providers and validates requests.
+    """Hybrid context that orchestrates indicator providers and supports
+    both sync and async resolution.
 
     It aggregates manifests from all registered providers, validates each
-    indicator request against the combined manifest, and delegates resolution
-    to the appropriate provider.
+    request, and delegates resolution to the appropriate provider.
+    Both synchronous and asynchronous methods are provided, so the same
+    context can be used in either execution model.
 
     Attributes:
         providers: List of registered indicator providers.
 
     """
 
-    def __init__(self, providers: list[IndicatorProvider]) -> None:
+    def __init__(self, providers: list):
         """Initialize the context with a list of providers.
 
         Args:
-            providers: List of IndicatorProvider instances.
+            providers: List of IndicatorProvider instances. They can be
+                synchronous, asynchronous, or hybrid.
 
         """
         self.providers = providers
-        # Normalize and cache per-provider manifests
-        self._provider_manifests: dict[IndicatorProvider, Manifest] = {
-            provider: self._normalize_manifest(provider.get_manifest())
-            for provider in self.providers
-        }
+        self._provider_manifests = {}
+        for p in providers:
+            manifest = p.get_manifest()
+            if isinstance(manifest, dict):
+                manifest = Manifest.from_dict(manifest)
+            self._provider_manifests[p] = manifest
         self._manifest = self._build_manifest()
         self._validator = ManifestValidator(self._manifest)
-
-    def _normalize_manifest(
-        self,
-        manifest_data: dict[str, Any] | Manifest
-    ) -> Manifest:
-        """Convert provider manifest data to a Manifest object.
-
-        Args:
-            manifest_data: Either a dict or a Manifest instance.
-
-        Returns:
-            Normalized Manifest object.
-
-        Raises:
-            TypeError: If the manifest data is neither dict nor Manifest.
-
-        """
-        if isinstance(manifest_data, Manifest):
-            return manifest_data
-        if isinstance(manifest_data, dict):
-            return Manifest.from_dict(manifest_data)
-        raise TypeError('Provider manifest must be dict or Manifest')
 
     def _build_manifest(self) -> Manifest:
         """Aggregate manifests from all providers into a single Manifest.
 
         Returns:
-            A combined Manifest object containing all indicators
-            from all providers.
+            A combined Manifest object.
 
         """
+        manifest: Manifest
         all_indicators: dict[str, IndicatorSchema] = {}
         for manifest in self._provider_manifests.values():
             all_indicators |= manifest.indicators
         return Manifest(indicators=all_indicators)
 
+    def get_manifest(self) -> Manifest:
+        """Return the combined manifest of all registered providers.
+
+        Returns:
+            The aggregated Manifest object.
+
+        """
+        return self._manifest
+
+    def _validate(self, indicator, params, attributes):
+        """Validate an indicator request against the manifest.
+
+        Raises:
+            ValueError: If validation fails.
+
+        """
+        if errors := self._validator.validate(indicator, params, attributes):
+            raise ValueError(f"Validation errors: {', '.join(errors)}")
+
     def get_value(
         self,
         indicator: str,
-        params: dict[str, Any],
-        attributes: list[str],
-        offset: int = 0,
+        params: dict,
+        attributes: list,
+        offset: int = 0
     ) -> float:
-        """Retrieve the current value of an indicator.
+        """Synchronously retrieve the current value of an indicator.
 
         Args:
             indicator: Name of the indicator.
@@ -97,54 +97,155 @@ class Context:
             ProviderError: If no provider can resolve the indicator.
 
         """
-        if errors := self._validator.validate(indicator, params, attributes):
-            raise ValueError(f'Validation errors: {", ".join(errors)}')
-        for provider, manifest in self._provider_manifests.items():
-            if indicator in manifest.indicators:
+        provider: IndicatorProvider
+        self._validate(indicator, params, attributes)
+        for provider in self.providers:
+            if getattr(provider, 'resolve'):
                 try:
                     return provider.resolve(
-                        indicator, params, attributes, offset
+                        indicator,
+                        params,
+                        attributes,
+                        offset
                     )
                 except ProviderError:
                     continue
-
         raise ProviderError(f"No provider found for indicator '{indicator}'")
 
     def get_history(
         self,
         indicator: str,
-        params: dict[str, Any],
-        attributes: list[str],
-        n: int,
+        params: dict,
+        attributes: list,
+        n: int
     ) -> list[float]:
-        """Retrieve historical values of an indicator for the last n bars.
+        """Synchronously retrieve historical values for the last n bars.
 
-        This default implementation calls get_value() for each offset.
-        Subclasses may override this for optimised batch retrieval.
+        If a provider supports `resolve_history`, it will be used; otherwise
+        it falls back to sequential calls to `get_value`.
 
         Args:
             indicator: Name of the indicator.
-            params: Dictionary of parameter names to values.
-            attributes: List of attribute names to access.
+            params: Parameter dictionary.
+            attributes: List of attribute names.
             n: Number of bars to retrieve (including current).
 
         Returns:
-            A list of values ordered from oldest to
-            newest (index 0 = n-1 bars ago).
+            A list of values ordered from
+            oldest to newest (index 0 = n-1 bars ago).
 
         """
-        result: list[float] = []
-        result.extend(
-            self.get_value(indicator, params, attributes, offset)
-            for offset in range(n - 1, -1, -1)
-        )
-        return result
+        provider: IndicatorProvider
+        self._validate(indicator, params, attributes)
+        for provider in self.providers:
+            if getattr(provider, 'resolve_history'):
+                try:
+                    return provider.resolve_history(
+                        indicator,
+                        params,
+                        attributes,
+                        n
+                    )
+                except ProviderError:
+                    continue
+        # fallback: sequential calls
+        return [
+            self.get_value(indicator, params, attributes, i)
+            for i in range(n - 1, -1, -1)
+        ]
 
-    def get_manifest(self) -> Manifest:
-        """Return the combined manifest of all registered providers.
+    async def get_value_async(
+        self,
+        indicator: str,
+        params: dict,
+        attributes: list,
+        offset: int = 0
+    ) -> float:
+        """Asynchronously retrieve the current value of an indicator.
+
+        If a provider implements `resolve_async`, it will be awaited;
+        otherwise, if it provides a synchronous `resolve`, it is run in
+        a thread executor.
+
+        Args:
+            indicator: Name of the indicator.
+            params: Parameter dictionary.
+            attributes: List of attribute names.
+            offset: Bar offset.
 
         Returns:
-            The aggregated Manifest object.
+            The numeric value.
+
+        Raises:
+            ValueError: If validation fails.
+            ProviderError: If no provider can resolve the indicator.
 
         """
-        return self._manifest
+        provider: AsyncIndicatorProvider | IndicatorProvider
+        self._validate(indicator, params, attributes)
+        for provider in self.providers:
+            if getattr(provider, 'resolve_async'):
+                try:
+                    return await provider.resolve_async(  # type: ignore[union-attr]  # noqa: E501
+                        indicator,
+                        params,
+                        attributes,
+                        offset
+                    )
+                except ProviderError:
+                    continue
+            elif getattr(provider, 'resolve'):
+                loop = asyncio.get_running_loop()
+                try:
+                    return await loop.run_in_executor(
+                        None,
+                        provider.resolve,  # type: ignore[union-attr]  # noqa: E501
+                        indicator,
+                        params,
+                        attributes,
+                        offset
+                    )
+                except ProviderError:
+                    continue
+        raise ProviderError(f"No provider found for indicator '{indicator}'")
+
+    async def get_history_async(
+        self,
+        indicator: str,
+        params: dict,
+        attributes: list,
+        n: int
+    ) -> list[float]:
+        """Asynchronously retrieve historical values for the last n bars.
+
+        If a provider implements `resolve_history_async`, it will be used;
+        otherwise it falls back to sequential calls to `get_value_async`.
+
+        Args:
+            indicator: Name of the indicator.
+            params: Parameter dictionary.
+            attributes: List of attribute names.
+            n: Number of bars to retrieve (including current).
+
+        Returns:
+            A list of values ordered from oldest to newest.
+
+        """
+        provider: AsyncIndicatorProvider
+        self._validate(indicator, params, attributes)
+        for provider in self.providers:
+            if getattr(provider, 'resolve_history_async'):
+                try:
+                    return await provider.resolve_history_async(
+                        indicator,
+                        params,
+                        attributes,
+                        n
+                    )
+                except ProviderError:
+                    continue
+        # fallback: sequential calls
+        return [
+            await self.get_value_async(indicator, params, attributes, i)
+            for i in range(n - 1, -1, -1)
+        ]

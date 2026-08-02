@@ -1,178 +1,294 @@
-import sys
-from pathlib import Path
+"""Integration tests for the interpreter with providers.
 
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(project_root))
+This module tests the full pipeline: tokenization -> parsing -> interpretation
+with actual context and providers.
+"""
 
 import pytest
-from dsl.tokenizer import Tokenizer
-from dsl.parser import Parser
-from dsl.interpreter import Interpreter
-from dsl.context import Context
-from dsl.exceptions import ParseError, EvaluationError
+
+from .conftest import DEFAULT_MANIFEST
+from ..context import Context
+from ..interpreter import Interpreter
+from ..ast import ASTNode
+from ..exceptions import EvaluationError, ProviderError
+from ..evaluate import evaluate_dsl, evaluate_dsl_async
+from ..parser import Parser
 
 
-class TestContext(Context):
-    """Контекст с настраиваемыми значениями индикаторов и историей."""
-
-    __test__ = False  # prevent pytest from collecting this class
-
-    def __init__(self, values=None, history=None):
-        self.values = values or {}
-        self.history = history or {}
-
-    def get_value(self, indicator, params, attributes, offset):
-        params_key = tuple(sorted(params.items())) if params else ()
-        attrs_key = tuple(attributes) if attributes else ()
-        key = (indicator, params_key, attrs_key, offset)
-        if key in self.values:
-            return self.values[key]
-        raise ValueError(f"Value not found for {key}")
-
-    def get_history(self, indicator, params, attributes, n):
-        params_key = tuple(sorted(params.items())) if params else ()
-        attrs_key = tuple(attributes) if attributes else ()
-        key = (indicator, params_key, attrs_key)
-        if key in self.history:
-            hist = self.history[key]
-            return hist[-n:] if len(hist) >= n else hist
-        return []
+def parse(code: str) -> ASTNode:
+    """Parse DSL code into AST."""
+    p = Parser()
+    return p.parse(code)
 
 
-def evaluate(code: str, ctx: Context) -> bool:
-    """Tokenise, parse and evaluate a DSL expression."""
-    tokenizer = Tokenizer()
-    tokens = tokenizer.tokenize(code)
-    parser = Parser()
-    parser.tokens = tokens
-    parser.pos = 0
-    ast = parser._expression()
-    if parser.pos < len(tokens):
-        raise ParseError(f"Unexpected token at end: {tokens[parser.pos].value}")
-    interpreter = Interpreter(ctx)
-    return interpreter.visit(ast)
+@pytest.mark.integration
+@pytest.mark.without_providers
+def test_literals_and_arithmetic_no_providers(context_empty) -> None:
+    """Test that expressions without indicators work without any provider."""
+    assert evaluate_dsl('1 + 2', context_empty) is True
+    assert evaluate_dsl('5 - 5', context_empty) is False
+    assert evaluate_dsl('2 * 0', context_empty) is False
+    assert evaluate_dsl('10 / 2', context_empty) is True
+    assert evaluate_dsl('2 ^ 3', context_empty) is True
+    assert evaluate_dsl('(1 + 2) * 3', context_empty) is True
+    with pytest.raises(EvaluationError, match='Division by zero'):
+        evaluate_dsl('1 / 0', context_empty)
 
 
-# ---------- Tests ----------
-
-def test_simple_arithmetic_with_indicator():
-    ctx = TestContext(values={
-        ("close", (), (), 0): 100.0,
-        ("volume", (), (), 0): 1000.0,
-    })
-    assert evaluate("close * 2 + volume / 10 - 50", ctx) == True
-    assert evaluate("close - 100", ctx) == False
-
-
-def test_chained_comparison_with_indicators():
-    ctx = TestContext(values={
-        ("low", (), (), 0): 50,
-        ("close", (), (), 0): 55,
-        ("high", (), (), 0): 60,
-    })
-    assert evaluate("low < close <= high", ctx) == True
-    assert evaluate("low > close", ctx) == False
+@pytest.mark.integration
+@pytest.mark.without_providers
+def test_comparisons_no_providers(context_empty) -> None:
+    """Test comparisons without providers."""
+    assert evaluate_dsl('5 > 3', context_empty) is True
+    assert evaluate_dsl('5 < 3', context_empty) is False
+    assert evaluate_dsl('5 == 5', context_empty) is True
+    assert evaluate_dsl('5 != 5', context_empty) is False
 
 
-def test_logical_combination():
-    ctx = TestContext(values={
-        ("rsi", (("period", 14),), ("value",), 0): 80,
-        ("close", (), (), 0): 150,
-    })
-    code = "rsi(period=14).value > 70 and close > 100"
-    assert evaluate(code, ctx) == True
-    code2 = "not (rsi(period=14).value < 30) or close < 200"
-    assert evaluate(code2, ctx) == True
+@pytest.mark.integration
+@pytest.mark.without_providers
+def test_logical_no_providers(context_empty) -> None:
+    """Test logical operations without providers."""
+    assert evaluate_dsl('1 and 1', context_empty) is True
+    assert evaluate_dsl('1 and 0', context_empty) is False
+    assert evaluate_dsl('0 or 1', context_empty) is True
+    assert evaluate_dsl('not 1', context_empty) is False
 
 
-def test_let_with_reuse():
-    ctx = TestContext(values={("close", (), (), 0): 200})
-    code = "let x = close - 100 in x > 0 and x < 200"
-    assert evaluate(code, ctx) == True
+@pytest.mark.integration
+@pytest.mark.without_providers
+def test_let_no_providers(context_empty) -> None:
+    """Test let binding without providers."""
+    assert evaluate_dsl('let x = 5 in x > 3', context_empty) is True
+    assert evaluate_dsl('let x = 5 + 3 in x * 2', context_empty) is True
+    assert evaluate_dsl(
+        'let x = 5 in let y = x + 1 in y == 6',
+        context_empty
+    ) is True
 
 
-def test_nested_let():
-    """Nested let expressions with variable shadowing."""
-    ctx = TestContext(values={("close", (), (), 0): 10})
-    code = "let x = close in let y = x + 1 in y > 10"
-    assert evaluate(code, ctx) == True
-
-    code2 = "let x = 5 in (let x = 10 in x) and x == 5"
-    assert evaluate(code2, ctx) == True
-
-
-def test_historical_access_inside_let():
-    ctx = TestContext(
-        values={("close", (), (), 1): 95},
-        history={("close", (), ()): [90, 95]}
-    )
-    code = "let prev = close[1] in prev < 100"
-    assert evaluate(code, ctx) == True
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_simple_indicator_access(context_with_sample_data) -> None:
+    """Test simple indicator access with provider."""
+    assert evaluate_dsl('close', context_with_sample_data) is True
+    assert evaluate_dsl('close > 50', context_with_sample_data) is True
+    assert evaluate_dsl('close < 50', context_with_sample_data) is False
 
 
-def test_rising_falling_with_let():
-    """Rising/falling applied directly to indicators,
-    with let used for numeric results."""
-    ctx = TestContext(
-        values={
-            ("close", (), (), 0): 10,
-            ("volume", (), (), 0): 100
-        },
-        history={
-            ("close", (), ()): [10, 20, 30],
-            ("volume", (), ()): [100, 90, 80],
-        }
-    )
-    # Use let to store a derived value, and apply rising/falling to the indicator
-    assert evaluate("let x = close + 1 in rising(close, 2) and x > 10", ctx) == True
-    assert evaluate("let y = volume - 10 in falling(volume, 2) and y > 80", ctx) == True
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_indicator_with_params(context_with_sample_data) -> None:
+    """Test indicator with parameters."""
+    assert evaluate_dsl(
+        'rsi(period=14).value > 70',
+        context_with_sample_data
+    ) is True
+    assert evaluate_dsl(
+        'rsi(period=14).value < 70',
+        context_with_sample_data
+    ) is False
 
 
-def test_complex_expression_with_operators():
-    ctx = TestContext(values={("close", (), (), 0): 10})
-    code = "(-close ^ 2) + 5 * close - 3"
-    assert evaluate(code, ctx) == True
-    code2 = "close > 0 and not (close < 5)"
-    assert evaluate(code2, ctx) == True
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_arithmetic_with_indicators(context_with_sample_data) -> None:
+    """Test arithmetic combining indicators and numbers."""
+    assert evaluate_dsl(
+        'close * 2 + volume / 10 - 50',
+        context_with_sample_data
+    ) is True
+    assert evaluate_dsl('close - 100', context_with_sample_data) is False
 
 
-def test_indicator_with_parameters_and_attributes():
-    ctx = TestContext(values={
-        ("macd", (("fast",12),("slow",26)), ("line",), 0): 1.5,
-        ("macd", (("fast",12),("slow",26)), ("signal",), 0): 0.5,
-    })
-    code = "macd(fast=12, slow=26).line > macd(fast=12, slow=26).signal"
-    assert evaluate(code, ctx) == True
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_chained_comparison_with_indicators(context_with_sample_data) -> None:
+    """Test chained comparisons with indicators."""
+    # low=50, close=100, high=110 are already in sample_values fixture
+    assert evaluate_dsl(
+        'low < close <= high',
+        context_with_sample_data
+    ) is True
 
 
-def test_errors():
-    """Integration error scenarios."""
-    ctx = TestContext(values={("close", (), (), 0): 100})
-
-    # Division by zero
-    with pytest.raises(EvaluationError, match="Division by zero"):
-        evaluate("1 / 0", ctx)
-
-    # Undefined identifier (treated as unknown indicator)
-    with pytest.raises(EvaluationError, match="Indicator error"):
-        evaluate("x", ctx)
-
-    # Syntax error (missing operand)
-    with pytest.raises(ParseError):
-        evaluate("close +", ctx)
-
-    # Historical access is not allowed on arbitrary expressions
-    with pytest.raises(ParseError):
-        evaluate("(close + 1)[1]", ctx)
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_let_with_indicator(context_with_sample_data) -> None:
+    """Test let binding with indicator values."""
+    assert evaluate_dsl(
+        'let x = close in x > 50',
+        context_with_sample_data
+    ) is True
+    assert evaluate_dsl(
+        'let x = close - 100 in x > 0',
+        context_with_sample_data
+    ) is False
 
 
-def test_empty_input():
-    with pytest.raises(ParseError):
-        evaluate("", TestContext())
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_historical_access(context_with_sample_data) -> None:
+    """Test historical access with provider."""
+    assert evaluate_dsl('close[1] > 90', context_with_sample_data) is True
+    assert evaluate_dsl('close[1] > 100', context_with_sample_data) is False
 
 
-def test_boolean_result_from_number():
-    assert evaluate("0", TestContext()) == False
-    assert evaluate("0.0", TestContext()) == False
-    assert evaluate("1", TestContext()) == True
-    assert evaluate("-0.001", TestContext()) == True
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_rising_function(context_with_sample_data) -> None:
+    """Test rising function with historical data."""
+    assert evaluate_dsl('rising(close, 2)', context_with_sample_data) is True
+    # close history: [10, 20, 30, 40] ->
+    # rising over 2 bars: 20->30, 30->40 = True
+    assert evaluate_dsl('rising(close, 4)', context_with_sample_data) is True
+    # 10->20->30->40 = True
+
+
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_falling_function(context_with_sample_data) -> None:
+    """Test falling function with historical data."""
+    # We need a decreasing history
+    provider = context_with_sample_data.providers[0]
+    provider.history[('close', (), ())] = [40, 30, 20, 10]
+    assert evaluate_dsl('falling(close, 2)', context_with_sample_data) is True
+    assert evaluate_dsl('falling(close, 4)', context_with_sample_data) is True
+
+
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_complex_expression_with_operators(context_with_sample_data) -> None:
+    """Test complex expression mixing indicators,
+    arithmetic, and comparisons.
+    """
+    assert evaluate_dsl(
+        '(-close ^ 2) + 5 * close - 3',
+        context_with_sample_data
+    ) is True
+    assert evaluate_dsl(
+        'close > 0 and not (close < 5)',
+        context_with_sample_data
+    ) is True
+
+
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_indicator_with_multiple_params(context_with_sample_data) -> None:
+    """Test indicator with multiple parameters."""
+    assert evaluate_dsl(
+        'macd(fast=12, slow=26).line > macd(fast=12, slow=26).signal',
+        context_with_sample_data
+    ) is True
+
+
+@pytest.mark.integration
+@pytest.mark.with_providers
+def test_multiple_providers_fallback() -> None:
+    """Test that context tries providers in order, falling back if needed."""
+    from dsl.providers.base import IndicatorProvider
+
+    class FailingProvider(IndicatorProvider):
+        def get_manifest(self) -> dict:
+            return DEFAULT_MANIFEST
+
+        def resolve(
+            self, indicator: str, params: dict,
+            attributes: list, offset: int
+        ) -> float:
+            raise ProviderError('Fail')
+
+    class WorkingProvider(IndicatorProvider):
+        def __init__(self) -> None:
+            self.values = {('close', (), (), 0): 100.0}
+
+        def get_manifest(self) -> dict:
+            return DEFAULT_MANIFEST
+
+        def resolve(
+            self, indicator: str, params: dict,
+            attributes: list, offset: int
+        ) -> float:
+            if indicator == 'close':
+                return self.values.get((indicator, (), (), offset), 0.0)
+            raise ProviderError('Unknown')
+
+    ctx = Context([FailingProvider(), WorkingProvider()])
+    assert evaluate_dsl('close', ctx) is True
+    assert evaluate_dsl('close == 100', ctx) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.async_test
+async def test_async_indicator_access(async_context_with_sample_data) -> None:
+    """Test asynchronous indicator access."""
+    ast = parse('close > 50')
+    interp = Interpreter(async_context_with_sample_data)
+    result = await interp.visit_async(ast)
+    assert result is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.async_test
+async def test_async_arithmetic_with_indicators(
+    async_context_with_sample_data
+) -> None:
+    """Test asynchronous arithmetic with indicators."""
+    assert await evaluate_dsl_async(
+        'close * 2 + volume / 10 - 50',
+        async_context_with_sample_data
+    ) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.async_test
+async def test_async_historical_access(async_context_with_sample_data) -> None:
+    """Test asynchronous historical access."""
+    assert await evaluate_dsl_async(
+        'close[1] > 90',
+        async_context_with_sample_data
+    ) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.async_test
+async def test_async_rising(async_context_with_sample_data) -> None:
+    """Test asynchronous rising function."""
+    assert await evaluate_dsl_async(
+        'rising(close, 2)',
+        async_context_with_sample_data
+    ) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.async_test
+async def test_async_falling(async_context_with_sample_data) -> None:
+    """Test asynchronous falling function."""
+    provider = async_context_with_sample_data.providers[0]
+    provider.history[('close', (), ())] = [40, 30, 20, 10]
+    assert await evaluate_dsl_async(
+        'falling(close, 3)',
+        async_context_with_sample_data
+    ) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.async_test
+async def test_async_error_handling(async_context_with_sample_data) -> None:
+    """Test error handling in async mode."""
+    with pytest.raises(EvaluationError, match='Division by zero'):
+        await evaluate_dsl_async('1 / 0', async_context_with_sample_data)
+    with pytest.raises(
+        ValueError,
+        match='Unknown indicator: unknown_indicator'
+    ):
+        await evaluate_dsl_async(
+            'unknown_indicator',
+            async_context_with_sample_data
+        )

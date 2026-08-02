@@ -1,62 +1,103 @@
+"""Unit tests for manifest and validator.
+
+This module tests the manifest structure and the validator that checks
+indicator requests against the manifest.
+"""
+
 import pytest
-from dsl.providers.manifest import (
-    Manifest, ManifestValidator, ParameterSchema, IndicatorSchema
+
+from ..providers.manifest import (
+    Manifest,
+    ManifestValidator
 )
 
-def make_manifest():
-    return Manifest(
-        indicators={
-            "rsi": IndicatorSchema(
-                parameters={
-                    "period": ParameterSchema(type="integer", default=14, min=1, max=100),
-                    "source": ParameterSchema(type="any", default="close")
-                },
-                attributes=["value", "signal"]
-            ),
-            "macd": IndicatorSchema(
-                parameters={
-                    "fast": ParameterSchema(type="integer", default=12, min=2),
-                    "slow": ParameterSchema(type="integer", default=26, min=2),
-                },
-                attributes=["line", "signal", "histogram"]
-            )
-        }
-    )
 
-def test_valid_indicator():
-    v = ManifestValidator(make_manifest())
-    assert v.validate_indicator("rsi") == True
-    assert v.validate_indicator("unknown") == False
+# -----------------------------------------------------------------------------
+# Tests
+# -----------------------------------------------------------------------------
 
-def test_valid_parameters():
-    v = ManifestValidator(make_manifest())
-    assert v.validate_parameter("rsi", "period", 14) == True
-    assert v.validate_parameter("rsi", "period", 200) == False  # > max
-    assert v.validate_parameter("rsi", "period", 0) == False    # < min
-    assert v.validate_parameter("rsi", "period", 3.14) == False # не integer
+@pytest.mark.unit
+@pytest.mark.manifest
+def test_valid_indicator(sample_manifest: Manifest) -> None:
+    """Test that existing indicator is validated correctly."""
+    v = ManifestValidator(sample_manifest)
+    assert v.validate_indicator('rsi') is True
+    assert v.validate_indicator('unknown') is False
 
-def test_undefined_parameter_strict():
-    v = ManifestValidator(make_manifest(), allow_undefined=False)
-    assert v.validate_parameter("rsi", "unknown_param", 10) == False
 
-def test_undefined_parameter_allowed():
-    v = ManifestValidator(make_manifest(), allow_undefined=True)
-    assert v.validate_parameter("rsi", "unknown_param", 10) == True
+@pytest.mark.unit
+@pytest.mark.manifest
+def test_valid_parameters(sample_manifest: Manifest) -> None:
+    """Test parameter validation including type and range constraints."""
+    v = ManifestValidator(sample_manifest)
+    assert v.validate_parameter('rsi', 'period', 14) is True
+    assert v.validate_parameter('rsi', 'period', 200) is False  # > max
+    assert v.validate_parameter('rsi', 'period', 0) is False    # < min
+    assert v.validate_parameter('rsi', 'period', 3.14) is False  # not integer
 
-def test_valid_attributes():
-    v = ManifestValidator(make_manifest())
-    assert v.validate_attributes("rsi", ["value"]) == True
-    assert v.validate_attributes("rsi", ["value", "signal"]) == True
-    assert v.validate_attributes("rsi", ["nonexistent"]) == False
-    assert v.validate_attributes("unknown", []) == True  # пустой список атрибутов всегда True
 
-def test_full_validation():
-    v = ManifestValidator(make_manifest())
-    errors = v.validate("rsi", {"period": 14}, ["value"])
+@pytest.mark.unit
+@pytest.mark.manifest
+def test_undefined_parameter_strict(sample_manifest: Manifest) -> None:
+    """Test that strict mode rejects unknown parameters."""
+    v = ManifestValidator(sample_manifest, allow_undefined=False)
+    assert v.validate_parameter('rsi', 'unknown_param', 10) is False
+
+
+@pytest.mark.unit
+@pytest.mark.manifest
+def test_undefined_parameter_allowed(sample_manifest: Manifest) -> None:
+    """Test that non-strict mode allows unknown parameters."""
+    v = ManifestValidator(sample_manifest, allow_undefined=True)
+    assert v.validate_parameter('rsi', 'unknown_param', 10) is True
+
+
+@pytest.mark.unit
+@pytest.mark.manifest
+def test_valid_attributes(sample_manifest: Manifest) -> None:
+    """Test attribute validation."""
+    v = ManifestValidator(sample_manifest)
+    assert v.validate_attributes('rsi', ['value']) is True
+    assert v.validate_attributes('rsi', ['value', 'signal']) is True
+    assert v.validate_attributes('rsi', ['nonexistent']) is False
+    # Empty attributes are always valid
+    assert v.validate_attributes('unknown', []) is True
+
+
+@pytest.mark.unit
+@pytest.mark.manifest
+def test_full_validation(sample_manifest: Manifest) -> None:
+    """Test full validation with error messages."""
+    v = ManifestValidator(sample_manifest)
+    errors = v.validate('rsi', {'period': 14}, ['value'])
     assert errors == []
-    errors = v.validate("rsi", {"period": 200}, ["value"])
+    errors = v.validate('rsi', {'period': 200}, ['value'])
     assert len(errors) == 1
-    assert "Invalid parameter" in errors[0]
-    errors = v.validate("unknown", {}, [])
+    assert 'Invalid parameter' in errors[0]
+    errors = v.validate('unknown', {}, [])
     assert len(errors) == 1
-    assert "Unknown indicator" in errors[0]
+    assert 'Unknown indicator' in errors[0]
+    # Multiple errors
+    errors = v.validate(
+        'rsi',
+        {'period': 200, 'source': 123},
+        ['invalid_attr']
+    )
+    assert len(errors) >= 2
+
+
+@pytest.mark.unit
+@pytest.mark.manifest
+def test_manifest_to_dict_from_dict(sample_manifest: Manifest) -> None:
+    """Test serialization and deserialization of manifest."""
+    manifest_dict = sample_manifest.to_dict()
+    reconstructed = Manifest.from_dict(manifest_dict)
+    assert reconstructed.indicators.keys() == sample_manifest.indicators.keys()
+    assert (
+        reconstructed.indicators['rsi'].attributes
+        == sample_manifest.indicators['rsi'].attributes
+    )
+    assert (
+        reconstructed.indicators['macd'].parameters.keys()
+        == sample_manifest.indicators['macd'].parameters.keys()
+    )
