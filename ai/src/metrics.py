@@ -10,7 +10,7 @@ def compute_action_accuracy(
     action_targets: torch.Tensor,
     ignore_index: int = -100,
 ) -> dict[str, float]:
-    """Calculate per‑class accuracy and overall accuracy for actions.
+    """Calculate per-class accuracy and overall accuracy for actions.
 
     Args:
         action_logits: (N, 3) raw logits (flattened).
@@ -46,9 +46,9 @@ def compute_trade_metrics(
     outcome_targets: torch.Tensor,
     ignore_index: int = 2,
 ) -> dict[str, float]:
-    """Simple trade‑like metrics based on action accuracy and outcome targets.
+    """Simple trade-like metrics based on action accuracy and outcome targets.
 
-    Only considers bars where both prediction and ground‑truth are ``entry``.
+    Only considers bars where both prediction and ground-truth are ``entry``.
     Win rate is the fraction of those bars where ``outcome_targets == 1``.
 
     Args:

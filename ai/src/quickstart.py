@@ -60,9 +60,10 @@ def quick_train(
     log_dir: str | None = None,
     early_stopping_patience: int = 3,
     save_best_path: str | None = None,
+    n_patterns: int = 10,
     **model_kwargs,
 ) -> EntryExitTransformer:
-    """Train the Entry‑Exit transformer in a single call.
+    """Train the Entry-Exit transformer in a single call.
 
     All data is read from Parquet files that must exist and be properly
     formatted.  The function creates a model, builds a DataLoader
@@ -108,6 +109,10 @@ def quick_train(
             improvement (default 3). 0 disables.
         save_best_path: If set, the model with the lowest validation loss
             is saved to this path.
+        n_patterns: Number of pattern labels for the multi-label pattern
+            head. Must match the number of columns in ``pattern_cols``
+            (default 10). If pattern_cols is None, this value is still
+            used to initialise the model but pattern loss is not applied.
         **model_kwargs: Additional keyword arguments forwarded to
             :class:`EntryExitTransformer` constructor.
 
@@ -121,10 +126,8 @@ def quick_train(
     else:
         device_str = device
     torch_device = torch.device(device_str)
-
     # ---------- Load order blocks ----------
     obs: list[OrderBlock] = load_order_blocks_parquet(order_blocks)
-
     # ---------- Build model ----------
     model = EntryExitTransformer(
         n_price_feats=len(price_cols),
@@ -135,9 +138,9 @@ def quick_train(
         num_layers=num_layers,
         num_heads=num_heads,
         outcome_mode=outcome_mode,
+        n_patterns=n_patterns,
         **model_kwargs,
     ).to(torch_device)
-
     # ---------- Build labeled loader ----------
     train_loader_all, df = build_loader_from_parquet(
         features_path=features,
@@ -152,7 +155,6 @@ def quick_train(
         shuffle=True,
         pattern_cols=pattern_cols,
     )
-
     # ---------- Validation split ----------
     if val_path:
         # Separate validation file provided
@@ -175,16 +177,14 @@ def quick_train(
         train_loader = train_loader_all
     else:
         # Random split from training data
-        train_loader, val_loader = _split_train_val(
+        train_loader, val_loader = _split_train_val(  # type: ignore[assignment]  # noqa: E501
             train_loader_all, val_split, batch_size
         )
-
     # ---------- Class weights (optional) ----------
     cw = (
         _compute_class_weights(df['action'].to_numpy())
         if class_weight else None
     )
-
     # ---------- Train ----------
     model = train_one_round(
         model=model,
@@ -203,11 +203,9 @@ def quick_train(
         early_stopping_patience=early_stopping_patience,
         close_idx=3,  # default OHLCV
     )
-
     # Ensure the returned module is indeed an EntryExitTransformer
     assert isinstance(model, EntryExitTransformer), (
         'train_one_round returned an unexpected type'
     )
-
     print('Training finished.')
     return model

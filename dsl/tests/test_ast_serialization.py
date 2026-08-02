@@ -34,6 +34,7 @@ from ..parser import Parser
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_number_serialization() -> None:
     """Test Number node serialization with positive,
     negative, and zero values.
@@ -49,6 +50,7 @@ def test_number_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_var_serialization() -> None:
     """Test Var node serialization with different variable names."""
     for name in ('x', 'my_var', '_temp'):
@@ -61,6 +63,7 @@ def test_var_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_indicator_access_serialization() -> None:
     """Test IndicatorAccess serialization with and without attributes."""
     # No attributes
@@ -74,7 +77,6 @@ def test_indicator_access_serialization() -> None:
     reconstructed = IndicatorAccess.from_dict(data)
     assert reconstructed.indicator == 'close'
     assert reconstructed.attributes == []
-
     # With attributes
     node = IndicatorAccess(indicator='rsi', attributes=['value', 'signal'])
     data = node.to_dict()
@@ -90,6 +92,7 @@ def test_indicator_access_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_indicator_with_params_serialization() -> None:
     """Test IndicatorWithParams serialization with various parameter types."""
     # Single integer parameter
@@ -138,6 +141,7 @@ def test_indicator_with_params_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_comparison_serialization() -> None:
     """Test Comparison serialization with all operators."""
     operators = ['<', '>', '<=', '>=', '==', '!=']
@@ -160,6 +164,7 @@ def test_comparison_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_multi_comparison_serialization() -> None:
     """Test MultiComparison serialization (chained comparisons)."""
     # Chain: 1 < x <= 10
@@ -199,6 +204,7 @@ def test_multi_comparison_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_logical_binop_serialization() -> None:
     """Test LogicalBinOp serialization with 'and' and 'or'."""
     for op in ('and', 'or'):
@@ -218,6 +224,7 @@ def test_logical_binop_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_logical_not_serialization() -> None:
     """Test LogicalNot serialization with nested operand."""
     node = LogicalNot(operand=Number(value=1.0))
@@ -237,6 +244,7 @@ def test_logical_not_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_add_serialization() -> None:
     """Test Add serialization."""
     node = Add(left=Number(value=1.0), right=Number(value=2.0))
@@ -250,6 +258,7 @@ def test_add_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_sub_serialization() -> None:
     """Test Sub serialization."""
     node = Sub(left=Number(value=5.0), right=Number(value=3.0))
@@ -263,6 +272,7 @@ def test_sub_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_mul_serialization() -> None:
     """Test Mul serialization."""
     node = Mul(left=Number(value=2.0), right=Number(value=3.0))
@@ -276,6 +286,7 @@ def test_mul_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_div_serialization() -> None:
     """Test Div serialization."""
     node = Div(left=Number(value=10.0), right=Number(value=2.0))
@@ -289,6 +300,7 @@ def test_div_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_mod_serialization() -> None:
     """Test Mod serialization."""
     node = Mod(left=Number(value=10.0), right=Number(value=3.0))
@@ -302,6 +314,7 @@ def test_mod_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_pow_serialization() -> None:
     """Test Pow serialization."""
     node = Pow(left=Number(value=2.0), right=Number(value=3.0))
@@ -315,6 +328,7 @@ def test_pow_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_unary_minus_serialization() -> None:
     """Test UnaryMinus serialization with nested operand."""
     node = UnaryMinus(operand=Number(value=5.0))
@@ -322,7 +336,6 @@ def test_unary_minus_serialization() -> None:
     reconstructed = UnaryMinus.from_dict(data)
     assert isinstance(reconstructed.operand, Number)
     assert reconstructed.operand.value == 5.0
-
     # Double negation: -(-x)
     node = UnaryMinus(operand=UnaryMinus(operand=Var(name='x')))
     data = node.to_dict()
@@ -334,6 +347,7 @@ def test_unary_minus_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_let_serialization() -> None:
     """Test Let serialization with simple and nested bodies."""
     # Simple let
@@ -371,6 +385,7 @@ def test_let_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_historical_access_serialization() -> None:
     """Test HistoricalAccess serialization with different offsets
     and expression types.
@@ -403,6 +418,7 @@ def test_historical_access_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_rising_serialization() -> None:
     """Test Rising serialization with different n values."""
     for n in (1, 5, 10):
@@ -416,6 +432,7 @@ def test_rising_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_falling_serialization() -> None:
     """Test Falling serialization with different n values."""
     for n in (1, 5, 10):
@@ -429,6 +446,7 @@ def test_falling_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_from_dict_factory_all_types() -> None:
     """Test the from_dict factory function for all node types
     with type checks.
@@ -680,6 +698,7 @@ def test_from_dict_factory_all_types() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_round_trip_through_parser() -> None:
     """Test that parsing, serializing, and deserializing yields
     equivalent AST.
@@ -697,6 +716,7 @@ def test_round_trip_through_parser() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_complex_nested_serialization() -> None:
     """Test serialization of a deeply nested AST."""
     # Construct: (1 + 2) * (3 - 4)
@@ -721,6 +741,7 @@ def test_complex_nested_serialization() -> None:
 
 @pytest.mark.unit
 @pytest.mark.ast
+@pytest.mark.deprecated
 def test_round_trip_with_empty_containers() -> None:
     """Test serialization round-trip with empty lists and dicts."""
     # IndicatorAccess with empty attributes
