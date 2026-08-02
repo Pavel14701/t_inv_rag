@@ -4,34 +4,6 @@ This guide walks you through installing the DSL, writing your first expression, 
 
 ---
 
-## Installation
-
-The DSL requires Python 3.10 or later. It is distributed as a Python package. Use `uv` (recommended) or `pip`:
-
-### Using `uv` (fast and modern)
-
-```bash
-uv add "git+https://github.com/your/repo.git"   # replace with actual URL
-```
-
-### Using `pip`
-
-```bash
-pip install "git+https://github.com/your/repo.git"
-```
-
-### Development install (if you plan to modify the DSL)
-
-```bash
-git clone https://github.com/your/repo.git
-cd repo
-uv venv
-source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-uv pip install -e .
-```
-
----
-
 ## Your First Expression
 
 Let's evaluate a simple condition: `close > 100`.
