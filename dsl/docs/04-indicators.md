@@ -32,14 +32,22 @@ macd(fast=12, slow=26)
 sma(period=20)
 ```
 
-Parameter names are identifiers, and their values can be **any expression** (not just literals):
+Parameter values are arbitrary expressions, but **conditional operators (`? :`) are not supported**. Instead, you can use arithmetic and logical operators to compute the value:
 
 ```text
-rsi(period=14 + 1)                     # period = 15
-sma(period=10 + close > 100 ? 5 : 20)  # conditional not supported, but you can use arithmetic/logic
+rsi(period=14 + 1)            # period = 15
+sma(period=10 + 5 * 2)        # period = 20
 ```
 
-In practice, parameters are usually numeric literals or simple expressions.
+If you need conditional logic, use a `let` binding to compute the parameter value:
+
+```text
+let p = 10 in
+  let q = p * 2 + 5 in
+    sma(period=q)
+```
+
+For complex conditions, you can simulate logic with arithmetic using boolean-to-integer conversion (e.g., `(close > 100) * 5` yields 5 when true, 0 when false). However, this can become difficult to read; for clarity, we recommend keeping parameters as simple literals or straightforward arithmetic.
 
 ---
 
