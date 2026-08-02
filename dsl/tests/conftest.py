@@ -8,11 +8,12 @@ and asynchronous execution modes.
 import pytest
 from typing import Any
 
-from dsl.context import Context
-from dsl.interpreter import Interpreter
-from dsl.providers.base import IndicatorProvider, AsyncIndicatorProvider
-from dsl.exceptions import ProviderError
-from dsl.providers.manifest import IndicatorSchema, Manifest, ParameterSchema
+from ..context import Context
+from ..interpreter import Interpreter
+from ..providers.base import IndicatorProvider, AsyncIndicatorProvider
+from ..exceptions import ProviderError
+from ..providers.in_process import InProcessProvider
+from ..providers.manifest import IndicatorSchema, Manifest, ParameterSchema
 
 
 DEFAULT_MANIFEST = {
@@ -351,3 +352,55 @@ def sample_manifest() -> Manifest:
             )
         }
     )
+
+
+@pytest.fixture
+def mock_context():
+    """Context with predefined indicator values for testing."""
+    manifest = {
+        'indicators': {
+            'close': {'attributes': []},
+            'high': {'attributes': []},
+            'low': {'attributes': []},
+            'volume': {'attributes': []},
+            'rsi': {
+                'attributes': ['value', 'signal'],
+                'parameters': {'period': {'type': 'float', 'default': 14.0}}
+            },
+            'macd': {
+                'attributes': ['line', 'signal', 'histogram'],
+                'parameters': {
+                    'fast': {'type': 'float', 'default': 12.0},
+                    'slow': {'type': 'float', 'default': 26.0}
+                }
+            },
+            'sma': {'attributes': []},
+        }
+    }
+
+    def resolver(indicator, params, attributes, offset):
+        # Predefined values for different offsets
+        base_values = {
+            'close': {0: 101.0, 1: 95.0, 2: 90.0, 3: 85.0},
+            'high': {0: 110.0, 1: 105.0, 2: 100.0, 3: 95.0},
+            'low': {0: 90.0, 1: 85.0, 2: 80.0, 3: 75.0},
+            'volume': {0: 1000000, 1: 900000, 2: 800000, 3: 700000},
+            'rsi': {0: 70.0, 1: 65.0, 2: 60.0, 3: 55.0},
+            'macd': {0: 1.5, 1: 1.2, 2: 1.0, 3: 0.8},
+        }
+        # For attributes, return different values if needed
+        if indicator == 'macd':
+            if 'signal' in attributes:
+                base_values['macd'] = {0: 0.5, 1: 0.4, 2: 0.3, 3: 0.2}
+            elif 'histogram' in attributes:
+                base_values['macd'] = {0: 1.0, 1: 0.8, 2: 0.6, 3: 0.4}
+        # For SMA, compute simple moving average based on close history
+        if indicator == 'sma':
+            return 95.0
+        # Resolve value from base_values
+        if indicator in base_values:
+            return base_values[indicator].get(offset, 0.0)
+        raise ValueError(f'Unknown indicator: {indicator}')
+
+    provider = InProcessProvider(manifest, resolver)
+    return Context([provider])
