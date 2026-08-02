@@ -42,6 +42,7 @@ dev = [
     "isort==8.0.1",
     "flake8-pyproject==1.2.4",
     "flake8-pie>=0.16.0",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [[tool.uv.index]]
@@ -130,4 +131,7 @@ exclude = [
 ignore_missing_imports = true
 explicit_package_bases = true 
 namespace_packages = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
 

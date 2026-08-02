@@ -6,6 +6,7 @@ from .ast import (
     LogicalBinOp, LogicalNot,
     Let, HistoricalAccess, Rising, Falling,
     Add, Sub, Mul, Div, Mod, Pow, UnaryMinus,
+    Var,
     ASTNode
 )
 from .exceptions import ParseError
@@ -16,6 +17,8 @@ class Parser:
 
     This parser implements a top-down parser with precedence climbing
     for arithmetic and comparison operators, and supports all DSL constructs.
+    It also tracks `let`-bound variables so that references to them
+    inside the body produce `Var` nodes instead of indicator accesses.
 
     Attributes:
         tokens: List of tokens from the tokenizer.
@@ -27,6 +30,9 @@ class Parser:
         """Initialize the parser with an empty token list."""
         self.tokens: list[Token] = []
         self.pos = 0
+        # Stack of sets representing active let-bound variable names.
+        # Each element corresponds to a nested scope.
+        self._let_stack: list[set[str]] = []
 
     def parse(self, code: str) -> ASTNode:
         """Parse a DSL expression string into an AST.
@@ -118,11 +124,21 @@ class Parser:
         """
         self._match('LET')
         ident = self._match('IDENT')
+        var_name = ident.value
         self._match('ASSIGN')
+
+        # Create a new scope with this variable
+        new_scope = {var_name}
+        self._let_stack.append(new_scope)
+
         value = self._or_expr()
         self._match('IN')
         body = self._expression()
-        return Let(var=ident.value, value=value, body=body)
+
+        # Remove the scope after parsing the body
+        self._let_stack.pop()
+
+        return Let(var=var_name, value=value, body=body)
 
     def _or_expr(self) -> ASTNode:
         """Parse an OR expression.
@@ -296,7 +312,7 @@ class Parser:
 
         Grammar:
             atom = NUMBER
-                | indicator_access
+                | IDENT (→ Var if let-bound, else indicator access)
                 | '(' expression ')'
                 | RISING '(' expression ',' NUMBER ')'
                 | FALLING '(' expression ',' NUMBER ')'
@@ -312,6 +328,12 @@ class Parser:
             self._next()
             return Number(value=float(tok.value))
         if tok.type == 'IDENT':
+            # If the identifier is a let-bound variable, emit a Var node.
+            if self._is_let_var(tok.value):
+                self._next()
+                return Var(name=tok.value)
+            # Otherwise treat it as an indicator access
+            # (with optional params/attrs).
             return self._parse_indicator()
         if tok.type == 'RISING':
             return self._parse_rising()
@@ -323,6 +345,15 @@ class Parser:
             self._match('RPAREN')
             return node
         raise ParseError(f'Unexpected token: {tok.value}')
+
+    def _is_let_var(self, name: str) -> bool:
+        """Check whether the given name refers to an active let-bound variable.
+
+        The lookup walks the stack from the innermost scope outward.
+        """
+        return any(name in scope for scope in reversed(self._let_stack))
+
+    # ---------- Indicator parsing helpers ----------
 
     def _parse_rising(self) -> Rising:
         """Parse the rising function: rising(expression, n).
@@ -374,11 +405,12 @@ class Parser:
         """  # noqa: E501
         ident_token = self._match('IDENT')
         base_name = ident_token.value
-        # Check for parameters
+        # Check for parameters enclosed in parentheses
         tok = self._peek()
         if tok and tok.type == 'LPAREN':
             return self._parse_indicator_params_and_attrs(base_name)
-        # No parameters: collect attributes and optional history
+        # No parameters: collect dotted attributes and optional
+        # historical offset
         attrs = []
         tok = self._peek()
         while tok and tok.type == 'DOT':
@@ -413,8 +445,7 @@ class Parser:
                     continue
                 break
         self._match('RPAREN')
-
-        # Collect attributes
+        # Collect optional dotted attributes after the closing paren
         attrs = []
         tok = self._peek()
         while tok and tok.type == 'DOT':
@@ -422,8 +453,7 @@ class Parser:
             attr = self._match('IDENT').value
             attrs.append(attr)
             tok = self._peek()
-
-        # Historical offset?
+        # Optional historical offset
         if tok and tok.type == 'LBRACKET':
             offset = self._parse_history_offset()
             expr = IndicatorWithParams(
@@ -432,7 +462,6 @@ class Parser:
                 attributes=attrs
             )
             return HistoricalAccess(expr=expr, offset=offset)
-
         return IndicatorWithParams(
             indicator=base_name,
             params=params,
@@ -440,7 +469,12 @@ class Parser:
         )
 
     def _parse_history_offset(self) -> int:
-        """Parse a historical access offset: [NUMBER]."""
+        """Parse a historical access offset: [NUMBER].
+
+        Returns:
+            The integer offset value.
+
+        """
         self._next()  # consume '['
         num_tok = self._match('NUMBER')
         result = int(num_tok.value)
