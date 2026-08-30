@@ -3,13 +3,13 @@ import numpy as np
 import polars as pl
 from numba import float64, int64, jit
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
 # RMA (Wilder's Moving Average) – Numba core
 # ----------------------------------------------------------------------
-@jit((float64[:], int64), nopython=True, fastmath=True, cache=True)
+@jit((float64[:], int64), nopython=True, cache=True)
 def _rma_numba_core(arr: np.ndarray, length: int) -> np.ndarray:
     """Wilder's Moving Average (RMA) using Numba.
     First value (index length-1) is SMA of first `length` points.

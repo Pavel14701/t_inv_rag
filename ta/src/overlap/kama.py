@@ -7,14 +7,14 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..external import talib, talib_available
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
 # Core KAMA calculation in Numba (single pass)
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _kama_numba_core(
     close: np.ndarray,
     length: int,

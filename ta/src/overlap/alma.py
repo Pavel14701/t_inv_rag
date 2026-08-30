@@ -3,9 +3,9 @@ from functools import lru_cache
 
 import numpy as np
 import polars as pl
-from numba import jit
+from numba import njit
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
 
 
 # ----------------------------------------------------------------------
@@ -37,12 +37,12 @@ def _alma_weights(length: int, sigma: float, dist_offset: float) -> np.ndarray:
     return w
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@njit(cache=True)
 def _alma_numba_full(
     arr: np.ndarray,
     weights: np.ndarray,
     offset: int,
-    fillna: float | None
+    fillna: float | None,
 ) -> np.ndarray:
     """ALMA core with integrated offset and fillna."""
     n = len(arr)
@@ -69,7 +69,7 @@ def alma_numba_opt(
     sigma: float = 6.0,
     dist_offset: float = 0.85,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
     """Arnaud Legoux Moving Average using Numba (optimized).
 
@@ -93,9 +93,17 @@ def alma_numba_opt(
     np.ndarray
         ALMA values.
 
+    Notes
+    -----
+    - All floating-point operations follow IEEE 754 rules.
+    - Infinite values (inf, -inf) are replaced with NaN.
+    - NaN values propagate naturally through the calculation.
+
     """
-    # Minimize copying
     close = np.asarray(close, dtype=np.float64, copy=False)
+    # Replace infinities with NaN (IEEE 754 compliance)
+    close = close.copy()
+    replace_inf_with_nan(close)
     # Ensure C-contiguous for best performance
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -112,7 +120,7 @@ def alma_ind(
     sigma: float = 6.0,
     dist_offset: float = 0.85,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
     """Universal ALMA (always uses Numba)."""
     if isinstance(close, pl.Series):
@@ -131,7 +139,7 @@ def alma_polars(
     dist_offset: float = 0.85,
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str | None = None
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """ALMA for Polars DataFrame.
 
@@ -157,7 +165,7 @@ def alma_polars(
     Returns
     -------
     pl.DataFrame
-        The original DataFrame with added columns.    
+        The original DataFrame with added columns.
 
     """
     close = df[close_col].to_numpy()
@@ -167,7 +175,7 @@ def alma_polars(
         sigma=sigma,
         dist_offset=dist_offset,
         offset=offset,
-        fillna=fillna
+        fillna=fillna,
     )
     out_name = output_col or f'ALMA_{length}_{sigma}_{dist_offset}'
     return df.with_columns([pl.Series(out_name, result)])

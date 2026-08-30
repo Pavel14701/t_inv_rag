@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import polars as pl
-from numba import float64, int64, njit
+from numba import njit
 
-from ..overlap import sma_ind
-from ..utils import _apply_offset_fillna, _handle_nan_policy
+from ..overlap.sma import sma_ind
+from .._array_ops import _apply_offset_fillna, _handle_nan_policy
 
 
 # ----------------------------------------------------------------------
 # Core SCRSI calculations with Numba acceleration
 # ----------------------------------------------------------------------
-@njit((float64[:], int64, int64), fastmath=True, cache=True)
+@njit(fastmath=True, cache=True)
 def _cyclic_smoothing(rsi_scaled: np.ndarray, vibration: int) -> np.ndarray:
     """Apply cyclic smoothing to scaled RSI.
 

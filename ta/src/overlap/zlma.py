@@ -1,30 +1,28 @@
 # -*- coding: utf-8 -*-
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import polars as pl
 
-from ..utils import _apply_offset_fillna
-from . import (
-    dema_ind,
-    ema_ind,
-    fwma_ind,
-    hma_ind,
-    kama_ind,
-    linreg_ind,
-    midpoint_ind,
-    pwma_ind,
-    rma_ind,
-    sinwma_ind,
-    sma_ind,
-    ssf_ind,
-    swma_ind,
-    t3_ind,
-    tema_ind,
-    trima_ind,
-    vidya_ind,
-    wma_ind,
-)
+from .._array_ops import _apply_offset_fillna
+from ..overlap.dema import dema_ind
+from ..overlap.ema import ema_ind
+from ..overlap.fwma import fwma_ind
+from ..overlap.hma import hma_ind
+from ..overlap.kama import kama_ind
+from ..overlap.linreg import linreg_ind
+from ..overlap.midpoint import midpoint_ind
+from ..overlap.pwma import pwma_ind
+from ..overlap.rma import rma_ind
+from ..overlap.sinwma import sinwma_ind
+from ..overlap.sma import sma_ind
+from ..overlap.ssf import ssf_ind
+from ..overlap.swma import swma_ind
+from ..overlap.t3 import t3_ind
+from ..overlap.tema import tema_ind
+from ..overlap.trima import trima_ind
+from ..overlap.vidya import vidya_ind
+from ..overlap.wma import wma_ind
 
 _MA_FUNCS: dict[str, Callable] = {
     'dema': dema_ind,

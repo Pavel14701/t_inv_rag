@@ -3,14 +3,14 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..external import talib, talib_available
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
 # WCP using Numba (vectorised)
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _wcp_numba_core(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
     """Weighted Closing Price core: (high + low + 2*close) / 4."""
     return (high + low + 2.0 * close) * 0.25

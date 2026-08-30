@@ -11,11 +11,13 @@ import polars as pl
 from numba import boolean, float64, int8, int64, njit  # type: ignore[attr-defined]
 from numba.typed import List
 
-from ..momentum import macd_ind, rsi_ind
-from ..overlap import sma_ind
-from ..trend import adx_ind, zigzag_peaks_valleys
-from ..utils import _rolling_max_numba, _rolling_min_numba
-from ..volatility import atr_ind
+from ..momentum.macd import macd_ind
+from ..momentum.rsi import rsi_ind
+from ..overlap.sma import sma_ind
+from ..trend.adx import adx_ind
+from ..trend.zigzag import zigzag_peaks_valleys
+from .._array_ops import _rolling_max_numba, _rolling_min_numba
+from ..volatility.atr import atr_ind
 
 
 # ----------------------------------------------------------------------

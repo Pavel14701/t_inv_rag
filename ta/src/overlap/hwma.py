@@ -3,13 +3,13 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
 # Core HWMA loop in Numba
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _hwma_numba_core(
     close: np.ndarray,
     na: float,

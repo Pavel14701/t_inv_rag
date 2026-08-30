@@ -3,7 +3,7 @@ import numpy as np
 import polars as pl
 
 from ..overlap.sma import sma_ind
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 def ao_numpy(

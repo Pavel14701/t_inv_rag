@@ -4,8 +4,9 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from .. import _TALIB_MA_MAP, ma_mode, talib, talib_available
-from ..utils import _apply_offset_fillna, _rolling_max_numba, _rolling_min_numba
+from ..external import _TALIB_MA_MAP, talib, talib_available
+from ..ma import ma_mode
+from .._array_ops import _apply_offset_fillna, _rolling_max_numba, _rolling_min_numba
 
 
 # ----------------------------------------------------------------------

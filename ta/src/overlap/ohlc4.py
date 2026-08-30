@@ -4,7 +4,7 @@ from typing import Optional
 import numpy as np
 import polars as pl
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 def ohlc4_numpy(

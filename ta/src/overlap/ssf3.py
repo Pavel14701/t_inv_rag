@@ -7,13 +7,13 @@ import numpy as np
 import polars as pl
 from numba import njit
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
 # Core SSF3 calculation (Numba)
 # ----------------------------------------------------------------------
-@njit(fastmath=True, cache=True)
+@njit(cache=True)
 def _ssf3_numba_core(
     close: np.ndarray,
     length: int,

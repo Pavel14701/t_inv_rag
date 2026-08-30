@@ -3,14 +3,14 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..external import talib, talib_available
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
 # CMO (Chande Momentum Oscillator) – Numba version
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _cmo_numba(close: np.ndarray, length: int, drift: int) -> np.ndarray:
     """Compute Chande Momentum Oscillator (CMO) using Numba.
     Returns an array of CMO values, same length as `close`.

@@ -1,8 +1,28 @@
-# -*- coding: utf-8 -*-
+"""TOS_STDEVALL indicator (Thinkorswim-style standard deviation bands).
+
+This indicator computes a linear regression line and standard deviation
+bands around it, similar to the Thinkorswim platform's STDEVALL study.
+The bands are calculated using the last N bars (or the entire series) and
+are symmetric around the regression line.
+
+The output includes:
+- Central regression line (LR)
+- Lower bands (L_1, L_2, ...) for each multiplier
+- Upper bands (U_1, U_2, ...) for each multiplier
+
+Functions:
+    tos_stdevall_numpy: Numpy-based calculation.
+    tos_stdevall_ind: Universal wrapper (numpy or Polars Series).
+    tos_stdevall_polars: Polars DataFrame wrapper.
+
+All functions return dictionaries with numpy arrays (or Polars DataFrames
+with new columns).
+"""
+
 import numpy as np
 import polars as pl
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 def tos_stdevall_numpy(
@@ -13,69 +33,45 @@ def tos_stdevall_numpy(
     offset: int = 0,
     fillna: float | None = None,
 ) -> dict[str, np.ndarray]:
-    """Numpy‑based TOS_STDEVALL calculation.
+    """Numpy-based calculation of TOS_STDEVALL bands.
 
-    Parameters
-    ----------
-    close : np.ndarray
-        Close prices (float64). If `length` is given, only the last `length`
-        points are used.
-    length : int, optional
-        Number of recent bars to consider. If None, all data are used.
-    stds : list of float, optional
-        Multipliers for the standard deviation bands (default [1,2,3]).
-    ddof : int
-        Delta Degrees of Freedom for the standard deviation (default 1).
-    offset : int
-        Global shift applied to all result columns.
-    fillna : float, optional
-        Value to fill NaNs after shifting.
-
-    Returns
-    -------
-    dict[str, np.ndarray]
-        Dictionary with column names as keys and numpy arrays as values.
-        Keys are:
-            f"TOS_STDEVALL{_suffix}_LR"            – central regression line
-            f"TOS_STDEVALL{_suffix}_L_{i}"        – lower band for multiplier i
-            f"TOS_STDEVALL{_suffix}_U_{i}"        – upper band for multiplier i
-        where `_suffix` = f"_{length}" if length is not None else "".
-
+    Returns arrays of length `length` (if specified) or full length.
     """
     close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
-    # Handle length
+    if not close.flags.writeable:
+        close = close.copy()
+    original_len = len(close)
+    if original_len < 2:
+        raise ValueError('Need at least 2 data points')
     if length is not None:
-        length = int(length)
         if length < 2:
             raise ValueError('length must be >= 2')
-        close = close[-length:]
+        if length > original_len:
+            raise ValueError('length cannot exceed data length')
         suffix = f'_{length}'
+        calc_close = close[-length:]
+        n = length
     else:
-        length = len(close)
         suffix = ''
-    if length < 2:
-        raise ValueError('Need at least 2 data points')
-    # Default stds
+        calc_close = close
+        n = original_len
     if stds is None:
         stds = [1.0, 2.0, 3.0]
     else:
-        stds = sorted(stds)  # ensure increasing order
-    # Linear regression using polyfit (via numpy.polynomial for newer API)
-    x = np.arange(length, dtype=np.float64)
-    coeffs = np.polyfit(x, close, 1)          # coeffs[0] = slope, coeffs[1] = intercept
-    lr = np.polyval(coeffs, x)                # regression line values
-    # Standard deviation of close
-    stdev = np.std(close, ddof=ddof)
-    # Prepare result dictionary
-    res = {}
+        stds = sorted(stds)
+    x = np.arange(n, dtype=np.float64)
+    coeffs = np.polyfit(x, calc_close, 1)
+    lr = np.polyval(coeffs, x)
+    stdev = np.std(calc_close, ddof=ddof)
     base_name = f'TOS_STDEVALL{suffix}'
-    res[f'{base_name}_LR'] = lr
-    for i in stds:
-        res[f'{base_name}_L_{i}'] = lr - i * stdev
-        res[f'{base_name}_U_{i}'] = lr + i * stdev
-    # Apply offset and fillna to every column
+    res = {
+        f'{base_name}_LR': lr,
+    }
+    for m in stds:
+        res[f'{base_name}_L_{m}'] = lr - m * stdev
+        res[f'{base_name}_U_{m}'] = lr + m * stdev
     for key, arr in res.items():
         res[key] = _apply_offset_fillna(arr, offset, fillna)
     return res
@@ -89,26 +85,7 @@ def tos_stdevall_ind(
     offset: int = 0,
     fillna: float | None = None,
 ) -> dict[str, np.ndarray]:
-    """Universal TOS_STDEVALL (accepts numpy array or Polars Series).
-
-    Parameters
-    ----------
-    close : np.ndarray or pl.Series
-        Close prices.
-    length : int, optional
-        Number of recent bars to consider.
-    stds : list of float, optional
-        Standard deviation multipliers (default [1,2,3]).
-    ddof : int
-        Delta Degrees of Freedom (default 1).
-    offset, fillna : as usual.
-
-    Returns
-    -------
-    dict[str, np.ndarray]
-        Dictionary of result arrays.
-
-    """
+    """Universal TOS_STDEVALL (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return tos_stdevall_numpy(close, length, stds, ddof, offset, fillna)
@@ -126,54 +103,71 @@ def tos_stdevall_polars(
 ) -> pl.DataFrame:
     """Add TOS_STDEVALL columns to a Polars DataFrame.
 
-    The following columns are added:
+    This function computes the TOS_STDEVALL bands and appends the resulting
+    columns to the DataFrame. The original DataFrame is not modified.
+
+    The added columns are:
         - TOS_STDEVALL{_suffix}_LR
-        - TOS_STDEVALL{_suffix}_L_{i}  for each i in stds
-        - TOS_STDEVALL{_suffix}_U_{i}  for each i in stds
-    where `_suffix` = f"_{length}" if length is not None, or an empty string.
+        - TOS_STDEVALL{_suffix}_L_{i} for each i in stds
+        - TOS_STDEVALL{_suffix}_U_{i} for each i in stds
+    where `_suffix` is:
+        - `_{length}` if `length` is not None and `suffix` is empty.
+        - If `suffix` is provided, it replaces the automatic suffix.
 
     Parameters
     ----------
     df : pl.DataFrame
-        Input data.
-    close_col : str
+        Input DataFrame containing the close price column.
+    close_col : str, default "close"
         Name of the column with close prices.
-    length : int, optional
-        Number of recent bars to use.
-    stds : list of float, optional
-        Standard deviation multipliers.
-    ddof : int
+    length : int or None, default None
+        Number of recent bars to use for the regression.
+    stds : list of float or None, default None
+        Standard deviation multipliers (default [1,2,3]).
+    ddof : int, default 1
         Delta Degrees of Freedom.
-    offset : int
-        Global shift applied to all new columns.
-    fillna : float, optional
-        Value to fill NaNs after shifting.
-    suffix : str
-        Additional suffix to append to column names (overrides the automatic one).
+    offset : int, default 0
+        Shift applied to all output columns.
+    fillna : float or None, default None
+        Value to fill NaN after shift.
+    suffix : str, default ""
+        Custom suffix to append to column names. If provided, it overrides
+        the automatic suffix (`_{length}`). For example, setting suffix="_my"
+        would produce column names like "TOS_STDEVALL_my_LR".
 
     Returns
     -------
     pl.DataFrame
-        Original DataFrame with new columns added.
+        A new DataFrame with the additional TOS_STDEVALL columns.
 
     """
     close = df[close_col].to_numpy()
-    res_dict = tos_stdevall_numpy(close, length, stds, ddof, offset, fillna)
-    # If a custom suffix is provided, replace the automatic one.
-    # The automatic suffix is built into the keys. We'll rename the columns.
+    res_dict = tos_stdevall_numpy(
+        close, length, stds, ddof, offset=0, fillna=None
+    )
+    # If length is not None and less than DataFrame height, pad with NaN
+    if length is not None and length < len(df):
+        pad_len = len(df) - length
+        for key, arr in res_dict.items():
+            res_dict[key] = np.concatenate([np.full(pad_len, np.nan), arr])
+    # Apply custom suffix if provided
     if suffix:
+        if length is not None:
+            base = f'TOS_STDEVALL_{length}'
+        else:
+            base = 'TOS_STDEVALL'
         new_dict = {}
         for key, arr in res_dict.items():
-            # Replace the base name part with custom suffix
-            # e.g. "TOS_STDEVALL_20_LR" -> "TOS_STDEVALL_custom_LR"
-            base = 'TOS_STDEVALL'
-            if length is not None:
-                base += f'_{length}'
             if key.startswith(base):
                 new_key = key.replace(base, f'TOS_STDEVALL{suffix}', 1)
             else:
-                new_key = key  # fallback
+                new_key = key
             new_dict[new_key] = arr
         res_dict = new_dict
-    # Add all series to the DataFrame
-    return df.with_columns([pl.Series(name, arr) for name, arr in res_dict.items()])
+    # Apply offset and fillna AFTER padding
+    for key, arr in res_dict.items():
+        res_dict[key] = _apply_offset_fillna(arr, offset, fillna)
+    return df.with_columns([
+        pl.Series(name, arr)
+        for name, arr in res_dict.items()
+    ])

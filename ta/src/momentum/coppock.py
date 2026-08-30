@@ -2,9 +2,9 @@
 import numpy as np
 import polars as pl
 
-from ..overlap import wma_ind
-from ..utils import _apply_offset_fillna
-from . import roc_ind
+from ..overlap.wma import wma_ind
+from .._array_ops import _apply_offset_fillna
+from .roc import roc_ind
 
 
 def coppock_numpy(

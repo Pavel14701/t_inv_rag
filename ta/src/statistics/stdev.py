@@ -1,60 +1,112 @@
-# -*- coding: utf-8 -*-
-from typing import Optional
+"""Rolling standard deviation (STDEV) for financial time series.
+
+This module provides Numba-accelerated and TA-Lib implementations of
+rolling standard deviation, with unified interface for numpy arrays
+and Polars Series/DataFrames.
+
+Functions:
+    stdev_numba: Numba-accelerated rolling standard deviation.
+    stdev_talib: TA-Lib-based rolling standard deviation (ddof=0).
+    stdev_ind: Universal rolling standard deviation (numpy or Polars Series).
+    stdev_polars: Add rolling standard deviation column to Polars DataFrame.
+    stdev_polars_multi: Add rolling standard deviation columns
+    for multiple columns.
+
+The core algorithm is implemented in Numba for high performance.
+"""
+
+from typing import Literal
 
 import numpy as np
 import polars as pl
-from numba import jit
+from numba import njit
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..external import talib, talib_available
+from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
-def _stdev_numba_core(close: np.ndarray, length: int, ddof: int) -> np.ndarray:
-    """Скользящее стандартное отклонение через суммы и суммы квадратов (Numba).
+@njit('float64[:](float64[:], int64, int64)', fastmath=True, cache=True)
+def _stdev_numba_core_online(
+    close: np.ndarray,
+    length: int,
+    ddof: int
+) -> np.ndarray:
+    """Online (one-pass) rolling standard deviation.
 
-    Параметры
-    ---------
-    close : np.ndarray
-        Цены закрытия (float64).
-    length : int
-        Размер окна.
-    ddof : int
-        Delta Degrees of Freedom (0 или 1, для других ddof не тестировалось).
-
-    Возвращает
-    ----------
-    np.ndarray
-        Массив со значениями STDEV; первые length-1 элементов NaN.
+    Uses running sums and sums of squares for O(1) update per element.
+    Fast but may have slight numerical inaccuracies for large windows.
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < length:
         return out
-
-    # Накопительные суммы для первого окна
     sum_x = 0.0
     sum_x2 = 0.0
     for i in range(length):
         val = close[i]
         sum_x += val
         sum_x2 += val * val
-    # Вычисляем std для первого окна
     mean = sum_x / length
-    variance = (sum_x2 - 2 * mean * sum_x + length * mean * mean) / (length - ddof)
+    variance = (
+        (sum_x2 - 2 * mean * sum_x + length * mean * mean)
+        / (length - ddof)
+    )
     out[length - 1] = np.sqrt(variance) if variance >= 0 else np.nan
-    # Скользящее обновление сумм
     for i in range(length, n):
-        # Добавляем новый элемент, удаляем самый старый
         new_val = close[i]
         old_val = close[i - length]
         sum_x += new_val - old_val
         sum_x2 += new_val * new_val - old_val * old_val
-        # Пересчитываем std
         mean = sum_x / length
-        variance = (sum_x2 - 2 * mean * sum_x + length * mean * mean) / (length - ddof)
+        variance = (
+            (sum_x2 - 2 * mean * sum_x + length * mean * mean)
+            / (length - ddof)
+        )
         out[i] = np.sqrt(variance) if variance >= 0 else np.nan
     return out
+
+
+@njit('float64[:](float64[:], int64, int64)', fastmath=True, cache=True)
+def _stdev_numba_core_twopass(
+    close: np.ndarray,
+    length: int,
+    ddof: int
+) -> np.ndarray:
+    """Two-pass rolling standard deviation.
+
+    Computes mean first, then variance. Slower but more numerically stable.
+    """
+    n = len(close)
+    out = np.full(n, np.nan, dtype=np.float64)
+    if n < length:
+        return out
+    for i in range(length - 1, n):
+        # Compute mean
+        sum_x = 0.0
+        for j in range(i - length + 1, i + 1):
+            sum_x += close[j]
+        mean = sum_x / length
+        # Compute variance
+        sum_sq = 0.0
+        for j in range(i - length + 1, i + 1):
+            diff = close[j] - mean
+            sum_sq += diff * diff
+        variance = sum_sq / (length - ddof)
+        out[i] = np.sqrt(variance) if variance >= 0 else np.nan
+    return out
+
+
+def _stdev_numba_core(
+    close: np.ndarray,
+    length: int,
+    ddof: int,
+    algorithm: Literal['online', 'two_pass'] = 'online',
+) -> np.ndarray:
+    """Dispatch to the appropriate Numba core function."""
+    if algorithm == 'online':
+        return _stdev_numba_core_online(close, length, ddof)
+    else:
+        return _stdev_numba_core_twopass(close, length, ddof)
 
 
 def stdev_numba(
@@ -62,13 +114,39 @@ def stdev_numba(
     length: int = 30,
     ddof: int = 1,
     offset: int = 0,
-    fillna: Optional[float] = None,
+    fillna: float | None = None,
+    algorithm: Literal['online', 'two_pass'] = 'online',
 ) -> np.ndarray:
-    """Скользящее стандартное отклонение через Numba (чистая версия)."""
+    """Numba-accelerated rolling standard deviation.
+
+    Parameters
+    ----------
+    close : np.ndarray
+        1D float64 array of close prices.
+    length : int, default 30
+        Window size.
+    ddof : int, default 1
+        Delta Degrees of Freedom (1 for sample std, 0 for population).
+    offset : int, default 0
+        Shift applied to the output array. Positive = forward shift.
+    fillna : float or None, default None
+        Value to fill positions that become NaN due to offset.
+    algorithm : {'online', 'two_pass'}, default 'online'
+        - 'online': one-pass algorithm (fast, may have small errors).
+        - 'two_pass': two-pass algorithm (slower, more accurate).
+
+    Returns
+    -------
+    np.ndarray
+        Float64 array of rolling standard deviations, shifted and NaN-filled.
+
+    """
     close = np.asarray(close, dtype=np.float64, copy=False)
+    if not close.flags.writeable:
+        close = close.copy()
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
-    result = _stdev_numba_core(close, length, ddof)
+    result = _stdev_numba_core(close, length, ddof, algorithm)
     return _apply_offset_fillna(result, offset, fillna)
 
 
@@ -76,11 +154,11 @@ def stdev_talib(
     close: np.ndarray,
     length: int = 30,
     offset: int = 0,
-    fillna: Optional[float] = None,
+    fillna: float | None = None,
 ) -> np.ndarray:
-    """Скользящее стандартное отклонение через TA-Lib (ddof=0)."""
+    """TA-Lib-based rolling standard deviation (ddof=0)."""
     if not talib_available:
-        raise ImportError('TA-Lib not available')
+        raise ImportError('TA-Lib is not available')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -93,37 +171,42 @@ def stdev_ind(
     length: int = 30,
     ddof: int = 1,
     offset: int = 0,
-    fillna: Optional[float] = None,
+    fillna: float | None = None,
     use_talib: bool = True,
+    algorithm: Literal['online', 'two_pass'] = 'online',
 ) -> np.ndarray:
-    """Универсальная функция скользящего стандартного отклонения.
+    """Universal rolling standard deviation (numpy array or Polars Series).
 
-    Параметры
-    ---------
-    close : np.ndarray или pl.Series
-        Цены закрытия.
-    length : int
-        Период.
-    ddof : int
-        Delta Degrees of Freedom. Для TA-Lib всегда 0.
-    offset : int
-        Сдвиг результата.
-    fillna : float, optional
-        Значение для заполнения NaN.
-    use_talib : bool
-        Если True и TA-Lib доступна, использует её (ddof=0).
-
-    Возвращает
+    Parameters
     ----------
+    close : np.ndarray or pl.Series
+        1D array or Polars Series of close prices.
+    length : int, default 30
+        Window size.
+    ddof : int, default 1
+        Delta Degrees of Freedom (1 for sample, 0 for population).
+    offset : int, default 0
+        Shift applied to the output array.
+    fillna : float or None, default None
+        Value to fill NaN positions after offset.
+    use_talib : bool, default True
+        If True and TA-Lib is available, use TA-Lib (ddof=0).
+        Otherwise, use Numba.
+    algorithm : {'online', 'two_pass'}, default 'online'
+        Only used when use_talib=False. See stdev_numba.
+
+    Returns
+    -------
     np.ndarray
-        Массив со значениями STDEV.
+        Float64 array of rolling standard deviations.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     if use_talib and talib_available:
         return stdev_talib(close, length, offset, fillna)
     else:
-        return stdev_numba(close, length, ddof, offset, fillna)
+        return stdev_numba(close, length, ddof, offset, fillna, algorithm)
 
 
 def stdev_polars(
@@ -132,11 +215,12 @@ def stdev_polars(
     length: int = 30,
     ddof: int = 1,
     offset: int = 0,
-    fillna: Optional[float] = None,
+    fillna: float | None = None,
     use_talib: bool = True,
-    output_col: Optional[str] = None,
+    algorithm: Literal['online', 'two_pass'] = 'online',
+    output_col: str | None = None,
 ) -> pl.Series:
-    """Добавляет колонку со скользящим стандартным отклонением в Polars DataFrame."""
+    """Add rolling standard deviation column to a Polars DataFrame."""
     close = df[close_col].to_numpy()
     result = stdev_ind(
         close,
@@ -145,6 +229,7 @@ def stdev_polars(
         offset=offset,
         fillna=fillna,
         use_talib=use_talib,
+        algorithm=algorithm,
     )
     out_name = output_col or f'STDEV_{length}'
     return pl.Series(out_name, result)
@@ -156,50 +241,22 @@ def stdev_polars_multi(
     length: int = 30,
     ddof: int = 1,
     offset: int = 0,
-    fillna: Optional[float] = None,
+    fillna: float | None = None,
     suffix: str = '_stdev',
+    use_talib: bool = False,
+    algorithm: Literal['online', 'two_pass'] = 'online',
 ) -> pl.DataFrame:
-    """Добавляет колонки со скользящим стандартным отклонением для нескольких колонок,
-    используя параллельные возможности Polars.
-
-    Параметры
-    ---------
-    df : pl.DataFrame
-        Исходные данные.
-    columns : list[str]
-        Список колонок, для которых нужно вычислить STDEV.
-    length : int
-        Период окна.
-    ddof : int
-        Delta Degrees of Freedom (для Polars rolling_std всегда использует ddof=1,
-        но параметр сохранён для совместимости).
-    offset : int
-        Сдвиг результата (положительный – вперёд).
-    fillna : float, optional
-        Значение для заполнения NaN после сдвига.
-    suffix : str
-        Суффикс, добавляемый к исходному имени колонки для формирования выходной.
-
-    Возвращает
-    ----------
-    pl.DataFrame
-        Исходный DataFrame с новыми колонками вида `{col}{suffix}`.
-    """
-    exprs = [
-        pl.col(col).rolling_std(window_size=length, ddof=ddof).alias(f'{col}{suffix}')
-        for col in columns
-    ]
-    df = df.with_columns(exprs)
-    if offset != 0:
-        shift_exprs = [
-            pl.col(f'{col}{suffix}').shift(offset).alias(f'{col}{suffix}')
-            for col in columns
-        ]
-        df = df.with_columns(shift_exprs)
-    if fillna is not None:
-        fill_exprs = [
-            pl.col(f'{col}{suffix}').fill_nan(fillna).alias(f'{col}{suffix}')
-            for col in columns
-        ]
-        df = df.with_columns(fill_exprs)
+    """Add rolling standard deviation columns for multiple columns."""
+    for col in columns:
+        arr = df[col].to_numpy()
+        result = stdev_ind(
+            arr,
+            length=length,
+            ddof=ddof,
+            offset=offset,
+            fillna=fillna,
+            use_talib=use_talib,
+            algorithm=algorithm,
+        )
+        df = df.with_columns(pl.Series(f'{col}{suffix}', result))
     return df

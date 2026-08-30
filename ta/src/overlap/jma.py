@@ -4,13 +4,13 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
 # Numba‑compiled core of the Jurik Moving Average (most aggressive version)
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _jma_numba_core(
     close: np.ndarray,
     length_param: int,

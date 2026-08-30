@@ -5,10 +5,10 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _rolling_max_numba(arr: np.ndarray, length: int) -> np.ndarray:
     """Compute the rolling maximum over a fixed window.
 
@@ -35,7 +35,7 @@ def _rolling_max_numba(arr: np.ndarray, length: int) -> np.ndarray:
     return out
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _rolling_min_numba(arr: np.ndarray, length: int) -> np.ndarray:
     """Compute the rolling minimum over a fixed window.
 
@@ -62,7 +62,7 @@ def _rolling_min_numba(arr: np.ndarray, length: int) -> np.ndarray:
     return out
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _midprice_multi_numba(
     high: np.ndarray,
     low: np.ndarray,
@@ -134,7 +134,7 @@ def _midprice_multi_numba(
     return out1, out2, out3
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _shift_forward(arr: np.ndarray, shift: int) -> np.ndarray:
     """Shift a 1D array forward by a given number of positions,
     filling the beginning with NaN.

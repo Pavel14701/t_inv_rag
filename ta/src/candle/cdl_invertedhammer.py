@@ -3,8 +3,8 @@ import numpy as np
 import polars as pl
 from numba import float64, njit
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..external import talib, talib_available
+from .._array_ops import _apply_offset_fillna
 
 
 # должно быть float8 для ускорения инференса и экономии памяти
@@ -30,20 +30,16 @@ def _cdl_invertedhammer_nb(
         c = close[i]
         h = high[i]
         l = low[i]
-
         rng = h - l
         if rng <= 0.0:
             continue
-
         # Body
         body = c - o if c > o else o - c
         if body <= 0.0:
             continue
-
         # Upper / lower shadows
         upper = h - (c if c > o else o)
         lower = (c if c > o else o) - l
-
         # Inverted Hammer shape:
         #  - long upper shadow
         #  - small body
@@ -52,13 +48,10 @@ def _cdl_invertedhammer_nb(
             continue
         if lower > 0.25 * body:
             continue
-
         # Body relatively small vs range
         if body > 0.4 * rng:
             continue
-
         out[i] = True
-
     return out
 
 

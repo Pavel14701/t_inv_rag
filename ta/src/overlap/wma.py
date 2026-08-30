@@ -1,12 +1,32 @@
 # -*- coding: utf-8 -*-
+"""Weighted Moving Average (WMA) implementation.
+
+WMA assigns linearly increasing (or decreasing) weights to
+prices in the window. The weight of the most recent
+price is `length` (or 1 if `asc=False`).
+
+This module provides:
+- Numba-accelerated implementation (`wma_numba`)
+- TA-Lib backend (`wma_talib`) – only for `asc=True`
+- Universal wrapper (`wma_ind`)
+- Polars integration (`wma_polars`)
+
+All floating-point operations follow IEEE 754 rules. Infinite values are
+replaced with NaN before calculation.
+"""
+
 from functools import lru_cache
 
 import numpy as np
 import polars as pl
 from numba import float64, njit
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna, _handle_nan_policy
+from ..external import talib, talib_available
+from .._array_ops import (
+    _apply_offset_fillna,
+    _handle_nan_policy,
+    replace_inf_with_nan
+)
 
 
 # ----------------------------------------------------------------------
@@ -15,9 +35,24 @@ from ..utils import _apply_offset_fillna, _handle_nan_policy
 @lru_cache(maxsize=128)
 def _get_wma_weights(length: int, asc: bool) -> np.ndarray:
     """Generate normalized linear weights for WMA.
-    If asc=True, weights increase from 1 to length (most recent heaviest).
-    If asc=False, weights decrease (most recent lightest).
-    Weights are normalized so that sum = 1.
+
+    Parameters
+    ----------
+    length : int
+        Window size.
+    asc : bool
+        If True, weights increase from 1 to `length` (most recent heaviest).
+        If False, weights decrease (most recent lightest).
+
+    Returns
+    -------
+    np.ndarray
+        Normalised weights summing to 1.
+
+    Notes
+    -----
+    - Results are cached via `lru_cache` for performance.
+
     """
     w = np.arange(1, length + 1, dtype=np.float64)
     if not asc:
@@ -29,21 +64,21 @@ def _get_wma_weights(length: int, asc: bool) -> np.ndarray:
 # ----------------------------------------------------------------------
 # WMA core loop (Numba) with typed signature
 # ----------------------------------------------------------------------
-@njit((float64[:], float64[:]), fastmath=True, cache=True)
+@njit((float64[:], float64[:]), fastmath=False, cache=True)
 def _wma_numba_core(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """Weighted Moving Average core loop.
 
     Parameters
     ----------
     arr : np.ndarray
-        1D float64 array (assumed to have no NaNs).
+        1D float64 array (assumed to have no NaNs or infinities).
     weights : np.ndarray
         Normalized weights (length = window size).
 
     Returns
     -------
     np.ndarray
-        WMA values; first (len(weights)-1) positions are NaN.
+        WMA values; first `len(weights)-1` positions are NaN.
 
     """
     n = len(arr)
@@ -53,7 +88,6 @@ def _wma_numba_core(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
         return out
     for i in range(length - 1, n):
         acc = 0.0
-        # weighted sum over the window
         for j in range(length):
             acc += arr[i - j] * weights[length - 1 - j]
         out[i] = acc
@@ -77,48 +111,69 @@ def wma_numba(
     Parameters
     ----------
     close : np.ndarray
-        Close prices.
-    length : int
-        WMA period (>= 1).
-    asc : bool
+        1D float64 array of close prices.
+    length : int, default 10
+        WMA period (must be >= 1).
+    asc : bool, default True
         If True, recent values have higher weight (default).
         If False, older values have higher weight.
-    offset, fillna, nan_policy, trim : as usual.
+    offset : int, default 0
+        Shift the result. Positive = forward, negative = backward.
+    fillna : float or None, default None
+        Value to replace NaN and shifted-in positions. If None, NaN remains.
+    nan_policy : str, default 'raise'
+        How to handle NaN values: 'raise', 'ignore', 'ffill', 'bfill', 'both'.
+    trim : bool, default False
+        If True, remove the first `length-1`
+        elements (incompatible with offset).
 
     Returns
     -------
     np.ndarray
-        WMA values.
+        WMA values, shifted and NaN-filled as requested.
+
+    Raises
+    ------
+    ValueError
+        If `length < 1`, input contains infinities (unless replaced by NaN),
+        invalid `nan_policy`, or series too short.
+
+    Notes
+    -----
+    - Infinites in `close` are replaced with NaN.
+    - This function is IEEE 754 compliant.
 
     """
-    # ---- Input validation ----
     if length < 1:
         raise ValueError('WMA length must be >= 1')
-    close = np.asarray(close, dtype=np.float64)
-    if np.isinf(close).any():
-        raise ValueError('Input contains non-finite values (inf or -inf).')
+    close = np.asarray(close, dtype=np.float64, copy=False)
+
+    # Replace infinities with NaN (IEEE 754 compliance)
+    close = close.copy()
+    replace_inf_with_nan(close)
+
     # Apply NaN policy
     close = _handle_nan_policy(close, nan_policy, 'close')
-    # Ensure C-contiguous
+
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
-    # Check length
+
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least \
-                {length} elements, got {len(close)}.'
-            )
-    # Get weights and compute WMA
+            f'Input series too short: need at least {length} elements, '
+            f'got {len(close)}.'
+        )
+
     weights = _get_wma_weights(length, asc)
     wma = _wma_numba_core(close, weights)
-    # Trim if requested
+
     if trim:
         valid_start = length - 1
         if valid_start < len(wma):
             wma = wma[valid_start:]
         else:
             wma = np.array([])
-    # Apply offset and fillna
+
     return _apply_offset_fillna(wma, offset, fillna)
 
 
@@ -138,26 +193,51 @@ def wma_talib(
     Parameters
     ----------
     close : np.ndarray
-        Close prices.
-    length : int
-        WMA period (>= 1).
-    offset, fillna, nan_policy, trim : as usual.
+        1D float64 array of close prices.
+    length : int, default 10
+        WMA period.
+    offset : int, default 0
+        Shift the result.
+    fillna : float or None, default None
+        Value to replace NaNs and shifted-in positions.
+    nan_policy : str, default 'raise'
+        How to handle NaN values: 'raise', 'ignore', 'ffill', 'bfill', 'both'.
+    trim : bool, default False
+        If True, remove the first `length-1` elements.
+
+    Returns
+    -------
+    np.ndarray
+        WMA values.
+
+    Raises
+    ------
+    ImportError
+        If TA-Lib is not installed.
+    ValueError
+        If `length < 1`, input contains infinities, invalid `nan_policy`,
+        or series too short.
+
+    Notes
+    -----
+    - TA-Lib does not handle NaNs, so they are pre-processed.
+    - Infinites are replaced with NaN.
+    - Only `asc=True` is supported; `asc=False` falls back to Numba.
 
     """
     if not talib_available:
         raise ImportError('TA-Lib is not available')
     if length < 1:
         raise ValueError('WMA length must be >= 1')
-    close = np.asarray(close, dtype=np.float64)
-    if np.isinf(close).any():
-        raise ValueError('Input contains non-finite values (inf or -inf).')
-    # TA‑Lib doesn't handle NaNs, so pre-process
+    close = np.asarray(close, dtype=np.float64, copy=False)
+    close = close.copy()
+    replace_inf_with_nan(close)
     close = _handle_nan_policy(close, nan_policy, 'close')
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least \
-                {length} elements, got {len(close)}.'
-            )
+            f'Input series too short: need at least {length} elements, '
+            f'got {len(close)}.'
+        )
     wma = talib.WMA(close, timeperiod=length)
     if trim:
         valid_start = length - 1
@@ -187,21 +267,43 @@ def wma_ind(
     ----------
     close : np.ndarray or pl.Series
         Close prices.
-    length : int
-        WMA period.
-    asc : bool
+    length : int, default 10
+        WMA period (must be >= 1).
+    asc : bool, default True
         If True, recent values have higher weight (TA-Lib compatible).
         If False, older values have higher weight (Numba only).
-    offset, fillna, use_talib, nan_policy, trim : as usual.
+    offset : int, default 0
+        Shift the result. Positive = forward, negative = backward.
+    fillna : float or None, default None
+        Value to replace NaN and shifted-in positions. If None, NaN remains.
+    use_talib : bool, default True
+        If True and TA-Lib is installed, use TA-Lib (only when `asc=True`).
+    nan_policy : str, default 'raise'
+        How to handle NaN values: 'raise', 'ignore', 'ffill', 'bfill', 'both'.
+    trim : bool, default False
+        If True, remove the first `length-1` elements.
+        Incompatible with TA-Lib.
 
     Returns
     -------
     np.ndarray
-        WMA values.
+        WMA values, shifted and NaN-filled as requested.
+
+    Raises
+    ------
+    ValueError
+        If `trim=True` and TA-Lib is used.
+
+    Notes
+    -----
+    - If `close` is a Polars Series, it is converted to NumPy.
+    - TA-Lib is used only when `asc=True` and `use_talib=True`.
+    - All operations are IEEE 754 compliant.
 
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
+
     if use_talib and talib_available and asc:
         return wma_talib(
             close,
@@ -237,22 +339,38 @@ def wma_polars(
     nan_policy: str = 'raise',
     output_col: str | None = None,
 ) -> pl.DataFrame:
-    """WMA for Polars DataFrame.
+    """Add WMA column to a Polars DataFrame.
 
     Parameters
     ----------
     df : pl.DataFrame
         Input DataFrame.
-    close_col : str
-        Name of the column with close prices.
-    length, asc, offset, fillna, use_talib, nan_policy : as in wma_ind.
-    output_col : str, optional
-        Output column name (default f"WMA_{length}").
+    close_col : str, default 'close'
+        Name of the column containing close prices.
+    length : int, default 10
+        WMA period.
+    asc : bool, default True
+        Weight direction (True = recent higher weight, False = older higher).
+    offset : int, default 0
+        Shift the result.
+    fillna : float or None, default None
+        Value to replace NaNs and shifted-in positions.
+    use_talib : bool, default True
+        If True and TA-Lib is available, use TA-Lib (only when `asc=True`).
+    nan_policy : str, default 'raise'
+        How to handle NaN values.
+    output_col : str or None, default None
+        Name of the output column. If None, defaults to f'WMA_{length}'.
 
     Returns
     -------
     pl.DataFrame
-        The original DataFrame with added column (same length).
+        Original DataFrame with an additional column containing WMA values.
+
+    Notes
+    -----
+    - The function does not modify the original DataFrame in-place.
+    - All operations are IEEE 754 compliant.
 
     """
     close = df[close_col].to_numpy()
@@ -264,7 +382,7 @@ def wma_polars(
         fillna=fillna,
         use_talib=use_talib,
         nan_policy=nan_policy,
-        trim=False,  # Polars всегда возвращает полную длину
+        trim=False,  # Polars always returns full length
     )
     out_name = output_col or f'WMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

@@ -7,8 +7,8 @@ import numpy as np
 import polars as pl
 
 from ..ma import ma_mode
-from ..statistics import stdev_ind
-from ..utils import _apply_offset_fillna
+from ..statistics.stdev import stdev_ind
+from .._array_ops import _apply_offset_fillna
 
 
 def bbands_numpy(

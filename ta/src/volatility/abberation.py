@@ -2,9 +2,9 @@
 import numpy as np
 import polars as pl
 
-from ..overlap import sma_ind
-from ..utils import _apply_offset_fillna
-from . import atr_ind
+from ..overlap.sma import sma_ind
+from .._array_ops import _apply_offset_fillna
+from .atr import atr_ind
 
 
 def aberration_numpy(

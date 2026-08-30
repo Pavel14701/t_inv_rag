@@ -7,7 +7,7 @@ from numba import jit
 # ----------------------------------------------------------------------
 # Core Numba implementation of SMMA
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _smma_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     """Smoothed Moving Average (SMMA) core calculation.
 

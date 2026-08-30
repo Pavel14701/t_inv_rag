@@ -7,14 +7,14 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..external import talib, talib_available
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
 # Core Numba implementation (single pass for min and max)
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _midpoint_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     """Compute midpoint = (rolling_min + rolling_max) / 2 in one pass."""
     n = len(close)

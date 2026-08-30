@@ -5,7 +5,7 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
@@ -33,7 +33,7 @@ def _pascal_weights(length: int, asc: bool) -> np.ndarray:
 # ----------------------------------------------------------------------
 # Core PWMA calculation in Numba (single pass)
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _pwma_numba_core(close: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """PWMA core loop.
 
