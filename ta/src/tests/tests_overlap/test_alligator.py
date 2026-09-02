@@ -298,7 +298,9 @@ def test_alligator_ind_nan_input() -> None:
         ],
         dtype=np.float64
     )
-    jaw, teeth, lips = alligator_ind(data, parallel=True)
+    jaw, teeth, lips = alligator_ind(
+        data, parallel=True, nan_policy='ignore'
+    )
     # Since SMMA is recursive, a single NaN will make subsequent values NaN
     # until enough new data 'washes' it out (but SMMA uses all previous).
     # Actually, SMMA uses previous value, so once NaN appears,
@@ -312,7 +314,9 @@ def test_alligator_ind_nan_input() -> None:
     assert np.isnan(teeth[2:]).all()
     assert np.isnan(lips[2:]).all()
     # Sequential mode should behave the same
-    jaw_seq, teeth_seq, lips_seq = alligator_ind(data, parallel=False)
+    jaw_seq, teeth_seq, lips_seq = alligator_ind(
+        data, parallel=False, nan_policy='ignore'
+    )
     assert np.isnan(jaw_seq[2:]).all()
     assert np.isnan(teeth_seq[2:]).all()
     assert np.isnan(lips_seq[2:]).all()
@@ -329,7 +333,9 @@ def test_alligator_ind_inf_input() -> None:
         ],
         dtype=np.float64
     )
-    jaw, teeth, lips = alligator_ind(data, parallel=True)
+    jaw, teeth, lips = alligator_ind(
+        data, parallel=True, nan_policy='ignore'
+    )
     # Inf should be replaced by NaN inside the function,
     # so behaviour same as NaN input
     assert np.isnan(jaw[2:]).all()
@@ -353,6 +359,43 @@ def test_alligator_ind_extreme_values() -> None:
     assert jaw is not None
     assert teeth is not None
     assert lips is not None
+
+
+@pytest.mark.overlap
+def test_alligator_ind_nan_policy_raise() -> None:
+    """Input with NaN and default nan_policy='raise' raises ValueError."""
+    data = np.array(
+        [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        dtype=np.float64,
+    )
+    with pytest.raises(ValueError, match='NaN'):
+        alligator_ind(data, jaw=3, teeth=2, lips=2)
+
+
+@pytest.mark.overlap
+def test_alligator_ind_nan_policy_ffill() -> None:
+    """Input with NaN and nan_policy='ffill' is filled and computed."""
+    data = np.array(
+        [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        dtype=np.float64,
+    )
+    jaw, teeth, lips = alligator_ind(
+        data, jaw=3, teeth=2, lips=2, nan_policy='ffill'
+    )
+    # after warmup all values must be finite
+    assert np.isfinite(jaw[2:]).all()
+    assert np.isfinite(teeth[1:]).all()
+    assert np.isfinite(lips[1:]).all()
+
+
+@pytest.mark.overlap
+def test_alligator_ind_invalid_periods() -> None:
+    """Periods below 1 raise ValueError."""
+    close = np.linspace(1.0, 20.0, 20)
+    with pytest.raises(ValueError, match='must all be >= 1'):
+        alligator_ind(close, jaw=0, teeth=2, lips=2)
+    with pytest.raises(ValueError, match='must all be >= 1'):
+        alligator_ind(close, jaw=3, teeth=-1, lips=2)
 
 
 @pytest.mark.overlap

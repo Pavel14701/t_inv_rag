@@ -79,8 +79,25 @@ def test_alma_weights_cache() -> None:
     dist_offset = 0.85
     w1 = _alma_weights(length, sigma, dist_offset)
     w2 = _alma_weights(length, sigma, dist_offset)
-    # Should be the same object (or identical values)
-    assert np.array_equal(w1, w2)
+    # Should be the same object (lru_cache)
+    assert w1 is w2
+
+
+@pytest.mark.overlap
+def test_alma_weights_readonly() -> None:
+    """Cached weights must be read-only to protect the lru_cache."""
+    weights = _alma_weights(9, 6.0, 0.85)
+    assert not weights.flags.writeable
+    with pytest.raises(ValueError):
+        weights[0] = 1.0
+
+
+@pytest.mark.overlap
+def test_alma_numba_opt_invalid_length() -> None:
+    """Length below 1 raises ValueError."""
+    close = np.arange(1.0, 11.0)
+    with pytest.raises(ValueError, match='must be >= 1'):
+        alma_numba_opt(close, length=0)
 
 
 # -----------------------------------------------------------------------------
@@ -272,7 +289,8 @@ def test_alma_numba_opt_with_nan(prices_with_nan):
     """NaN in input propagates correctly through ALMA calculation."""  # noqa: D403, E501
     length = 5
     result = alma_numba_opt(
-        prices_with_nan, length=length, offset=0, fillna=None
+        prices_with_nan, length=length, offset=0, fillna=None,
+        nan_policy='ignore',
     )
     # NaN at index 5
     # First valid at index length-1 = 4 (no NaN in window 0-4)
@@ -287,7 +305,9 @@ def test_alma_numba_opt_with_nan(prices_with_nan):
 def test_alma_numba_opt_with_inf(prices_with_inf):
     """Inf in input is replaced with NaN, so it behaves like NaN."""
     length = 5
-    result = alma_numba_opt(prices_with_inf, length=length)
+    result = alma_numba_opt(
+        prices_with_inf, length=length, nan_policy='ignore'
+    )
     # Same as with NaN because Inf is replaced with NaN
     assert np.isfinite(result[4])
     assert np.isnan(result[5:10]).all()
@@ -304,9 +324,11 @@ def test_alma_numba_opt_empty(prices_empty):
 @pytest.mark.overlap
 def test_alma_numba_opt_all_nan(prices_all_nan):
     """All NaNs -> all NaNs (or fillna if provided)."""
-    result = alma_numba_opt(prices_all_nan, length=5)
+    result = alma_numba_opt(prices_all_nan, length=5, nan_policy='ignore')
     assert np.isnan(result).all()
-    result_fill = alma_numba_opt(prices_all_nan, length=5, fillna=0.0)
+    result_fill = alma_numba_opt(
+        prices_all_nan, length=5, fillna=0.0, nan_policy='ignore'
+    )
     # _apply_offset_fillna replaces all NaNs with fillna
     assert (result_fill == 0.0).all()
 
@@ -315,7 +337,7 @@ def test_alma_numba_opt_all_nan(prices_all_nan):
 def test_alma_numba_opt_extreme_values(prices_extreme):
     """Extreme values (1e300, 1e-300) must not crash."""
     length = 5
-    result = alma_numba_opt(prices_extreme, length=length)
+    result = alma_numba_opt(prices_extreme, length=length, nan_policy='ignore')
     # Should not crash; may contain inf or nan, but at least the function runs.
     assert result is not None
 
@@ -329,7 +351,7 @@ def test_alma_polars_with_nan(df_random_walk):
     df_with_nan = df_random_walk.with_columns([pl.Series('close', close_arr)])
     result_df = alma_polars(
         df_with_nan, close_col='close',
-        length=5, output_col='ALMA'
+        length=5, output_col='ALMA', nan_policy='ignore'
     )
     assert 'ALMA' in result_df.columns
     assert len(result_df) == len(df_random_walk)
@@ -340,3 +362,26 @@ def test_alma_polars_with_nan(df_random_walk):
     # So indices 5..9 should be NaN
     # But we only check that at least some NaN exists
     assert np.isnan(alma_vals[5:10]).any()
+
+
+@pytest.mark.overlap
+def test_alma_numba_opt_nan_policy_raise() -> None:
+    """Input with NaN and default nan_policy='raise' raises ValueError."""
+    data = np.array(
+        [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        dtype=np.float64,
+    )
+    with pytest.raises(ValueError, match='NaN'):
+        alma_numba_opt(data, length=3)
+
+
+@pytest.mark.overlap
+def test_alma_numba_opt_nan_policy_ffill() -> None:
+    """Input with NaN and nan_policy='ffill' is filled and computed."""
+    data = np.array(
+        [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        dtype=np.float64,
+    )
+    result = alma_numba_opt(data, length=3, nan_policy='ffill')
+    # after warmup all values must be finite
+    assert np.isfinite(result[2:]).all()

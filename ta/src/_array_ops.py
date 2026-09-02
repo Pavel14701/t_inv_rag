@@ -320,6 +320,12 @@ def _handle_nan_policy(arr: np.ndarray, nan_policy: str, name: str) -> np.ndarra
     ValueError
         If `nan_policy == 'raise'` and any NaN is present.
     """
+    _VALID_POLICIES = ('raise', 'ignore', 'ffill', 'bfill', 'both')
+    if nan_policy not in _VALID_POLICIES:
+        raise ValueError(
+            f'Unknown nan_policy: {nan_policy}. '
+            "Use 'raise', 'ignore', 'ffill', 'bfill', or 'both'."
+        )
     if nan_policy == 'ignore':
         return arr
     if not np.isnan(arr).any():

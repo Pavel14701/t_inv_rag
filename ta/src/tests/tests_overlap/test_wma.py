@@ -83,12 +83,37 @@ def test_wma_weights_direction() -> None:
 
 @pytest.mark.overlap
 def test_wma_weights_cache() -> None:
-    """Test that weights are cached (lru_cache works)."""
+    """Test that weights are cached (lru_cache returns same object)."""
     length = 10
     asc = True
     w1 = _get_wma_weights(length, asc)
     w2 = _get_wma_weights(length, asc)
-    assert np.array_equal(w1, w2)
+    assert w1 is w2
+
+
+@pytest.mark.overlap
+def test_wma_weights_readonly() -> None:
+    """Cached weights must be read-only to protect the lru_cache."""
+    weights = _get_wma_weights(10, True)
+    assert not weights.flags.writeable
+    with pytest.raises(ValueError):
+        weights[0] = 1.0
+
+
+@pytest.mark.overlap
+def test_wma_numba_invalid_length() -> None:
+    """Length below 1 raises ValueError."""
+    close = np.arange(1.0, 11.0)
+    with pytest.raises(ValueError, match='must be >= 1'):
+        wma_numba(close, length=0)
+
+
+@pytest.mark.overlap
+def test_wma_numba_invalid_nan_policy() -> None:
+    """Unknown nan_policy raises ValueError."""
+    close = np.array([1.0, np.nan, 3.0, 4.0, 5.0], dtype=np.float64)
+    with pytest.raises(ValueError, match='nan_policy'):
+        wma_numba(close, length=2, nan_policy='invalid')
 
 
 # -----------------------------------------------------------------------------

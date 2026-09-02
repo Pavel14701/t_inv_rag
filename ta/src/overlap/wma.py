@@ -19,7 +19,7 @@ from functools import lru_cache
 
 import numpy as np
 import polars as pl
-from numba import float64, njit
+from numba import njit
 
 from ..external import talib, talib_available
 from .._array_ops import (
@@ -58,13 +58,15 @@ def _get_wma_weights(length: int, asc: bool) -> np.ndarray:
     if not asc:
         w = w[::-1]
     w /= w.sum()
+    # Protect the lru_cache from accidental in-place modification
+    w.flags.writeable = False
     return w
 
 
 # ----------------------------------------------------------------------
 # WMA core loop (Numba) with typed signature
 # ----------------------------------------------------------------------
-@njit((float64[:], float64[:]), fastmath=False, cache=True)
+@njit(fastmath=False, cache=True)
 def _wma_numba_core(arr: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """Weighted Moving Average core loop.
 
@@ -124,8 +126,8 @@ def wma_numba(
     nan_policy : str, default 'raise'
         How to handle NaN values: 'raise', 'ignore', 'ffill', 'bfill', 'both'.
     trim : bool, default False
-        If True, remove the first `length-1`
-        elements (incompatible with offset).
+        If True, remove the first `length-1` elements before
+        applying `offset`.
 
     Returns
     -------
@@ -135,8 +137,7 @@ def wma_numba(
     Raises
     ------
     ValueError
-        If `length < 1`, input contains infinities (unless replaced by NaN),
-        invalid `nan_policy`, or series too short.
+        If `length < 1`, invalid `nan_policy`, or series too short.
 
     Notes
     -----
@@ -203,7 +204,8 @@ def wma_talib(
     nan_policy : str, default 'raise'
         How to handle NaN values: 'raise', 'ignore', 'ffill', 'bfill', 'both'.
     trim : bool, default False
-        If True, remove the first `length-1` elements.
+        If True, remove the first `length-1` elements before
+        applying `offset`.
 
     Returns
     -------
@@ -215,8 +217,7 @@ def wma_talib(
     ImportError
         If TA-Lib is not installed.
     ValueError
-        If `length < 1`, input contains infinities, invalid `nan_policy`,
-        or series too short.
+        If `length < 1`, invalid `nan_policy`, or series too short.
 
     Notes
     -----
@@ -281,8 +282,8 @@ def wma_ind(
     nan_policy : str, default 'raise'
         How to handle NaN values: 'raise', 'ignore', 'ffill', 'bfill', 'both'.
     trim : bool, default False
-        If True, remove the first `length-1` elements.
-        Incompatible with TA-Lib.
+        If True, remove the first `length-1` elements before
+        applying `offset`.
 
     Returns
     -------
@@ -292,7 +293,7 @@ def wma_ind(
     Raises
     ------
     ValueError
-        If `trim=True` and TA-Lib is used.
+        If `length < 1`, invalid `nan_policy`, or series too short.
 
     Notes
     -----

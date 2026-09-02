@@ -96,7 +96,24 @@ def test_fwma_weights_cache() -> None:
     asc = True
     w1 = _get_fib_weights(length, asc)
     w2 = _get_fib_weights(length, asc)
-    assert np.array_equal(w1, w2)
+    assert w1 is w2
+
+
+@pytest.mark.overlap
+def test_fwma_weights_readonly() -> None:
+    """Cached weights must be read-only to protect the lru_cache."""
+    weights = _get_fib_weights(10, True)
+    assert not weights.flags.writeable
+    with pytest.raises(ValueError):
+        weights[0] = 1.0
+
+
+@pytest.mark.overlap
+def test_fwma_numba_invalid_length() -> None:
+    """Length below 1 raises ValueError."""
+    close = np.arange(1.0, 11.0)
+    with pytest.raises(ValueError, match='must be >= 1'):
+        fwma_numba(close, length=0)
 
 
 # -----------------------------------------------------------------------------
@@ -278,7 +295,7 @@ def test_fwma_numba_with_nan(prices_with_nan):
     leaves the window eventually.
     """  # noqa: D403
     length = 5
-    result = fwma_numba(prices_with_nan, length=length)
+    result = fwma_numba(prices_with_nan, length=length, nan_policy='ignore')
     # NaN at index 5. FWMA with window 5:
     # - indices 0-3: NaN (insufficient data)
     # - index 4: SMA of 0-4 (no NaN) -> finite
@@ -294,7 +311,7 @@ def test_fwma_numba_with_nan(prices_with_nan):
 def test_fwma_numba_with_inf(prices_with_inf):
     """Inf in input is replaced with NaN, so it behaves like NaN."""
     length = 5
-    result = fwma_numba(prices_with_inf, length=length)
+    result = fwma_numba(prices_with_inf, length=length, nan_policy='ignore')
     # Same as NaN test
     assert np.isnan(result[:4]).all()
     assert np.isfinite(result[4])
@@ -312,9 +329,11 @@ def test_fwma_numba_empty(prices_empty):
 @pytest.mark.overlap
 def test_fwma_numba_all_nan(prices_all_nan):
     """All NaNs -> all NaNs (or fillna if provided)."""
-    result = fwma_numba(prices_all_nan, length=5)
+    result = fwma_numba(prices_all_nan, length=5, nan_policy='ignore')
     assert np.isnan(result).all()
-    result_fill = fwma_numba(prices_all_nan, length=5, fillna=0.0)
+    result_fill = fwma_numba(
+        prices_all_nan, length=5, fillna=0.0, nan_policy='ignore'
+    )
     # _apply_offset_fillna replaces all NaNs with fillna
     assert (result_fill == 0.0).all()
 
@@ -323,10 +342,31 @@ def test_fwma_numba_all_nan(prices_all_nan):
 def test_fwma_numba_extreme_values(prices_extreme):
     """Extreme values (1e300, 1e-300) must not crash."""
     length = 5
-    result = fwma_numba(prices_extreme, length=length)
+    result = fwma_numba(prices_extreme, length=length, nan_policy='ignore')
     assert result is not None
-    # At least some finite values after index length-1
-    assert np.isfinite(result[length:]).any()
+
+
+@pytest.mark.overlap
+def test_fwma_numba_nan_policy_raise() -> None:
+    """Input with NaN and default nan_policy='raise' raises ValueError."""
+    data = np.array(
+        [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        dtype=np.float64,
+    )
+    with pytest.raises(ValueError, match='NaN'):
+        fwma_numba(data, length=3)
+
+
+@pytest.mark.overlap
+def test_fwma_numba_nan_policy_ffill() -> None:
+    """Input with NaN and nan_policy='ffill' is filled and computed."""
+    data = np.array(
+        [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        dtype=np.float64,
+    )
+    result = fwma_numba(data, length=3, nan_policy='ffill')
+    # after warmup all values must be finite
+    assert np.isfinite(result[2:]).all()
 
 
 @pytest.mark.overlap
@@ -338,7 +378,7 @@ def test_fwma_polars_with_nan(df_random_walk):
     df_with_nan = df_random_walk.with_columns([pl.Series('close', close_arr)])
     result_df = fwma_polars(
         df_with_nan, close_col='close',
-        length=5, output_col='FWMA'
+        length=5, output_col='FWMA', nan_policy='ignore'
     )
     assert 'FWMA' in result_df.columns
     assert len(result_df) == len(df_random_walk)

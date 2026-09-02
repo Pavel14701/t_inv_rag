@@ -5,7 +5,11 @@ import numpy as np
 import polars as pl
 from numba import njit
 
-from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
+from .._array_ops import (
+    _apply_offset_fillna,
+    _handle_nan_policy,
+    replace_inf_with_nan,
+)
 
 
 # ----------------------------------------------------------------------
@@ -34,6 +38,8 @@ def _alma_weights(length: int, sigma: float, dist_offset: float) -> np.ndarray:
     k = dist_offset * (length - 1)
     w = np.exp(-0.5 * ((sigma / length) * (x - k)) ** 2)
     w /= w.sum()
+    # Protect the lru_cache from accidental in-place modification
+    w.flags.writeable = False
     return w
 
 
@@ -70,6 +76,7 @@ def alma_numba_opt(
     dist_offset: float = 0.85,
     offset: int = 0,
     fillna: float | None = None,
+    nan_policy: str = 'raise',
 ) -> np.ndarray:
     """Arnaud Legoux Moving Average using Numba (optimized).
 
@@ -87,11 +94,20 @@ def alma_numba_opt(
         Shift result.
     fillna : float, optional
         Value to fill NaNs.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`:
+        'raise', 'ignore', 'ffill', 'bfill', or 'both'.
 
     Returns
     -------
     np.ndarray
         ALMA values.
+
+    Raises
+    ------
+    ValueError
+        If `length < 1`, the input contains NaN with `nan_policy='raise'`,
+        or `nan_policy` is unknown.
 
     Notes
     -----
@@ -100,10 +116,13 @@ def alma_numba_opt(
     - NaN values propagate naturally through the calculation.
 
     """
+    if length < 1:
+        raise ValueError('ALMA length must be >= 1')
     close = np.asarray(close, dtype=np.float64, copy=False)
     # Replace infinities with NaN (IEEE 754 compliance)
     close = close.copy()
     replace_inf_with_nan(close)
+    close = _handle_nan_policy(close, nan_policy, 'close')
     # Ensure C-contiguous for best performance
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -121,11 +140,14 @@ def alma_ind(
     dist_offset: float = 0.85,
     offset: int = 0,
     fillna: float | None = None,
+    nan_policy: str = 'raise',
 ) -> np.ndarray:
     """Universal ALMA (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
-    return alma_numba_opt(close, length, sigma, dist_offset, offset, fillna)
+    return alma_numba_opt(
+        close, length, sigma, dist_offset, offset, fillna, nan_policy
+    )
 
 
 # ----------------------------------------------------------------------
@@ -139,6 +161,7 @@ def alma_polars(
     dist_offset: float = 0.85,
     offset: int = 0,
     fillna: float | None = None,
+    nan_policy: str = 'raise',
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """ALMA for Polars DataFrame.
@@ -159,6 +182,8 @@ def alma_polars(
         Shift result.
     fillna : float, optional
         Value to fill NaNs.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in the close column.
     output_col : str, optional
         Output column name (default f"ALMA_{length}_{sigma}_{dist_offset}").
 
@@ -176,6 +201,7 @@ def alma_polars(
         dist_offset=dist_offset,
         offset=offset,
         fillna=fillna,
+        nan_policy=nan_policy,
     )
     out_name = output_col or f'ALMA_{length}_{sigma}_{dist_offset}'
     return df.with_columns([pl.Series(out_name, result)])

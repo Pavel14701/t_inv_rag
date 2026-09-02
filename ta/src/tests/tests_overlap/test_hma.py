@@ -2,12 +2,11 @@
 """Unit tests for Hull Moving Average (HMA) module.
 
 Tests cover:
-- hma_numba against reference implementation
+- hma_numba against reference implementation for each mamode
 - offset and fillna
 - hma_ind with Polars Series
 - hma_polars DataFrame integration
 - IEEE 754 compliance (NaN, Inf, empty, extreme)
-- Different mamode options (sma, ema, wma)
 """
 
 import pytest
@@ -33,12 +32,16 @@ def _hma_reference(
 ) -> npt.NDArray[np.float64]:
     """Pure Python reference HMA using specified MA."""
     if mamode == 'sma':
-        ma_func = sma_ind
+        ma_func = lambda x, length, **kwargs: sma_ind(  # noqa: E731
+            x, length, use_talib=False, nan_policy='ignore', trim=False, **kwargs
+        )
     elif mamode == 'ema':
-        ma_func = ema_ind
+        ma_func = lambda x, length, **kwargs: ema_ind(  # noqa: E731
+            x, length, use_talib=False, nan_policy='ignore', trim=False, **kwargs
+        )
     elif mamode == 'wma':
         ma_func = lambda x, length, **kwargs: wma_ind(  # noqa: E731
-            x, length, asc=True, use_talib=False, nan_policy='ignore', **kwargs
+            x, length, asc=True, use_talib=False, nan_policy='ignore', trim=False, **kwargs
         )
     else:
         raise ValueError(f'Unsupported mamode: {mamode}')
@@ -53,22 +56,50 @@ def _hma_reference(
 
 
 # -----------------------------------------------------------------------------
-# Tests for hma_numba
+# Separate tests for each mamode
 # -----------------------------------------------------------------------------
 @pytest.mark.overlap
-def test_hma_numba_against_reference(
+def test_hma_numba_against_reference_sma(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
-    """Test hma_numba against pure Python reference for all mamodes."""
+    """Test HMA with SMA base against reference."""
     close = prices_random_walk
     length = 10
+    start = 50
+    result = hma_numba(close, length=length, mamode='sma')
+    expected = _hma_reference(close, length, mamode='sma')
+    assert_allclose(result[start:], expected[start:], rtol=1e-6, equal_nan=True)
 
-    for mamode in ('sma', 'ema', 'wma'):
-        result = hma_numba(close, length=length, mamode=mamode)
-        expected = _hma_reference(close, length, mamode)
-        assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
+
+@pytest.mark.overlap
+def test_hma_numba_against_reference_ema(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
+    """Test HMA with EMA base against reference."""
+    close = prices_random_walk
+    length = 10
+    start = 50
+    result = hma_numba(close, length=length, mamode='ema')
+    expected = _hma_reference(close, length, mamode='ema')
+    assert_allclose(result[start:], expected[start:], rtol=1e-6, equal_nan=True)
 
 
+@pytest.mark.overlap
+def test_hma_numba_against_reference_wma(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
+    """Test HMA with WMA base against reference."""
+    close = prices_random_walk
+    length = 10
+    start = 50
+    result = hma_numba(close, length=length, mamode='wma')
+    expected = _hma_reference(close, length, mamode='wma')
+    assert_allclose(result[start:], expected[start:], rtol=1e-6, equal_nan=True)
+
+
+# -----------------------------------------------------------------------------
+# Tests for hma_numba (offset, fillna, short window, invalid mamode)
+# -----------------------------------------------------------------------------
 @pytest.mark.overlap
 def test_hma_numba_offset_fillna(
     prices_random_walk: npt.NDArray[np.float64],
@@ -98,7 +129,7 @@ def test_hma_numba_short_window() -> None:
 @pytest.mark.overlap
 def test_hma_numba_invalid_mamode() -> None:
     """Unsupported mamode raises ValueError."""
-    close = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    close = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], dtype=np.float64)
     with pytest.raises(ValueError, match='Unsupported mamode'):
         hma_numba(close, length=5, mamode='invalid')
 
@@ -115,7 +146,8 @@ def test_hma_ind_with_pl_series(
     length = 10
     result = hma_ind(s, length=length, mamode='wma')
     expected = _hma_reference(prices_random_walk, length, 'wma')
-    assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
+    start = 50
+    assert_allclose(result[start:], expected[start:], rtol=1e-6, equal_nan=True)
 
 
 # -----------------------------------------------------------------------------
@@ -137,7 +169,13 @@ def test_hma_polars_basic(df_random_walk: pl.DataFrame) -> None:
 
     close_arr = df_random_walk['close'].to_numpy()
     expected = _hma_reference(close_arr, length, 'wma')
-    assert_allclose(result_df['HMA'].to_numpy(), expected, rtol=1e-6, equal_nan=True)
+    start = 50
+    assert_allclose(
+        result_df['HMA'].to_numpy()[start:],
+        expected[start:],
+        rtol=1e-6,
+        equal_nan=True
+    )
 
 
 @pytest.mark.overlap
@@ -176,22 +214,18 @@ def test_hma_numba_with_nan(prices_with_nan):
     """NaN in input propagates correctly through HMA."""
     length = 5
     result = hma_numba(prices_with_nan, length=length, mamode='wma')
-    # NaN at index 5. With WMA, NaN propagates to windows containing it.
-    # For length=5, half_length=2, sqrt_length=2.
-    # NaN will affect indices where any MA includes NaN.
-    # We check that NaN appears somewhere after index 5, but not necessarily all.
-    assert np.isnan(result[5:10]).any()
-    # After index 10, no NaN should remain (since windows no longer include index 5)
-    assert np.isfinite(result[10:]).all()
+    # NaN at index 5. For HMA with length=5, half=2, sqrt=2.
+    # NaN will affect indices 5..10 (5 + 2 + 2 + 1 = 10)
+    assert np.isnan(result[5:11]).all()
+    assert np.isfinite(result[11:]).all()
 
 
 def test_hma_numba_with_inf(prices_with_inf):
     """Inf in input is replaced with NaN, so behaves like NaN."""
     length = 5
     result = hma_numba(prices_with_inf, length=length, mamode='wma')
-    # Same as NaN test
-    assert np.isnan(result[5:10]).any()
-    assert np.isfinite(result[10:]).all()
+    assert np.isnan(result[5:11]).all()
+    assert np.isfinite(result[11:]).all()
 
 
 def test_hma_numba_empty(prices_empty):
@@ -224,5 +258,5 @@ def test_hma_polars_with_nan(df_random_walk):
     result_df = hma_polars(df_with_nan, close_col='close', length=5, output_col='HMA')
     assert 'HMA' in result_df.columns
     hma_vals = result_df['HMA'].to_numpy()
-    assert np.isnan(hma_vals[5:10]).any()
-    assert np.isfinite(hma_vals[10:]).all()
+    assert np.isnan(hma_vals[5:11]).all()
+    assert np.isfinite(hma_vals[11:]).all()

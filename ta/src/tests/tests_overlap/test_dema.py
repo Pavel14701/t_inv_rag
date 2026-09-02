@@ -54,9 +54,17 @@ def _dema_reference(
     close: npt.NDArray[np.float64],
     length: int
 ) -> npt.NDArray[np.float64]:
-    """Pure Python reference DEMA: 2*EMA - EMA(EMA)."""
+    """Pure Python reference DEMA: 2*EMA - EMA(EMA).
+
+    The second EMA is seeded on the valid (non-NaN) part of ema1,
+    so DEMA is finite from index 2*(length-1) onward.
+    """
     ema1 = _ema_reference(close, length)
-    ema2 = _ema_reference(ema1, length)
+    n = len(ema1)
+    ema2 = np.full(n, np.nan, dtype=np.float64)
+    valid_start = length - 1
+    ema2_tail = _ema_reference(ema1[valid_start:], length)
+    ema2[2 * valid_start:] = ema2_tail[valid_start:]
     return 2.0 * ema1 - ema2
 
 
@@ -89,6 +97,14 @@ def test_dema_numba_offset_fillna(
     expected = _apply_offset_fillna(base, offset, fillna)
     result = dema_numba(close, length=length, offset=offset, fillna=fillna)
     assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
+
+
+@pytest.mark.overlap
+def test_dema_numba_invalid_length() -> None:
+    """Length below 1 raises ValueError."""
+    close = np.arange(1.0, 11.0)
+    with pytest.raises(ValueError, match='must be >= 1'):
+        dema_numba(close, length=0)
 
 
 @pytest.mark.overlap
@@ -260,7 +276,7 @@ def test_dema_numba_with_nan(prices_with_nan):
     remains NaN for all subsequent values.
     """  # noqa: D403
     length = 5
-    result = dema_numba(prices_with_nan, length=length)
+    result = dema_numba(prices_with_nan, length=length, nan_policy='ignore')
     # NaN at index 5. EMA becomes NaN at index 5 and stays NaN forever.
     # DEMA = 2*EMA1 - EMA2, both become NaN at index 5 and stay NaN.
     # Therefore, result should be NaN from index 5 to the end.
@@ -272,7 +288,7 @@ def test_dema_numba_with_nan(prices_with_nan):
 def test_dema_numba_with_inf(prices_with_inf):
     """Inf in input is replaced with NaN, so it behaves like NaN."""
     length = 5
-    result = dema_numba(prices_with_inf, length=length)
+    result = dema_numba(prices_with_inf, length=length, nan_policy='ignore')
     # Same as NaN test
     assert np.isnan(result[:5]).all()
     assert np.isnan(result[5:]).all()
@@ -288,9 +304,11 @@ def test_dema_numba_empty(prices_empty):
 @pytest.mark.overlap
 def test_dema_numba_all_nan(prices_all_nan):
     """All NaNs -> all NaNs (or fillna if provided)."""
-    result = dema_numba(prices_all_nan, length=5)
+    result = dema_numba(prices_all_nan, length=5, nan_policy='ignore')
     assert np.isnan(result).all()
-    result_fill = dema_numba(prices_all_nan, length=5, fillna=0.0)
+    result_fill = dema_numba(
+        prices_all_nan, length=5, fillna=0.0, nan_policy='ignore'
+    )
     assert (result_fill == 0.0).all()
 
 
@@ -298,8 +316,31 @@ def test_dema_numba_all_nan(prices_all_nan):
 def test_dema_numba_extreme_values(prices_extreme):
     """Extreme values (1e300, 1e-300) must not crash."""
     length = 5
-    result = dema_numba(prices_extreme, length=length)
+    result = dema_numba(prices_extreme, length=length, nan_policy='ignore')
     assert result is not None
+
+
+@pytest.mark.overlap
+def test_dema_numba_nan_policy_raise() -> None:
+    """Input with NaN and default nan_policy='raise' raises ValueError."""
+    data = np.array(
+        [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        dtype=np.float64,
+    )
+    with pytest.raises(ValueError, match='NaN'):
+        dema_numba(data, length=3)
+
+
+@pytest.mark.overlap
+def test_dema_numba_nan_policy_ffill() -> None:
+    """Input with NaN and nan_policy='ffill' is filled and computed."""
+    data = np.array(
+        [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        dtype=np.float64,
+    )
+    result = dema_numba(data, length=3, nan_policy='ffill')
+    # after warmup all values must be finite
+    assert np.isfinite(result[4:]).all()
 
 
 @pytest.mark.overlap
@@ -310,7 +351,8 @@ def test_dema_polars_with_nan(df_random_walk):
     close_arr[5] = np.nan
     df_with_nan = df_random_walk.with_columns([pl.Series('close', close_arr)])
     result_df = dema_polars(
-        df_with_nan, close_col='close', length=5, output_col='DEMA'
+        df_with_nan, close_col='close', length=5, output_col='DEMA',
+        nan_policy='ignore',
     )
     assert 'DEMA' in result_df.columns
     assert len(result_df) == len(df_random_walk)

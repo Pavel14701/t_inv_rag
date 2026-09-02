@@ -13,8 +13,6 @@ All floating‑point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
 """
 
-from functools import partial
-
 import numpy as np
 import polars as pl
 
@@ -41,7 +39,7 @@ def hma_numba(
     close : np.ndarray
         1D float64 array of close prices.
     length : int, default 10
-        HMA period (must be >= 1).
+        HMA period (must be >= 2).
     mamode : str, default 'wma'
         Type of moving average for internal calculations:
         'sma', 'ema', or 'wma'.
@@ -58,16 +56,21 @@ def hma_numba(
     Raises
     ------
     ValueError
-        If `length < 1` or `mamode` is not supported.
+        If `length < 2`, `mamode` is not supported, or series too short.
 
     Notes
     -----
     - The first `int(sqrt(length)) + int(length/2) - 1` elements are NaN.
     - Infinites in `close` are replaced with NaN.
-    - All internal MA calls use `nan_policy='ignore'` and `use_talib=False`
-      to ensure IEEE 754 compliance and avoid NaN propagation errors.
+    - All internal MA calls use Numba backend with `nan_policy='ignore'`.
 
     """
+    if length < 2:
+        raise ValueError('HMA length must be >= 2')
+
+    if mamode not in ('sma', 'ema', 'wma'):
+        raise ValueError(f'Unsupported mamode: {mamode}')
+
     close = np.asarray(close, dtype=np.float64, copy=False)
     close = close.copy()
     replace_inf_with_nan(close)
@@ -78,25 +81,34 @@ def hma_numba(
     half_length = int(length / 2)
     sqrt_length = int(np.sqrt(length))
 
-    # If series too short for any required window, return all NaN
-    min_len = min(half_length, length, sqrt_length)
-    if len(close) < min_len:
+    if len(close) < max(half_length, length, sqrt_length):
         return np.full(len(close), np.nan, dtype=np.float64)
 
-    # Select MA function with fixed parameters
+    # Compute moving averages using wrapper functions
     if mamode == 'sma':
-        ma_func = partial(sma_ind, use_talib=False, nan_policy='ignore')
+        maf = sma_ind(close, half_length, use_talib=False,
+                      nan_policy='ignore', trim=False)
+        mas = sma_ind(close, length, use_talib=False,
+                      nan_policy='ignore', trim=False)
+        diff = 2.0 * maf - mas
+        hma = sma_ind(diff, sqrt_length, use_talib=False,
+                      nan_policy='ignore', trim=False)
     elif mamode == 'ema':
-        ma_func = partial(ema_ind, use_talib=False, nan_policy='ignore')
-    elif mamode == 'wma':
-        ma_func = partial(wma_ind, use_talib=False, asc=True, nan_policy='ignore')
-    else:
-        raise ValueError(f'Unsupported mamode: {mamode}')
-
-    maf = ma_func(close, half_length)
-    mas = ma_func(close, length)
-    diff = 2.0 * maf - mas
-    hma = ma_func(diff, sqrt_length)
+        maf = ema_ind(close, half_length, use_talib=False,
+                      nan_policy='ignore', trim=False)
+        mas = ema_ind(close, length, use_talib=False,
+                      nan_policy='ignore', trim=False)
+        diff = 2.0 * maf - mas
+        hma = ema_ind(diff, sqrt_length, use_talib=False,
+                      nan_policy='ignore', trim=False)
+    else:  # mamode == 'wma'
+        maf = wma_ind(close, half_length, asc=True, use_talib=False,
+                      nan_policy='ignore', trim=False)
+        mas = wma_ind(close, length, asc=True, use_talib=False,
+                      nan_policy='ignore', trim=False)
+        diff = 2.0 * maf - mas
+        hma = wma_ind(diff, sqrt_length, asc=True, use_talib=False,
+                      nan_policy='ignore', trim=False)
 
     return _apply_offset_fillna(hma, offset, fillna)
 

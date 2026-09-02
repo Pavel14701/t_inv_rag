@@ -22,7 +22,11 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
+from .._array_ops import (
+    _apply_offset_fillna,
+    _handle_nan_policy,
+    replace_inf_with_nan,
+)
 
 
 # ----------------------------------------------------------------------
@@ -62,6 +66,8 @@ def _get_fib_weights(length: int, asc: bool) -> np.ndarray:
     if not asc:
         w = w[::-1]
     w /= w.sum()
+    # Protect the lru_cache from accidental in-place modification
+    w.flags.writeable = False
     return w
 
 
@@ -114,6 +120,7 @@ def fwma_numba(
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
+    nan_policy: str = 'raise',
 ) -> np.ndarray:
     """Fibonacci Weighted Moving Average
     using Numba (fallback/primary backend).
@@ -132,6 +139,9 @@ def fwma_numba(
         negative = backward (shifted to the past).
     fillna : float or None, default None
         Value to replace NaN and shifted-in positions. If None, NaN remains.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`:
+        'raise', 'ignore', 'ffill', 'bfill', or 'both'.
 
     Returns
     -------
@@ -141,7 +151,8 @@ def fwma_numba(
     Raises
     ------
     ValueError
-        If `length < 1` (handled by weight generation, but also checked).
+        If `length < 1`, the input contains NaN with `nan_policy='raise'`,
+        or `nan_policy` is unknown.
 
     Notes
     -----
@@ -150,9 +161,14 @@ def fwma_numba(
     - This function is IEEE 754 compliant.
 
     """
+    if length < 1:
+        raise ValueError('FWMA length must be >= 1')
     close = np.asarray(close, dtype=np.float64, copy=False)
     close = close.copy()
     replace_inf_with_nan(close)
+    close = _handle_nan_policy(close, nan_policy, 'close')
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     weights = _get_fib_weights(length, asc)
     fwma = _fwma_numba_cached(close, weights)
     return _apply_offset_fillna(fwma, offset, fillna)
@@ -167,6 +183,7 @@ def fwma_ind(
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
+    nan_policy: str = 'raise',
 ) -> np.ndarray:
     """Universal FWMA (always uses Numba, no TA-Lib equivalent).
 
@@ -182,6 +199,9 @@ def fwma_ind(
         Shift the result.
     fillna : float or None, default None
         Value to replace NaNs.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`:
+        'raise', 'ignore', 'ffill', 'bfill', or 'both'.
 
     Returns
     -------
@@ -196,7 +216,7 @@ def fwma_ind(
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
-    return fwma_numba(close, length, asc, offset, fillna)
+    return fwma_numba(close, length, asc, offset, fillna, nan_policy)
 
 
 # ----------------------------------------------------------------------
@@ -209,6 +229,7 @@ def fwma_polars(
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
+    nan_policy: str = 'raise',
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add FWMA column to a Polars DataFrame.
@@ -227,6 +248,8 @@ def fwma_polars(
         Shift the result.
     fillna : float or None, default None
         Value to replace NaNs.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in the close column.
     output_col : str or None, default None
         Name of the output column. If None, defaults to f'FWMA_{length}'.
 
@@ -248,6 +271,7 @@ def fwma_polars(
         asc=asc,
         offset=offset,
         fillna=fillna,
+        nan_policy=nan_policy,
     )
     out_name = output_col or f'FWMA_{length}'
     return df.with_columns([pl.Series(out_name, result)])

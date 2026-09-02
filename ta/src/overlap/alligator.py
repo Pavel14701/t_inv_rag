@@ -13,7 +13,11 @@ import polars as pl
 from numba import jit, prange
 
 from .smma import _smma_numba_core
-from .._array_ops import replace_inf_with_nan
+from .._array_ops import (
+    _apply_offset_fillna,
+    _handle_nan_policy,
+    replace_inf_with_nan,
+)
 
 
 # ----------------------------------------------------------------------
@@ -108,6 +112,7 @@ def alligator_ind(  # noqa: C901
     offset: int = 0,
     fillna: float | None = None,
     parallel: bool = True,
+    nan_policy: str = 'raise',
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Bill Williams Alligator indicator.
 
@@ -125,11 +130,20 @@ def alligator_ind(  # noqa: C901
     parallel : bool, default True
         If True, use parallel computation (faster for large data).
         If False, use sequential computation (less overhead for small data).
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`:
+        'raise', 'ignore', 'ffill', 'bfill', or 'both'.
 
     Returns
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
         (jaw, teeth, lips) as numpy arrays, same length as `close`.
+
+    Raises
+    ------
+    ValueError
+        If any period is < 1, the input contains NaN with
+        `nan_policy='raise'`, or `nan_policy` is unknown.
 
     Notes
     -----
@@ -138,12 +152,15 @@ def alligator_ind(  # noqa: C901
     - All operations are IEEE 754 compliant.
 
     """
+    if jaw < 1 or teeth < 1 or lips < 1:
+        raise ValueError('jaw, teeth and lips periods must all be >= 1')
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     close = np.asarray(close, dtype=np.float64, copy=False)
     # Replace infinities with NaN (IEEE 754 compliance)
     close = close.copy()
     replace_inf_with_nan(close)
+    close = _handle_nan_policy(close, nan_policy, 'close')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if parallel:
@@ -155,20 +172,9 @@ def alligator_ind(  # noqa: C901
     teeth_arr = _smma_numba_core(close, teeth)
     lips_arr = _smma_numba_core(close, lips)
     # Apply offset and fillna (same logic as in parallel version)
-    if offset != 0:
-        for arr in (jaw_arr, teeth_arr, lips_arr):
-            if offset > 0:
-                arr[offset:] = arr[:-offset]
-                arr[:offset] = np.nan
-            else:
-                arr[:offset] = arr[-offset:]
-                arr[offset:] = np.nan
-    if fillna is not None:
-        n = len(close)
-        for arr in (jaw_arr, teeth_arr, lips_arr):
-            for i in range(n):
-                if np.isnan(arr[i]):
-                    arr[i] = fillna
+    jaw_arr = _apply_offset_fillna(jaw_arr, offset, fillna)
+    teeth_arr = _apply_offset_fillna(teeth_arr, offset, fillna)
+    lips_arr = _apply_offset_fillna(lips_arr, offset, fillna)
     return jaw_arr, teeth_arr, lips_arr
 
 

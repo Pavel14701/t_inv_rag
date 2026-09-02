@@ -178,7 +178,7 @@ def _hilo_numba_core(
         - if close[i] < low_ma[i-1]   -> hilo[i] = high_ma[i], short = high_ma[i]
         - else                        -> hilo[i] = hilo[i-1], long & short = hilo[i-1]
 
-    """  # noqa: E501
+    """
     n = len(close)
     hilo = np.full(n, np.nan, dtype=np.float64)
     long_arr = np.full(n, np.nan, dtype=np.float64)
@@ -222,8 +222,8 @@ def _hilo_numba(
     Parameters
     ----------
     high, low, close : np.ndarray
-        Price arrays.
-    high_length, low_length : int
+        Price arrays (float64).
+    high_length, low_length : int, default 13, 21
         Periods for high and low moving averages.
     mamode : str, default 'sma'
         Type of moving average ('sma' or 'ema').
@@ -239,26 +239,38 @@ def _hilo_numba(
 
     Notes
     -----
-    - Infinites in `high`, `low`, `close` are replaced with NaN.
+    - If `close` is empty, returns three empty arrays.
+    - If `len(close) < min(high_length, low_length)`, returns arrays of NaN.
+    - Infinites are replaced with NaN before calculation.
     - All operations are IEEE 754 compliant.
 
-    """  # noqa: D403
+    """
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    # Replace infinities with NaN
+
+    n = len(close)
+    if n == 0:
+        return np.array([]), np.array([]), np.array([])
+    if n < min(high_length, low_length):
+        return (
+            np.full(n, np.nan, dtype=np.float64),
+            np.full(n, np.nan, dtype=np.float64),
+            np.full(n, np.nan, dtype=np.float64),
+        )
+
     high = high.copy()
     low = low.copy()
     close = close.copy()
     replace_inf_with_nan(high)
     replace_inf_with_nan(low)
     replace_inf_with_nan(close)
-    # Compute moving averages with nan_policy='ignore'
+
     high_ma = ma_numba(high, high_length, mamode, nan_policy='ignore')
     low_ma = ma_numba(low, low_length, mamode, nan_policy='ignore')
-    hilo, long_arr, short_arr = _hilo_numba_core(
-        high, low, close, high_ma, low_ma
-    )
+
+    hilo, long_arr, short_arr = _hilo_numba_core(high, low, close, high_ma, low_ma)
+
     hilo = _apply_offset_fillna(hilo, offset, fillna)
     long_arr = _apply_offset_fillna(long_arr, offset, fillna)
     short_arr = _apply_offset_fillna(short_arr, offset, fillna)
@@ -280,12 +292,23 @@ def _hilo_talib(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """HiLo Activator using TA-Lib for MA and Numba for core logic.
 
-    Parameters are the same as `_hilo_numba`.
+    Parameters
+    ----------
+    high, low, close : np.ndarray
+        Price arrays (float64).
+    high_length, low_length : int, default 13, 21
+        Periods for high and low moving averages.
+    mamode : str, default 'sma'
+        Type of moving average ('sma' or 'ema').
+    offset : int, default 0
+        Shift the result.
+    fillna : float or None, default None
+        Value to replace NaNs.
 
     Returns
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
-        (hilo, long, short).
+        (hilo, long, short) – all arrays have the same length as `close`.
 
     Raises
     ------
@@ -294,26 +317,41 @@ def _hilo_talib(
 
     Notes
     -----
-    - Infinites are replaced with NaN.
+    - If `close` is empty, returns three empty arrays.
+    - If `len(close) < min(high_length, low_length)`, returns arrays of NaN.
+    - Infinites are replaced with NaN before calculation.
     - All operations are IEEE 754 compliant.
 
-    """  # noqa: D403
+    """
     if not talib_available:
         raise ImportError('TA-Lib not available')
+
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
+
+    n = len(close)
+    if n == 0:
+        return np.array([]), np.array([]), np.array([])
+    if n < min(high_length, low_length):
+        return (
+            np.full(n, np.nan, dtype=np.float64),
+            np.full(n, np.nan, dtype=np.float64),
+            np.full(n, np.nan, dtype=np.float64),
+        )
+
     high = high.copy()
     low = low.copy()
     close = close.copy()
     replace_inf_with_nan(high)
     replace_inf_with_nan(low)
     replace_inf_with_nan(close)
+
     high_ma = ma_talib(high, high_length, mamode, nan_policy='ignore')
     low_ma = ma_talib(low, low_length, mamode, nan_policy='ignore')
-    hilo, long_arr, short_arr = _hilo_numba_core(
-        high, low, close, high_ma, low_ma
-    )
+
+    hilo, long_arr, short_arr = _hilo_numba_core(high, low, close, high_ma, low_ma)
+
     hilo = _apply_offset_fillna(hilo, offset, fillna)
     long_arr = _apply_offset_fillna(long_arr, offset, fillna)
     short_arr = _apply_offset_fillna(short_arr, offset, fillna)
@@ -362,13 +400,13 @@ def hilo_ind(
     - All operations are IEEE 754 compliant.
 
     """
-    # Convert Polars Series to NumPy if needed
     if isinstance(high, pl.Series):
         high = high.to_numpy()
     if isinstance(low, pl.Series):
         low = low.to_numpy()
     if isinstance(close, pl.Series):
         close = close.to_numpy()
+
     if use_talib and talib_available:
         return _hilo_talib(
             high, low, close, high_length, low_length, mamode, offset, fillna
@@ -429,6 +467,7 @@ def hilo_polars(
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
+
     hilo_arr, long_arr, short_arr = hilo_ind(
         high, low, close,
         high_length=high_length,
@@ -438,8 +477,10 @@ def hilo_polars(
         fillna=fillna,
         use_talib=use_talib,
     )
+
     if not suffix:
         suffix = f'_{high_length}_{low_length}'
+
     return df.with_columns([
         pl.Series(f'HILO{suffix}', hilo_arr),
         pl.Series(f'HILOl{suffix}', long_arr),

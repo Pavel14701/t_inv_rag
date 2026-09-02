@@ -1,4 +1,15 @@
 # -*- coding: utf-8 -*-
+"""Linear Regression indicator (LINREG) implementation.
+
+This module provides:
+- Numba-accelerated core (`_linreg_numba_core`)
+- Numba wrapper (`linreg_numba`), TA-Lib backend (`linreg_talib`)
+- Universal wrapper (`linreg_ind`)
+- Polars integration (`linreg_polars`)
+
+All floating-point operations follow IEEE 754 rules. Infinite values are
+replaced with NaN before calculation.
+"""  # noqa: E501
 from typing import Literal, Optional
 
 import numpy as np
@@ -6,7 +17,11 @@ import polars as pl
 from numba import jit
 
 from ..external import talib, talib_available
-from .._array_ops import _apply_offset_fillna
+from .._array_ops import (
+    _apply_offset_fillna,
+    _handle_nan_policy,
+    replace_inf_with_nan,
+)
 
 
 # ----------------------------------------------------------------------
@@ -52,8 +67,6 @@ def _linreg_numba_core(
         y = close[i - length + 1:i + 1]
         y_sum = y.sum()
         xy_sum = np.dot(x, y)
-        if mode == 'r':
-            y2_sum = (y * y).sum()
         # slope
         slope = (length * xy_sum - x_sum * y_sum) * inv_divisor
         if mode == 'slope':
@@ -104,6 +117,8 @@ def linreg_talib(
     """
     if not talib_available:
         raise ImportError('TA‑Lib not available')
+    if length < 1:
+        raise ValueError('LINREG length must be >= 1')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -117,8 +132,10 @@ def linreg_talib(
         result = talib.LINEARREG_INTERCEPT(close, timeperiod=length)
     elif mode == 'angle':
         result = talib.LINEARREG_ANGLE(close, timeperiod=length)
-        if degrees:
-            result = result * 180.0 / np.pi
+        # TA-Lib LINEARREG_ANGLE already returns degrees. Convert to
+        # radians only when degrees=False, to match the Numba backend.
+        if not degrees:
+            result = result * np.pi / 180.0
     else:
         raise ValueError(f"Mode '{mode}' not supported by TA‑Lib")
     return result
@@ -133,7 +150,8 @@ def linreg_numba(
     mode: Literal['line', 'tsf', 'slope', 'intercept', 'angle', 'r'] = 'line',
     degrees: bool = False,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
+    nan_policy: str = 'raise',
 ) -> np.ndarray:
     """Linear regression using Numba.
 
@@ -149,14 +167,36 @@ def linreg_numba(
     degrees : bool
         If mode='angle', return degrees instead of radians.
     offset, fillna : as usual.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`:
+        'raise', 'ignore', 'ffill', 'bfill', or 'both'.
 
     Returns
     -------
     np.ndarray
         Result series.
 
+    Raises
+    ------
+    ValueError
+        If `length < 1`, `mode` is unknown, the input contains NaN with
+        `nan_policy='raise'`, or `nan_policy` is unknown.
+
+    Notes
+    -----
+    - Infinites in `close` are replaced with NaN before calculation.
+    - This function is IEEE 754 compliant.
+
     """
+    if length < 1:
+        raise ValueError('LINREG length must be >= 1')
+    if mode not in ('line', 'tsf', 'slope', 'intercept', 'angle', 'r'):
+        raise ValueError(f'Unsupported mode: {mode}')
     close = np.asarray(close, dtype=np.float64, copy=False)
+    # Replace infinities with NaN (IEEE 754 compliance)
+    close = close.copy()
+    replace_inf_with_nan(close)
+    close = _handle_nan_policy(close, nan_policy, 'close')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
 
@@ -192,6 +232,8 @@ def linreg_ind(
         Shift result.
     fillna : float, optional
         Fill NaN with this value.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`.
     use_talib : bool
         Use TA‑Lib if available and mode is supported.
 
@@ -199,6 +241,11 @@ def linreg_ind(
     -------
     np.ndarray
         Result series.
+
+    Notes
+    -----
+    - If `close` is a Polars Series, it is converted to NumPy.
+    - All operations are IEEE 754 compliant.
 
     """
     if isinstance(close, pl.Series):
@@ -208,7 +255,9 @@ def linreg_ind(
         result = linreg_talib(close, length, mode, degrees)
         return _apply_offset_fillna(result, offset, fillna)
     else:
-        return linreg_numba(close, length, mode, degrees, offset, fillna)
+        return linreg_numba(
+            close, length, mode, degrees, offset, fillna, nan_policy
+        )
 
 
 # ----------------------------------------------------------------------
@@ -223,6 +272,7 @@ def linreg_polars(
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
+    nan_policy: str = 'raise',
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
     """Add linear regression column to Polars DataFrame.
@@ -242,6 +292,8 @@ def linreg_polars(
     offset, fillna : as usual.
     use_talib : bool
         Use TA‑Lib if available.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in the close column.
     output_col : str, optional
         Output column name. Default: f"LINREG_{mode}_{length}".
 
@@ -250,8 +302,17 @@ def linreg_polars(
     pl.DataFrame
         Original DataFrame with new column.
 
+    Notes
+    -----
+    - The function does not modify the original DataFrame in-place.
+    - All operations are IEEE 754 compliant.
+
     """
     close = df[close_col].to_numpy()
-    result = linreg_ind(close, length, mode, degrees, offset, fillna, use_talib)
+    result = linreg_ind(
+        close, length=length, mode=mode, degrees=degrees,
+        offset=offset, fillna=fillna,
+        use_talib=use_talib, nan_policy=nan_policy,
+    )
     out_name = output_col or f'LINREG_{mode}_{length}'
     return df.with_columns([pl.Series(out_name, result)])
