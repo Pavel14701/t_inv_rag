@@ -6,7 +6,7 @@ import polars as pl
 from numba import jit
 
 from ..ma import ma_mode
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 from .atr import atr_ind
 
 

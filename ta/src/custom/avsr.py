@@ -2,8 +2,8 @@
 import numpy as np
 import polars as pl
 
-from ..overlap import sma_ind
-from ..utils import _apply_offset_fillna
+from ..overlap.sma import sma_ind
+from .._array_ops import _apply_offset_fillna
 from .avs_base import _avs_base, _compute_len_v, _compute_vpcc, _price_v_rolling
 
 

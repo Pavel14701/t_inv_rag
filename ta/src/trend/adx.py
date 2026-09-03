@@ -5,9 +5,9 @@ import numpy as np
 import polars as pl
 from numba import float64, int64, njit
 
-from .. import talib, talib_available
+from ..external import talib, talib_available
 from ..ma import ma_mode
-from ..utils import _apply_offset_fillna, _handle_nan_policy
+from .._array_ops import _apply_offset_fillna, _handle_nan_policy
 from ..volatility import atr_ind
 
 

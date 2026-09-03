@@ -2,11 +2,11 @@
 import numpy as np
 import polars as pl
 
-from .. import talib, talib_available
+from ..external import talib, talib_available
 from ..overlap.hlc3 import hlc3_ind
 from ..overlap.sma import sma_ind
 from ..statistics.mad import mad_ind
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 def cci_numpy(

@@ -2,9 +2,9 @@
 import numpy as np
 import polars as pl
 
-from .. import talib, talib_available
+from ..external import talib, talib_available
 from ..overlap.sma import sma_ind
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 def cdl_doji_numpy(

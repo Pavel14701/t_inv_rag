@@ -13,3 +13,4 @@ wheels/
 .env
 
 to_do.txt
+.pytest_cache

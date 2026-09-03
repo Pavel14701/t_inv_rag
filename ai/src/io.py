@@ -94,15 +94,17 @@ def merge_features_labels(
     """Merge feature and label DataFrames, filling missing label columns.
 
     If both DataFrames contain a 'bar_index' column, a left join is
-    performed on that column; otherwise they are concatenated column-wise
-    (hstack), assuming identical row ordering.
+    performed on that column. Otherwise, the DataFrames are assumed to
+    have the same row order and are concatenated horizontally (hstack).
 
-    Missing 'action' and 'outcome' columns after the join are filled
+    Missing 'action' and 'outcome' columns after the merge are filled
     with ``default_action`` and ``default_outcome`` respectively.
 
     Args:
-        df_feat: Feature DataFrame.
-        df_lbl: Label DataFrame.
+        df_feat: Feature DataFrame. Must contain at least the columns
+            needed for features (prices, signals, etc.).
+        df_lbl: Label DataFrame. Should contain at least 'action' and
+            'outcome' columns, and optionally 'bar_index' for joining.
         default_action: Value to fill when 'action' is missing
             (default -100, which is the ignore index in loss).
         default_outcome: Value to fill when 'outcome' is missing
@@ -113,10 +115,29 @@ def merge_features_labels(
         'outcome' columns.
 
     """
+    # 1. Check for join key
     if 'bar_index' in df_feat.columns and 'bar_index' in df_lbl.columns:
         df = df_feat.join(df_lbl, on='bar_index', how='left')
     else:
-        df = df_feat.join(df_lbl, how='left', on=None)
+        # 2. No common key -> assume same row order and hstack
+        if len(df_feat) != len(df_lbl):
+            raise ValueError(
+                f'Row count mismatch: df_feat has {len(df_feat)} rows, '
+                f'df_lbl has {len(df_lbl)} rows. Cannot hstack without',
+                "'bar_index'."
+            )
+        # Ensure action and outcome columns exist; if not, add with defaults
+        lbl_cols = []
+        if 'action' in df_lbl.columns:
+            lbl_cols.append(pl.col('action'))
+        else:
+            lbl_cols.append(pl.lit(default_action).alias('action'))
+        if 'outcome' in df_lbl.columns:
+            lbl_cols.append(pl.col('outcome'))
+        else:
+            lbl_cols.append(pl.lit(default_outcome).alias('outcome'))
+        df = df_feat.with_columns(lbl_cols)
+    # 3. Ensure final columns exist (in case join did not produce them)
     if 'action' not in df.columns:
         df = df.with_columns(pl.lit(default_action).alias('action'))
     else:

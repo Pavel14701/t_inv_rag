@@ -3,8 +3,8 @@ import numpy as np
 import polars as pl
 from numba import float64, int64, jit
 
-from ..utils import _apply_offset_fillna
-from . import rsi_ind
+from .._array_ops import _apply_offset_fillna
+from .rsi import rsi_ind
 
 
 # ----------------------------------------------------------------------

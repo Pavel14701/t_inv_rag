@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
+"""OHLC4 indicator – vectorised NumPy implementation.
+
+All floating-point operations follow IEEE 754 rules: NaN in any of the
+four components makes that bar's average NaN, and infinite values
+propagate naturally through addition and multiplication by 0.25.
+"""
 from typing import Optional
 
 import numpy as np
 import polars as pl
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 def ohlc4_numpy(
@@ -32,11 +38,11 @@ def ohlc4_numpy(
         OHLC4 values.
 
     """
-    # Ensure float64 and C‑contiguous with minimal copying
-    open = np.asarray(open, dtype=np.float64, copy=False)
-    high = np.asarray(high, dtype=np.float64, copy=False)
-    low = np.asarray(low, dtype=np.float64, copy=False)
-    close = np.asarray(close, dtype=np.float64, copy=False)
+    # Ensure float64 (copy only when the dtype differs)
+    open = np.asarray(open, dtype=np.float64)
+    high = np.asarray(high, dtype=np.float64)
+    low = np.asarray(low, dtype=np.float64)
+    close = np.asarray(close, dtype=np.float64)
     # Compute average (vectorised)
     avg = (open + high + low + close) * 0.25
     # Apply offset and fillna
@@ -114,5 +120,8 @@ def ohlc4_polars(
     high_arr = df[high_col].to_numpy()
     low_arr = df[low_col].to_numpy()
     close_arr = df[close_col].to_numpy()
-    result = ohlc4_numpy(open_arr, high_arr, low_arr, close_arr, offset, fillna)
+    result = ohlc4_numpy(
+        open_arr, high_arr, low_arr,
+        close_arr, offset, fillna
+    )
     return df.with_columns([pl.Series(output_col, result)])

@@ -42,6 +42,7 @@ def parse(code: str) -> ASTNode:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_simple_number() -> None:
     """Test parsing of a numeric literal."""
     ast = parse('42')
@@ -51,6 +52,7 @@ def test_simple_number() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_negative_number() -> None:
     """Test parsing of a negative number via unary minus."""
     ast = parse('-42')
@@ -61,6 +63,7 @@ def test_negative_number() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_indicator_access() -> None:
     """Test parsing of a simple indicator without attributes."""
     ast = parse('close')
@@ -71,6 +74,7 @@ def test_indicator_access() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_indicator_with_attribute() -> None:
     """Test parsing of an indicator with a dot attribute."""
     ast = parse('rsi.value')
@@ -81,6 +85,7 @@ def test_indicator_with_attribute() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_indicator_with_multiple_attributes() -> None:
     """Test parsing of an indicator with multiple dot-separated attributes."""
     ast = parse('rsi.value.signal')
@@ -91,6 +96,7 @@ def test_indicator_with_multiple_attributes() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_indicator_with_params() -> None:
     """Test parsing of an indicator with named parameters."""
     ast = parse('rsi(period=14).value')
@@ -106,6 +112,7 @@ def test_indicator_with_params() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_indicator_with_multiple_params() -> None:
     """Test parsing of an indicator with multiple parameters."""
     ast = parse('macd(fast=12, slow=26).line')
@@ -117,6 +124,7 @@ def test_indicator_with_multiple_params() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_indicator_with_params_and_attributes_and_history() -> None:
     """Test parsing of an indicator with parameters, attributes,
     and historical offset.
@@ -132,6 +140,7 @@ def test_indicator_with_params_and_attributes_and_history() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_arithmetic_add() -> None:
     """Test parsing of addition."""
     ast = parse('1 + 2')
@@ -144,6 +153,7 @@ def test_arithmetic_add() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_arithmetic_sub() -> None:
     """Test parsing of subtraction."""
     ast = parse('5 - 3')
@@ -156,6 +166,7 @@ def test_arithmetic_sub() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_arithmetic_mul() -> None:
     """Test parsing of multiplication."""
     ast = parse('2 * 3')
@@ -168,6 +179,7 @@ def test_arithmetic_mul() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_arithmetic_div() -> None:
     """Test parsing of division."""
     ast = parse('10 / 2')
@@ -180,6 +192,7 @@ def test_arithmetic_div() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_arithmetic_mod() -> None:
     """Test parsing of modulo."""
     ast = parse('10 % 3')
@@ -192,6 +205,7 @@ def test_arithmetic_mod() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_arithmetic_pow() -> None:
     """Test parsing of exponentiation (right-associative)."""
     ast = parse('2 ^ 3')
@@ -204,6 +218,7 @@ def test_arithmetic_pow() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_precedence_mul_add() -> None:
     """Test that multiplication has higher precedence than addition."""
     ast = parse('1 + 2 * 3')
@@ -217,6 +232,7 @@ def test_precedence_mul_add() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_precedence_pow_mul() -> None:
     """Test that exponentiation has higher precedence than multiplication."""
     ast = parse('2 * 3 ^ 2')
@@ -230,6 +246,7 @@ def test_precedence_pow_mul() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_right_associativity_pow() -> None:
     """Test that exponentiation is right-associative (2^3^2 = 2^(3^2))."""
     ast = parse('2 ^ 3 ^ 2')
@@ -245,6 +262,7 @@ def test_right_associativity_pow() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_unary_minus_precedence() -> None:
     """Test that unary minus has higher precedence than exponentiation."""
     ast = parse('-2 ^ 3')
@@ -260,6 +278,7 @@ def test_unary_minus_precedence() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_parentheses_override_precedence() -> None:
     """Test that parentheses override the usual precedence."""
     ast = parse('(1 + 2) * 3')
@@ -275,6 +294,7 @@ def test_parentheses_override_precedence() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_comparison_single() -> None:
     """Test parsing of a single comparison."""
     ast = parse('close > 100')
@@ -287,6 +307,7 @@ def test_comparison_single() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_chained_comparison() -> None:
     """Test parsing of a chained comparison (a < b <= c)."""
     ast = parse('1 < x <= 10')
@@ -303,6 +324,7 @@ def test_chained_comparison() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_chained_comparison_with_different_ops() -> None:
     """Test chained comparison with mixed operators (e.g., a < b == c)."""
     ast = parse('a < b == c')
@@ -313,6 +335,7 @@ def test_chained_comparison_with_different_ops() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_logical_and_or() -> None:
     """Test that 'and' and 'or' are parsed with
     correct precedence (and higher than or).
@@ -329,6 +352,7 @@ def test_logical_and_or() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_logical_not() -> None:
     """Test parsing of logical NOT."""
     ast = parse('not (a > b)')
@@ -338,6 +362,7 @@ def test_logical_not() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_not_precedence() -> None:
     """Test that NOT has higher precedence than AND/OR."""
     ast = parse('not a and b')
@@ -352,6 +377,7 @@ def test_not_precedence() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_complex_logical_expression() -> None:
     """Test parsing of a complex logical expression with parentheses."""
     ast = parse('(a > 0 and b < 10) or (c == 5 and d != 0)')
@@ -363,6 +389,7 @@ def test_complex_logical_expression() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_let_expression() -> None:
     """Test parsing of a let expression."""
     ast = parse('let x = rsi(period=14) in x > 70')
@@ -374,6 +401,7 @@ def test_let_expression() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_let_with_arithmetic() -> None:
     """Test let binding with arithmetic expression."""
     ast = parse('let x = 5 + 3 in x * 2')
@@ -388,6 +416,7 @@ def test_let_with_arithmetic() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_nested_let() -> None:
     """Test nested let expressions (inner let shadows outer)."""
     ast = parse('let x = 5 in let y = x + 1 in y > 10')
@@ -405,6 +434,7 @@ def test_nested_let() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_let_variable_usage() -> None:
     """Test that variables in body are represented as Var nodes."""
     ast = parse('let x = 10 in x + 5')
@@ -419,6 +449,7 @@ def test_let_variable_usage() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_historical_access() -> None:
     """Test parsing of historical access with offset."""
     ast = parse('close[1]')
@@ -429,6 +460,7 @@ def test_historical_access() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_historical_access_with_attrs() -> None:
     """Test parsing of historical access on an indicator with attributes."""
     ast = parse('rsi.value[2]')
@@ -441,6 +473,7 @@ def test_historical_access_with_attrs() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_historical_access_with_params() -> None:
     """Test parsing of historical access on an indicator with parameters."""
     ast = parse('rsi(period=14).value[3]')
@@ -451,6 +484,7 @@ def test_historical_access_with_params() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_rising_function() -> None:
     """Test parsing of the rising function."""
     ast = parse('rising(close, 5)')
@@ -461,6 +495,7 @@ def test_rising_function() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_falling_function() -> None:
     """Test parsing of the falling function."""
     ast = parse('falling(close, 3)')
@@ -471,6 +506,7 @@ def test_falling_function() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_rising_with_params() -> None:
     """Test rising with an indicator that has parameters."""
     ast = parse('rising(rsi(period=14).value, 3)')
@@ -482,6 +518,7 @@ def test_rising_with_params() -> None:
 @pytest.mark.unit
 @pytest.mark.parser
 @pytest.mark.error
+@pytest.mark.deprecated
 def test_parse_error_eof() -> None:
     """Test that parser raises ParseError on unexpected end of input."""
     with pytest.raises(ParseError, match='Unexpected EOF'):
@@ -491,6 +528,7 @@ def test_parse_error_eof() -> None:
 @pytest.mark.unit
 @pytest.mark.parser
 @pytest.mark.error
+@pytest.mark.deprecated
 def test_parse_error_unexpected_token() -> None:
     """Test that parser raises ParseError on a misplaced token."""
     with pytest.raises(ParseError, match='Unexpected token'):
@@ -500,6 +538,7 @@ def test_parse_error_unexpected_token() -> None:
 @pytest.mark.unit
 @pytest.mark.parser
 @pytest.mark.error
+@pytest.mark.deprecated
 def test_parse_error_missing_rparen() -> None:
     """Test that parser catches missing closing parenthesis."""
     with pytest.raises(ParseError, match='Expected RPAREN'):
@@ -509,6 +548,7 @@ def test_parse_error_missing_rparen() -> None:
 @pytest.mark.unit
 @pytest.mark.parser
 @pytest.mark.error
+@pytest.mark.deprecated
 def test_parse_error_missing_rbracket() -> None:
     """Test that parser catches missing closing bracket."""
     with pytest.raises(ParseError, match='Expected RBRACKET'):
@@ -518,6 +558,7 @@ def test_parse_error_missing_rbracket() -> None:
 @pytest.mark.unit
 @pytest.mark.parser
 @pytest.mark.error
+@pytest.mark.deprecated
 def test_parse_error_missing_comma() -> None:
     """Test that parser catches missing comma in function call."""
     with pytest.raises(ParseError, match='Expected COMMA'):
@@ -527,6 +568,7 @@ def test_parse_error_missing_comma() -> None:
 @pytest.mark.unit
 @pytest.mark.parser
 @pytest.mark.error
+@pytest.mark.deprecated
 def test_parse_error_bad_attribute_dot() -> None:
     """Test that parser catches dot without following identifier."""
     with pytest.raises(ParseError, match='Expected IDENT'):
@@ -536,6 +578,7 @@ def test_parse_error_bad_attribute_dot() -> None:
 @pytest.mark.unit
 @pytest.mark.parser
 @pytest.mark.error
+@pytest.mark.deprecated
 def test_parse_error_historical_on_non_indicator() -> None:
     """Test that historical access on arbitrary expression
     is not allowed (should be caught by grammar).
@@ -546,6 +589,7 @@ def test_parse_error_historical_on_non_indicator() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_very_long_expression() -> None:
     """Test parsing a very long expression
     (should not hit recursion limits).
@@ -556,6 +600,7 @@ def test_very_long_expression() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_mixed_operators_without_spaces() -> None:
     """Test parsing of expression without spaces (e.g., 1+2)."""
     ast = parse('1+2')
@@ -568,6 +613,7 @@ def test_mixed_operators_without_spaces() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parser
+@pytest.mark.deprecated
 def test_multiple_attributes() -> None:
     """Test indicator with three attributes."""
     ast = parse('a.b.c.d')

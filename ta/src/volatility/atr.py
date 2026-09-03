@@ -3,8 +3,10 @@ import numpy as np
 import polars as pl
 
 from .. import talib, talib_available
-from ..overlap import ema_ind, rma_ind, sma_ind
-from ..utils import _apply_offset_fillna, _handle_nan_policy
+from ..overlap.ema import ema_ind
+from ..overlap.rma import rma_ind
+from ..overlap.sma import sma_ind
+from .._array_ops import _apply_offset_fillna, _handle_nan_policy
 from .true_range import true_range_ind
 
 

@@ -771,8 +771,8 @@ def _update_labels_parquet(
             ).alias('outcome'),
         ])
 
-    action_arr = df_lbl['action'].to_numpy()
-    outcome_arr = df_lbl['outcome'].to_numpy()
+    action_arr = df_lbl['action'].to_numpy().copy()
+    outcome_arr = df_lbl['outcome'].to_numpy().copy()
     n_rows = len(action_arr)
 
     for global_bar, pseudo_action, pseudo_outcome in new_pseudo:

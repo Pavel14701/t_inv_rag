@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Kaufman's Adaptive Moving Average (KAMA) with dual backend (Numba/TA‑Lib)."""
+"""Kaufman's Adaptive Moving Average (KAMA) with dual backend."""  # noqa: E501
 
 from typing import Optional
 
@@ -7,14 +7,18 @@ import numpy as np
 import polars as pl
 from numba import jit
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..external import talib, talib_available
+from .._array_ops import (
+    _apply_offset_fillna,
+    _handle_nan_policy,
+    replace_inf_with_nan,
+)
 
 
 # ----------------------------------------------------------------------
 # Core KAMA calculation in Numba (single pass)
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _kama_numba_core(
     close: np.ndarray,
     length: int,
@@ -87,7 +91,8 @@ def kama_talib(
     fast: int = 2,
     slow: int = 30,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
+    nan_policy: str = 'raise',
 ) -> np.ndarray:
     """KAMA using TA-Lib (C implementation).
 
@@ -98,23 +103,44 @@ def kama_talib(
     length : int
         Period for efficiency ratio.
     fast : int
-        Fast EMA period.
+        Fast EMA period (unused, TA-Lib handles it internally).
     slow : int
-        Slow EMA period.
+        Slow EMA period (unused, TA-Lib handles it internally).
     offset : int
         Shift result.
     fillna : float, optional
         Value to fill NaNs.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`.
 
     Returns
     -------
     np.ndarray
         KAMA values.
 
+    Raises
+    ------
+    ImportError
+        If TA-Lib is not available.
+    ValueError
+        If `length < 1`, the input contains NaN with `nan_policy='raise'`,
+        or `nan_policy` is unknown.
+
+    Notes
+    -----
+    - Infinites in `close` are replaced with NaN before calculation.
+    - This function is IEEE 754 compliant.
+
     """
     if not talib_available:
         raise ImportError('TA-Lib is not available')
+    if length < 1:
+        raise ValueError('KAMA length must be >= 1')
     close = np.asarray(close, dtype=np.float64, copy=False)
+    # Replace infinities with NaN (IEEE 754 compliance)
+    close = close.copy()
+    replace_inf_with_nan(close)
+    close = _handle_nan_policy(close, nan_policy, 'close')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     kama = talib.KAMA(close, timeperiod=length)
@@ -131,10 +157,58 @@ def kama_numba(
     slow: int = 30,
     drift: int = 1,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
+    nan_policy: str = 'raise',
 ) -> np.ndarray:
-    """KAMA using Numba (raw numpy version)."""
+    """KAMA using Numba (raw numpy version).
+
+    Parameters
+    ----------
+    close : np.ndarray
+        Close prices (float64).
+    length : int, default 10
+        Period for efficiency ratio (must be >= 1).
+    fast : int, default 2
+        Fast EMA period.
+    slow : int, default 30
+        Slow EMA period.
+    drift : int, default 1
+        Shift for price difference (must be >= 1).
+    offset : int, default 0
+        Shift result.
+    fillna : float, optional
+        Value to fill NaNs.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`:
+        'raise', 'ignore', 'ffill', 'bfill', or 'both'.
+
+    Returns
+    -------
+    np.ndarray
+        KAMA values.
+
+    Raises
+    ------
+    ValueError
+        If `length < 1` or `drift < 1`, the input contains NaN with
+        `nan_policy='raise'`, or `nan_policy` is unknown.
+
+    Notes
+    -----
+    - The first `length-1` elements are NaN because the window is not full.
+    - Infinites in `close` are replaced with NaN before calculation.
+    - This function is IEEE 754 compliant.
+
+    """
+    if length < 1:
+        raise ValueError('KAMA length must be >= 1')
+    if drift < 1:
+        raise ValueError('KAMA drift must be >= 1')
     close = np.asarray(close, dtype=np.float64, copy=False)
+    # Replace infinities with NaN (IEEE 754 compliance)
+    close = close.copy()
+    replace_inf_with_nan(close)
+    close = _handle_nan_policy(close, nan_policy, 'close')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     kama = _kama_numba_core(close, length, fast, slow, drift)
@@ -149,7 +223,8 @@ def kama_ind(
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
-    use_talib: bool = True
+    nan_policy: str = 'raise',
+    use_talib: bool = True,
 ) -> np.ndarray:
     """Universal KAMA with automatic backend selection.
 
@@ -169,6 +244,8 @@ def kama_ind(
         Shift result.
     fillna : float, optional
         Value to fill NaNs.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in `close`.
     use_talib : bool
         If True and TA-Lib is available, use it; else use Numba.
 
@@ -177,13 +254,22 @@ def kama_ind(
     np.ndarray
         KAMA values.
 
+    Notes
+    -----
+    - If `close` is a Polars Series, it is converted to NumPy.
+    - All operations are IEEE 754 compliant.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     if use_talib and talib_available:
-        return kama_talib(close, length, fast, slow, offset, fillna)
+        return kama_talib(
+            close, length, fast, slow, offset, fillna, nan_policy
+        )
     else:
-        return kama_numba(close, length, fast, slow, drift, offset, fillna)
+        return kama_numba(
+            close, length, fast, slow, drift, offset, fillna, nan_policy
+        )
 
 
 def kama_polars(
@@ -196,6 +282,7 @@ def kama_polars(
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
+    nan_policy: str = 'raise',
     output_col: Optional[str] = None
 ) -> pl.DataFrame:
     """KAMA for Polars DataFrame.
@@ -218,6 +305,8 @@ def kama_polars(
         Shift result.
     fillna : float, optional
         Value to fill NaNs.
+    nan_policy : str, default 'raise'
+        How to handle NaN values in the close column.
     use_talib : bool
         Use TA-Lib if available.
     output_col : str, optional
@@ -228,8 +317,23 @@ def kama_polars(
     pl.DataFrame
         Original DataFrame with KAMA series.
 
+    Notes
+    -----
+    - The function does not modify the original DataFrame in-place.
+    - All operations are IEEE 754 compliant.
+
     """
     close = df[close_col].to_numpy()
-    result = kama_ind(close, length, fast, slow, drift, offset, fillna, use_talib)
+    result = kama_ind(
+        close,
+        length=length,
+        fast=fast,
+        slow=slow,
+        drift=drift,
+        offset=offset,
+        fillna=fillna,
+        nan_policy=nan_policy,
+        use_talib=use_talib,
+    )
     out_name = output_col or f'KAMA_{length}_{fast}_{slow}'
     return df.with_columns([pl.Series(out_name, result)])

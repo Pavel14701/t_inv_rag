@@ -5,8 +5,8 @@ import numpy as np
 import polars as pl
 
 from ..ma import ma_mode
-from ..momentum import rsi_ind
-from ..utils import (
+from ..momentum.rsi import rsi_ind
+from .._array_ops import (
     _apply_offset_fillna,
     _handle_nan_policy,
     _rolling_max_numba,

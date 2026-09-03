@@ -1,11 +1,23 @@
 # -*- coding: utf-8 -*-
+"""PWMA (Pascal's Weighted Moving Average) indicator.
+
+Weights are binomial coefficients from row (length-1) of Pascal's
+triangle, normalized to sum to 1. Note: Pascal's triangle rows are
+symmetric (C(n, k) == C(n, n - k)), so the weights are symmetric and
+the `asc` flag is effectively a no-op — it is kept for API
+compatibility.
+
+All floating-point operations follow IEEE 754 rules (no fastmath
+optimisations): NaN in a window makes that window's PWMA NaN and
+infinite values propagate naturally through the weighted sum.
+"""
 from functools import lru_cache
 
 import numpy as np
 import polars as pl
 from numba import jit
 
-from ..utils import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
@@ -16,6 +28,7 @@ def _pascal_weights(length: int, asc: bool) -> np.ndarray:
     """Generate normalized Pascal's triangle weights.
     Uses binomial coefficients from row (length-1) of Pascal's triangle.
     If asc=True, weights increase (most recent highest weight).
+    Note: the coefficients are symmetric, so `asc` does not change them.
     """
     # Binomial coefficients for row (length-1)
     coeffs = np.zeros(length, dtype=np.float64)
@@ -27,13 +40,14 @@ def _pascal_weights(length: int, asc: bool) -> np.ndarray:
     else:
         w = coeffs[::-1]
     w /= w.sum()
+    w.setflags(write=False)  # cached array must not be mutated by callers
     return w
 
 
 # ----------------------------------------------------------------------
 # Core PWMA calculation in Numba (single pass)
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def _pwma_numba_core(close: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """PWMA core loop.
 
@@ -57,7 +71,7 @@ def _pwma_numba_core(close: np.ndarray, weights: np.ndarray) -> np.ndarray:
         return out
     for i in range(length - 1, n):
         acc = 0.0
-        # weighted sum over the window, weights 
+        # weighted sum over the window, weights
         # correspond to arr[i - (length-1) .. i] in direct order
         for j in range(length):
             acc += close[i - j] * weights[length - 1 - j]
@@ -76,7 +90,9 @@ def pwma_numba(
     fillna: float | None = None
 ) -> np.ndarray:
     """PWMA using Numba (raw numpy version)."""
-    close = np.asarray(close, dtype=np.float64, copy=False)
+    if length < 1:
+        raise ValueError('PWMA length must be >= 1')
+    close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
 

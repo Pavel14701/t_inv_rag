@@ -71,6 +71,6 @@ __all__ = [
     'trima_ind', 'trima_polars',
     'vidya_ind', 'vidya_polars',
     'wcp_ind', 'wcp_polars',
-    'wma_ind', 'wma_polars', 
+    'wma_ind', 'wma_polars',
     'zlma_ind', 'zlma_polars'
 ]

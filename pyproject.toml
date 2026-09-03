@@ -24,6 +24,7 @@ dependencies = [
     "sqlalchemy>=2.0.51",
     "t-tech-investments>=0.3.3",
     "ta-lib>=0.7.0",
+    "tensorboard>=2.20.0",
     "uuid6>=2025.0.1",
     "yfinance>=1.5.1",
 ]

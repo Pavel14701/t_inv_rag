@@ -2,8 +2,8 @@
 import numpy as np
 import polars as pl
 
-from .. import talib, talib_available
-from ..utils import _apply_offset_fillna
+from ..external import talib, talib_available
+from .._array_ops import _apply_offset_fillna
 
 
 def bop_numpy(
