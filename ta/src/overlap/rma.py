@@ -3,7 +3,7 @@ import numpy as np
 import polars as pl
 from numba import float64, int64, jit
 
-from .._array_ops import _apply_offset_fillna
+from .._array_ops import _apply_offset_fillna, _handle_nan_policy
 
 
 # ----------------------------------------------------------------------
@@ -55,6 +55,7 @@ def rma_numba(
     nan_policy : str, default 'raise'
         How to handle NaNs in the input:
         - 'raise': raise ValueError if any NaN is present.
+        - 'ignore': leave NaNs as-is (they poison the recursion onward).
         - 'ffill': forward fill (propagate last valid observation).
         - 'bfill': backward fill (propagate next valid observation).
         - 'both': first forward fill, then backward fill (fills all gaps).
@@ -68,38 +69,15 @@ def rma_numba(
     # ---- Input validation ----
     if length < 1:
         raise ValueError('RMA length must be >= 1')
-    arr = np.asarray(arr, dtype=np.float64, copy=False)
+    arr = np.asarray(arr, dtype=np.float64)
     # ---- NaN handling on input ----
-    if np.isnan(arr).any():
-        if nan_policy == 'raise':
-            raise ValueError("Input contains NaN values. \
-                Use nan_policy='ffill', 'bfill' or 'both' to fill them.")
-        elif nan_policy == 'ffill':
-            arr = arr.copy()
-            for i in range(1, len(arr)):
-                if np.isnan(arr[i]):
-                    arr[i] = arr[i - 1]
-        elif nan_policy == 'bfill':
-            arr = arr.copy()
-            for i in range(len(arr) - 2, -1, -1):
-                if np.isnan(arr[i]):
-                    arr[i] = arr[i + 1]
-        elif nan_policy == 'both':
-            arr = arr.copy()
-            # forward fill
-            for i in range(1, len(arr)):
-                if np.isnan(arr[i]):
-                    arr[i] = arr[i - 1]
-            # backward fill (to handle leading NaNs)
-            for i in range(len(arr) - 2, -1, -1):
-                if np.isnan(arr[i]):
-                    arr[i] = arr[i + 1]
-        else:
-            raise ValueError(f"Unknown nan_policy: {nan_policy}. \
-                Use 'raise', 'ffill', 'bfill', or 'both'.")
-    # Ensure C-contiguous for Numba performance
-    if not arr.flags.c_contiguous:
-        arr = np.ascontiguousarray(arr)
+    # Supports 'raise', 'ignore', 'ffill', 'bfill', 'both' (same
+    # convention as the rest of the codebase).
+    arr = _handle_nan_policy(arr, nan_policy, 'input')
+    # Numba's typed dispatch requires a writable, C-contiguous array
+    # (Polars `.to_numpy()` and read-only views may be non-writable).
+    if not (arr.flags.c_contiguous and arr.flags.writeable):
+        arr = np.array(arr, dtype=np.float64, copy=True)
     result = _rma_numba_core(arr, length)
     return _apply_offset_fillna(result, offset, fillna)
 

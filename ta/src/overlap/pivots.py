@@ -11,8 +11,8 @@ from numba import jit
 # ----------------------------------------------------------------------
 @jit(nopython=True, cache=True)
 def _pivot_camarilla(
-    high: np.ndarray, 
-    low: np.ndarray, 
+    high: np.ndarray,
+    low: np.ndarray,
     close: np.ndarray
 ) -> tuple[np.ndarray, ...]:
     tp = (high + low + close) / 3.0
@@ -30,8 +30,8 @@ def _pivot_camarilla(
 
 @jit(nopython=True, cache=True)
 def _pivot_classic(
-    high: np.ndarray, 
-    low: np.ndarray, 
+    high: np.ndarray,
+    low: np.ndarray,
     close: np.ndarray
 ) -> tuple[np.ndarray, ...]:
     tp = (high + low + close) / 3.0
@@ -49,9 +49,9 @@ def _pivot_classic(
 
 @jit(nopython=True, cache=True)
 def _pivot_demark(
-    open_: np.ndarray, 
-    high: np.ndarray, 
-    low: np.ndarray, 
+    open_: np.ndarray,
+    high: np.ndarray,
+    low: np.ndarray,
     close: np.ndarray
 ) -> tuple[np.ndarray, ...]:
     n = len(close)
@@ -77,8 +77,8 @@ def _pivot_demark(
 
 @jit(nopython=True, cache=True)
 def _pivot_fibonacci(
-    high: np.ndarray, 
-    low: np.ndarray, 
+    high: np.ndarray,
+    low: np.ndarray,
     close: np.ndarray
 ) -> tuple[np.ndarray, ...]:
     tp = (high + low + close) / 3.0
@@ -96,8 +96,8 @@ def _pivot_fibonacci(
 
 @jit(nopython=True, cache=True)
 def _pivot_traditional(
-    high: np.ndarray, 
-    low: np.ndarray, 
+    high: np.ndarray,
+    low: np.ndarray,
     close: np.ndarray
 ) -> tuple[np.ndarray, ...]:
     tp = (high + low + close) / 3.0
@@ -105,7 +105,8 @@ def _pivot_traditional(
     s1 = 2.0 * tp - high
     s2 = tp - hl_range
     s3 = tp - 2.0 * hl_range
-    s4 = tp - 2.0 * hl_range  # Note: same as s3 in original? kept for consistency
+    # Note: same as s3 in original? kept for consistency
+    s4 = tp - 2.0 * hl_range
     r1 = 2.0 * tp - low
     r2 = tp + hl_range
     r3 = tp + 2.0 * hl_range
@@ -115,10 +116,14 @@ def _pivot_traditional(
 
 @jit(nopython=True, cache=True)
 def _pivot_woodie(
-    open_: np.ndarray, 
-    high: np.ndarray, 
-    low: np.ndarray
+    open_: np.ndarray,
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
 ) -> tuple[np.ndarray, ...]:
+    """Woodie pivot (uses the opening price; `close` is accepted for a
+    uniform 4-argument interface with `_pivot_demark` but is unused).
+    """
     tp = (2.0 * open_ + high + low) / 4.0
     hl_range = high - low
     s1 = 2.0 * tp - high
@@ -174,7 +179,8 @@ def pivots_ind(
     method: str = 'traditional',
     anchor: str = 'D',
 ) -> pl.DataFrame:
-    """Calculate Pivot Points (support/resistance levels) for the given price data.
+    """Calculate Pivot Points (support/resistance levels)
+    for the given price data.
 
     Parameters
     ----------
@@ -188,9 +194,10 @@ def pivots_ind(
         Pivot calculation method. One of:
         'traditional', 'fibonacci', 'woodie', 'classic', 'demark', 'camarilla'.
     anchor : str
-        Resampling frequency (e.g., 'D' for daily, 'W' for weekly, 'M' for monthly).
-        Must be a valid pandas offset string (since we rely on Polars' dynamic grouping,
-        we convert it to a Polars interval; only basic frequencies are supported).
+        Resampling frequency (e.g., 'D' for daily, 'W'for weekly, 'M'
+        for monthly). Must be a valid pandas offset string (since we rely on
+        Polars' dynamic grouping, we convert it to a Polars interval;
+        only basic frequencies are supported).
 
     Returns
     -------
@@ -277,7 +284,7 @@ def pivots_ind(
             pl.col(f'PIVOTS{suffix}_R4'),
         ]),
         on=date_col,
-        strategy='forward',
+        strategy='backward',
     )
     # Optionally drop rows where pivot values are all NaN 
     # (original behaviour for some methods)

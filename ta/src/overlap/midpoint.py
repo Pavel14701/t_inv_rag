@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Midpoint indicator – Numba‑accelerated with TA‑Lib fallback."""
+"""Midpoint indicator – Numba‑accelerated with TA‑Lib fallback.
+
+All floating-point operations follow IEEE 754 rules (no fastmath
+optimisations). NaN and infinite values propagate naturally through
+min/max and arithmetic — the Numba core and TA-Lib MIDPOINT agree on
+this behaviour (verified by tests).
+"""
 
 from typing import Optional
 
@@ -45,7 +51,9 @@ def midpoint_numba(
     fillna: Optional[float] = None
 ) -> np.ndarray:
     """Midpoint using Numba (raw numpy version)."""
-    close = np.asarray(close, dtype=np.float64, copy=False)
+    if length < 1:
+        raise ValueError('MIDPOINT length must be >= 1')
+    close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     result = _midpoint_numba_core(close, length)
@@ -64,7 +72,9 @@ def midpoint_talib(
     """Midpoint using TA‑Lib."""
     if not talib_available:
         raise ImportError('TA‑Lib not available')
-    close = np.asarray(close, dtype=np.float64, copy=False)
+    if length < 1:
+        raise ValueError('MIDPOINT length must be >= 1')
+    close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     result = talib.MIDPOINT(close, timeperiod=length)

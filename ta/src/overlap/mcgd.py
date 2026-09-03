@@ -56,12 +56,13 @@ def _mcgd_numba_core(close: np.ndarray, length: int, c: float) -> np.ndarray:
     Notes
     -----
     - IEEE 754 compliant: NaN propagates naturally through the recursion
-      (a single NaN poisons every subsequent value).
+        (a single NaN poisons every subsequent value).
     - Degenerate cases where the denominator would be zero (zero price or
-      zero previous MCGD) do not raise: the filter carries the previous
-      value forward (or re-seeds from the price when MCGD is zero) so the
-      series never explodes to +/-Inf.
-    """
+        zero previous MCGD) do not raise: the filter carries the previous
+        value forward (or re-seeds from the price when MCGD is zero) so the
+        series never explodes to +/-Inf.
+
+    """  # noqa: D403
     n = len(close)
     mcgd = np.empty(n, dtype=np.float64)
     if n == 0:
@@ -130,7 +131,7 @@ def mcgd_numba(
     - Infinite values are replaced with NaN before any calculation.
     - This function is IEEE 754 compliant.
 
-    """
+    """  # noqa: D403
     if length < 1:
         raise ValueError(f'MCGD length must be >= 1, got {length}.')
     if c <= 0:
