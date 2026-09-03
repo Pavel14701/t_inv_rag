@@ -120,6 +120,9 @@ def linreg_talib(
     if length < 1:
         raise ValueError('LINREG length must be >= 1')
     close = np.asarray(close, dtype=np.float64, copy=False)
+    # Replace infinities with NaN (IEEE 754 compliance)
+    close = close.copy()
+    replace_inf_with_nan(close)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if mode == 'line':
@@ -214,6 +217,7 @@ def linreg_ind(
     degrees: bool = False,
     offset: int = 0,
     fillna: Optional[float] = None,
+    nan_policy: str = 'raise',
     use_talib: bool = True
 ) -> np.ndarray:
     """Universal Linear Regression.

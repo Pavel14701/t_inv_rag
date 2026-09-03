@@ -284,7 +284,7 @@ def test_smma_numba_nan_policy_ffill() -> None:
 
 @pytest.mark.overlap
 def test_smma_numba_with_nan(prices_with_nan):
-    """NaN in input poisons the SMMA recurrence permanently."""
+    """NaN in input poisons the SMMA recurrence permanently."""  # noqa: D403
     length = 5
     result = smma_numba(prices_with_nan, length=length, nan_policy='ignore')
     # NaN at index 5 -> initial SMA (indices 0-4) is clean,
