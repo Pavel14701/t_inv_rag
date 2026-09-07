@@ -79,7 +79,10 @@ def test_cdl_z_offset_fillna() -> None:
     for key in result_offset:
         assert result_offset[key].shape == (n,)
         assert result_offset[key][0] == 0.0
-        assert_allclose(result_offset[key][1:], result_no_offset[key][:-1], rtol=1e-6)
+        # fillna also replaces the warm-up NaNs of the shifted series
+        no_offset_tail = result_no_offset[key][:-1]
+        expected = np.where(np.isnan(no_offset_tail), 0.0, no_offset_tail)
+        assert_allclose(result_offset[key][1:], expected, rtol=1e-6)
 
 
 # -----------------------------------------------------------------------------

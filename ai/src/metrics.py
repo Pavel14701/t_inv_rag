@@ -46,14 +46,17 @@ def compute_trade_metrics(
     outcome_targets: torch.Tensor,
     ignore_index: int = 2,
 ) -> dict[str, float]:
-    """Simple trade-like metrics based on action accuracy and outcome targets.
+    """Simple trade-like metrics based on the model's predicted entries.
 
-    Only considers bars where both prediction and ground-truth are ``entry``.
-    Win rate is the fraction of those bars where ``outcome_targets == 1``.
+    Only bars where the model **predicts** an entry (``pred == 1``) and
+    the ground-truth outcome is known are considered.  Restricting the
+    metric to bars where the ground truth also says ``entry`` would
+    bias the Win Rate towards the label generator's choices.
 
     Args:
         action_logits: (N, 3) flattened action logits.
-        action_targets: (N,) long action labels.
+        action_targets: (N,) long action labels (unused for masking,
+            kept for API compatibility).
         outcome_targets: (N,) float outcome labels.
         ignore_index: Value in outcome_targets to ignore (default 2).
 
@@ -62,7 +65,7 @@ def compute_trade_metrics(
 
     """
     action_pred = action_logits.argmax(dim=-1)
-    entry_mask = (action_pred == 1) & (action_targets == 1)
+    entry_mask = action_pred == 1
     if not entry_mask.any():
         return {'win_rate': 0.0, 'profit_factor': 0.0, 'num_trades': 0}
 

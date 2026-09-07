@@ -10,7 +10,7 @@ from .._array_ops import _apply_offset_fillna
 from .atr import atr_ind
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=False, cache=True)
 def _atrts_numba_core(
     close: np.ndarray,
     ma: np.ndarray,
@@ -19,6 +19,11 @@ def _atrts_numba_core(
     ma_length: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Core ATR Trailing Stop logic.
+
+    The stop line is recursive (each bar depends on the previous one), so
+    it runs with ``fastmath=False``: the ``>`` comparisons and max/min
+    updates must keep exact IEEE 754 semantics.  Inputs must be free of
+    NaN/inf (enforced upstream by the MA/ATR backends).
 
     Parameters
     ----------
@@ -94,14 +99,30 @@ def atrts_numpy(
     """Numpy‑based ATR Trailing Stop.
 
     Returns main ATRTS line as numpy array.
+
+    Raises
+    ------
+    ValueError
+        If `length` < 1 or `ma_length` < 1, or if the input contains
+        NaN/inf (enforced by the ATR/MA backends).
+
     """
     # Input preparation
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if ma_length < 1:
+        raise ValueError('ma_length must be >= 1')
+    # Rebind the outer names: assigning to the loop variable is a no-op
+    # and left the arrays non-contiguous for the numba backends.
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
 
     # Compute ATR (using existing atr_ind)
     atr = atr_ind(

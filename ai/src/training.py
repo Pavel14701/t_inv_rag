@@ -25,7 +25,7 @@ import numpy as np
 import polars as pl
 import torch
 import torch.nn.functional as functional
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset
 from torch.utils.tensorboard import SummaryWriter
 
 from .dataset import TradingDataset, collate_ob
@@ -792,11 +792,19 @@ def _split_train_val(
     val_split: float,
     batch_size: int,
 ) -> tuple[DataLoader, DataLoader | None]:
-    """Create a training and optional validation loader from a single dataset.
+    """Split a dataset into chronological train/validation loaders.
+
+    The validation set takes the **most recent** ``val_split`` fraction
+    of the sliding windows (by time), never a random subset.  To prevent
+    leakage across the boundary, training windows are additionally
+    truncated so that no training window overlaps any validation bar
+    (a window of ``seq_len`` bars would otherwise share
+    ``seq_len - 1`` bars with the validation period).
 
     Args:
         loader: DataLoader whose ``.dataset`` is a :class:`TradingDataset`.
-        val_split: Fraction of data to use for validation.
+        val_split: Fraction of the most recent windows to use for
+            validation.
         batch_size: Batch size for both returned loaders.
 
     Returns:
@@ -811,19 +819,34 @@ def _split_train_val(
     if val_split <= 0:
         return loader, None
 
-    n_val = int(len(dataset) * val_split)
-    n_train = len(dataset) - n_val
+    n_windows = len(dataset)
+    n_val = int(n_windows * val_split)
     if n_val == 0:
         raise ValueError('val_split too small, validation set is empty')
-    train_ds, val_ds = random_split(dataset, [n_train, n_val])
+
+    # Validation: the most recent windows
+    val_start = n_windows - n_val
+    val_indices = list(range(val_start, n_windows))
+
+    # Training: all windows that end strictly before the first
+    # validation window starts (no bar overlap across the boundary)
+    train_end = max(0, val_start - (dataset.seq_len - 1))
+    if train_end == 0:
+        raise ValueError(
+            'val_split/seq_len leave no training windows: need '
+            f'at least {dataset.seq_len} windows before the validation '
+            'boundary. Use more data, a smaller seq_len or val_split.'
+        )
+    train_indices = list(range(train_end))
+
     train_loader = DataLoader(
-        train_ds,
+        Subset(dataset, train_indices),
         batch_size=batch_size,
         shuffle=True,
         collate_fn=collate_ob,
     )
     val_loader = DataLoader(
-        val_ds,
+        Subset(dataset, val_indices),
         batch_size=batch_size,
         shuffle=False,
         collate_fn=collate_ob,

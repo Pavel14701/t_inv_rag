@@ -36,7 +36,7 @@ def test_quick_train_basic(sample_parquet_files: dict[str, str]) -> None:
         sig_cols=['sig1', 'sig2'],
         tp_sl_cols=['tp', 'sl'],
         ind_cols=['ind1', 'ind2', 'ind3'],
-        seq_len=128,
+        seq_len=32,
         batch_size=2,
         epochs=1,
         device='cpu',
@@ -69,11 +69,12 @@ def test_quick_train_with_validation_file(
         sig_cols=['sig1', 'sig2'],
         tp_sl_cols=['tp', 'sl'],
         ind_cols=['ind1', 'ind2', 'ind3'],
-        seq_len=128,
+        seq_len=32,
         batch_size=2,
         epochs=1,
-        # same file for simplicity
+        # same files for simplicity
         val_path=sample_parquet_files['features_path'],
+        val_labels_path=sample_parquet_files['labels_path'],
         device='cpu',
         save_best_path=None,
     )
@@ -116,7 +117,7 @@ def test_quick_train_with_pattern_cols(
         ind_cols=['ind1', 'ind2', 'ind3'],
         pattern_cols=['pattern1', 'pattern2'],
         n_patterns=2,
-        seq_len=128,
+        seq_len=32,
         batch_size=2,
         epochs=1,
         device='cpu',

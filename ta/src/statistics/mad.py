@@ -22,13 +22,17 @@ from numba import jit
 from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=False, cache=True)
 def _mad_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     """Numba-compiled core for rolling Mean Absolute Deviation.
 
-    For each window, the mean is computed and then the mean absolute
-    deviation is calculated.  This implementation uses O(n * length)
-    time (quadratic) but is straightforward and Numba-accelerated.
+    For each window, the mean is recomputed from scratch (two-pass) and
+    then the mean absolute deviation is calculated.  This implementation
+    uses O(n * length) time, which is required for strict IEEE 754
+    compliance: incremental running sums accumulate floating-point drift
+    and a single NaN/inf would permanently poison every later value,
+    whereas the two-pass form propagates NaN/inf only while the affected
+    value is inside the window and stays exact on large-magnitude inputs.
 
     Parameters
     ----------
@@ -41,7 +45,7 @@ def _mad_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     -------
     np.ndarray
         Float64 array of rolling MAD values, with first `length-1` elements
-        set to NaN.
+        set to NaN.  NaN/inf inputs propagate to windows containing them.
 
     """
     n = len(close)
@@ -49,32 +53,18 @@ def _mad_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     if n < length:
         return out
 
-    # Initial window
-    s = 0.0
-    for i in range(length):
-        s += close[i]
-    mean = s / length
-
-    mad = 0.0
-    for i in range(length):
-        mad += abs(close[i] - mean)
-    mad /= length
-    out[length - 1] = mad
-
-    # Sliding window
-    for i in range(length, n):
-        # Update mean using the removed and added values
-        old = close[i - length]
-        new = close[i]
-        s += new - old
+    for i in range(length - 1, n):
+        # Fresh summation per window: no running-sum drift, and a NaN/inf
+        # affects only the windows that contain it.
+        s = 0.0
+        for j in range(i - length + 1, i + 1):
+            s += close[j]
         mean = s / length
 
-        # Recompute MAD for the new window
         mad = 0.0
         for j in range(i - length + 1, i + 1):
             mad += abs(close[j] - mean)
-        mad /= length
-        out[i] = mad
+        out[i] = mad / length
 
     return out
 
@@ -113,6 +103,8 @@ def mad_numba(
 
     """  # noqa: E501
     close = np.asarray(close, dtype=np.float64)
+    if length < 2:
+        raise ValueError('length must be >= 2')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:

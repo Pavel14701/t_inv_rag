@@ -15,9 +15,12 @@ from ..volatility import atr_ind
 # Helper for TradingView mode (tvmode=True) with Numba signature
 # ----------------------------------------------------------------------
 @njit(
-    (float64[:], float64[:], int64, int64, float64, float64[:]), 
-    cache=True, 
-    fastmath=True
+    (float64[:], float64[:], int64, int64, float64, float64[:]),
+    cache=True,
+    fastmath=False,  # strict IEEE: this kernel branches on np.isfinite()
+                     # to skip the ATR warm-up; fastmath's nnan flag folds
+                     # those checks to "always True" and the NaN seed then
+                     # poisons the recursive smoothing (all-NaN output)
 )
 def _tv_dmp_dmn_adx(
     pos: np.ndarray,
@@ -35,24 +38,42 @@ def _tv_dmp_dmn_adx(
     dmp = np.empty(n, dtype=np.float64)
     dmn = np.empty(n, dtype=np.float64)
     dx = np.empty(n, dtype=np.float64)
-    adx = np.empty(n, dtype=np.float64)
-    dmp[:length - 1] = np.nan
-    dmn[:length - 1] = np.nan
-    dx[:length - 1] = np.nan
-    adx[:length - 1] = np.nan
-    # Compute sum of first `length` raw pos and neg
+    # NB: np.full, not np.empty - the bars between the DMP/DMN start and
+    # the first ADX value (the DX signal warm-up) are never written;
+    # np.empty leaves them as heap garbage, which made results depend on
+    # whatever the previous test/loop left in memory.
+    adx = np.full(n, np.nan, dtype=np.float64)
+    # First bar with a finite ATR (warm-up may end later than length-1);
+    # starting earlier would seed the recursive smoothing with NaN and
+    # poison every subsequent value.
+    first = -1
+    for i in range(length - 1, n):
+        if np.isfinite(atr[i]):
+            first = i
+            break
+    if first < 0:
+        dmp[:] = np.nan
+        dmn[:] = np.nan
+        dx[:] = np.nan
+        adx[:] = np.nan
+        return dmp, dmn, adx
+    dmp[:first] = np.nan
+    dmn[:first] = np.nan
+    dx[:first] = np.nan
+    adx[:first] = np.nan
+    # Compute sum of the `length` raw pos/neg values ending at `first`
     sum_pos = 0.0
     sum_neg = 0.0
-    for i in range(length):
+    for i in range(first - length + 1, first + 1):
         sum_pos += pos[i]
         sum_neg += neg[i]
-    dmp[length - 1] = k[length - 1] * sum_pos
-    dmn[length - 1] = k[length - 1] * sum_neg
+    dmp[first] = k[first] * sum_pos
+    dmn[first] = k[first] * sum_neg
     alpha = 1.0 / length
-    for i in range(length, n):
+    for i in range(first + 1, n):
         dmp[i] = alpha * k[i] * pos[i] + (1.0 - alpha) * dmp[i - 1]
         dmn[i] = alpha * k[i] * neg[i] + (1.0 - alpha) * dmn[i - 1]
-    for i in range(length - 1, n):
+    for i in range(first, n):
         denom = dmp[i] + dmn[i]
         if denom != 0.0:
             dx[i] = scalar * abs(dmp[i] - dmn[i]) / denom
@@ -63,18 +84,55 @@ def _tv_dmp_dmn_adx(
     dx_shifted = np.full(n, np.nan, dtype=np.float64)
     if n > length:
         dx_shifted[:-length] = dx[length:]
-    # ADX is RMA of the shifted DX with period signal_length
-    adx_start_idx = length + signal_length - 1
+    # ADX is RMA of the shifted DX with period signal_length.
+    # The SMA seed consumes signal_length shifted-DX samples starting at
+    # ``first`` (dx_shifted[first] = dx[first + length] is the first
+    # finite one), so the first ADX value lands exactly on bar
+    # ``first + signal_length - 1`` - the classic 2*length - 1 warm-up.
+    adx_start_idx = first + signal_length - 1
     if adx_start_idx < n:
         # Initial SMA
         sum_dx = 0.0
-        for i in range(length, length + signal_length):
+        for i in range(first, first + signal_length):
             sum_dx += dx_shifted[i]
         adx[adx_start_idx] = sum_dx / signal_length
         alpha_sig = 1.0 / signal_length
         for i in range(adx_start_idx + 1, n):
             adx[i] = alpha_sig * dx_shifted[i] + (1.0 - alpha_sig) * adx[i - 1]
     return dmp, dmn, adx
+
+
+# ----------------------------------------------------------------------
+# Helper: signal MA starting at the first finite value
+# ----------------------------------------------------------------------
+def _rma_from_first_valid(
+    x: np.ndarray, length: int, mamode: str,
+) -> np.ndarray:
+    """Apply ``mamode`` MA to ``x`` starting at its first finite value.
+
+    Leading NaNs (warm-up region) are preserved; the smoothing window
+    is aligned with the first finite sample, mirroring the tvmode
+    kernel behaviour.
+    """
+    out = np.full(len(x), np.nan, dtype=np.float64)
+    finite = np.flatnonzero(np.isfinite(x))
+    if len(finite) == 0:
+        return out
+    start = int(finite[0])
+    tail = x[start:]
+    # Internal NaNs (denominator == 0) are forward-filled so that the
+    # MA keeps a contiguous input; they stay local artefacts.
+    nan_mask = ~np.isfinite(tail)
+    if nan_mask.any():
+        tail = tail.copy()
+        idx = np.where(~nan_mask, np.arange(len(tail)), 0)
+        np.maximum.accumulate(idx, out=idx)
+        tail = tail[idx]
+    smoothed = ma_mode(
+        mamode, tail, length=length, offset=0, fillna=None, use_talib=False,
+    )
+    out[start:] = smoothed
+    return out
 
 
 # ----------------------------------------------------------------------
@@ -117,7 +175,12 @@ def adx_numpy(
         Moving average mode for standard calculation (ignored if tvmode=True).
     drift : int
         Lookback period for price differences.
-    offset, fillna, use_talib : as usual.
+    offset : int
+        Shift of the output series by ``offset`` bars (default 0).
+    fillna : float, optional
+        Value used to fill NaNs instead of the default NaN policy.
+    use_talib : bool, default True
+        Use the TA-Lib backend where available (never for tvmode).
     nan_policy : str, default 'raise'
         How to handle NaNs in input arrays ('raise', 'ffill', 'bfill', 'both').
     trim : bool, default False
@@ -144,7 +207,9 @@ def adx_numpy(
     # Check for infinite values
     for name, arr in [('high', high), ('low', low), ('close', close)]:
         if np.isinf(arr).any():
-            raise ValueError(f'Input {name} contains non-finite values (inf or -inf).')
+            raise ValueError(
+                f'Input {name} contains non-finite values (inf or -inf).'
+            )
     # Apply NaN policy to each array
     high = _handle_nan_policy(high, nan_policy, 'high')
     low = _handle_nan_policy(low, nan_policy, 'low')
@@ -194,18 +259,24 @@ def adx_numpy(
             # Standard calculation using MA of pos/neg
             k = scalar / atr
             dmp = k * cast(np.ndarray, ma_mode(
-                mamode, pos, length=length, offset=0, fillna=None, use_talib=False
+                mamode, pos, length=length, offset=0,
+                fillna=None, use_talib=False
             ))
             dmn = k * cast(np.ndarray, ma_mode(
-                mamode, neg, length=length, offset=0, fillna=None, use_talib=False
+                mamode, neg, length=length, offset=0,
+                fillna=None, use_talib=False
             ))
             denom = dmp + dmn
             with np.errstate(divide='ignore', invalid='ignore'):
                 dx = scalar * np.abs(dmp - dmn) / denom
                 dx = np.where(denom == 0.0, np.nan, dx)
-            adx = cast(np.ndarray, ma_mode(
-                mamode, dx, length=signal_length, offset=0, fillna=None, use_talib=False
-            ))
+            # dx has NaNs during the warm-up (ATR/DMP/DMN not defined yet).
+            # Smoothing a series with leading NaNs would raise under
+            # nan_policy='raise', so - like the tvmode kernel - start the
+            # signal MA at the first finite dx value.
+            adx = _rma_from_first_valid(
+                cast(np.ndarray, dx), signal_length, mamode,
+            )
     # 5. ADXR
     adx_shifted = np.roll(adx, adxr_length)
     adx_shifted[:adxr_length] = np.nan
@@ -214,7 +285,9 @@ def adx_numpy(
     if trim:
         start = length + signal_length - 1
         if start >= len(adx):
-            raise ValueError('Trim start index exceeds array length. Series too short.')
+            raise ValueError(
+                'Trim start index exceeds array length. Series too short.'
+            )
         adx = adx[start:]
         adxr = adxr[start:]
         dmp = dmp[start:]
@@ -244,7 +317,7 @@ def adx_ind(
     nan_policy: str = 'raise',
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Universal ADX (accepts numpy arrays or Polars Series) with NaN handling and trim.
+    """Universal ADX (numpy arrays or Polars Series) with NaN handling.
     Returns (adx, adxr, dmp, dmn) as numpy arrays.
     """
     if isinstance(high, pl.Series):
@@ -289,7 +362,7 @@ def adx_polars(
     nan_policy: str = 'raise',
     suffix: str = '',
 ) -> pl.DataFrame:
-    """ADX for Polars DataFrame (does not support trim because it must return same length).
+    """ADX for Polars DataFrame (no trim: output keeps input length).
 
     Columns added:
         ADX_{signal_length}

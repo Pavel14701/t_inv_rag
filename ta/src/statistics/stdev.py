@@ -25,7 +25,7 @@ from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna
 
 
-@njit('float64[:](float64[:], int64, int64)', fastmath=True, cache=True)
+@njit('float64[:](float64[:], int64, int64)', fastmath=False, cache=True)
 def _stdev_numba_core_online(
     close: np.ndarray,
     length: int,
@@ -34,7 +34,12 @@ def _stdev_numba_core_online(
     """Online (one-pass) rolling standard deviation.
 
     Uses running sums and sums of squares for O(1) update per element.
-    Fast but may have slight numerical inaccuracies for large windows.
+    To keep IEEE 754 corner-case semantics the sums are resynchronised
+    from scratch whenever a non-finite value enters the window, so a
+    single NaN/inf poisons only the windows that contain it.  Note that
+    large-magnitude inputs can still lose precision through cancellation
+    in the sum of squares; use the 'two_pass' algorithm when exactness
+    matters.
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -55,8 +60,23 @@ def _stdev_numba_core_online(
     for i in range(length, n):
         new_val = close[i]
         old_val = close[i - length]
-        sum_x += new_val - old_val
-        sum_x2 += new_val * new_val - old_val * old_val
+        if (
+            np.isfinite(new_val)
+            and np.isfinite(old_val)
+            and np.isfinite(sum_x)
+            and np.isfinite(sum_x2)
+        ):
+            sum_x += new_val - old_val
+            sum_x2 += new_val * new_val - old_val * old_val
+        else:
+            # Resynchronise: recompute sums from scratch for the current
+            # window so a NaN/inf affects only the windows containing it.
+            sum_x = 0.0
+            sum_x2 = 0.0
+            for j in range(i - length + 1, i + 1):
+                val = close[j]
+                sum_x += val
+                sum_x2 += val * val
         mean = sum_x / length
         variance = (
             (sum_x2 - 2 * mean * sum_x + length * mean * mean)
@@ -66,7 +86,7 @@ def _stdev_numba_core_online(
     return out
 
 
-@njit('float64[:](float64[:], int64, int64)', fastmath=True, cache=True)
+@njit('float64[:](float64[:], int64, int64)', fastmath=False, cache=True)
 def _stdev_numba_core_twopass(
     close: np.ndarray,
     length: int,
@@ -74,7 +94,10 @@ def _stdev_numba_core_twopass(
 ) -> np.ndarray:
     """Two-pass rolling standard deviation.
 
-    Computes mean first, then variance. Slower but more numerically stable.
+    Computes the mean first, then the variance from the summed squared
+    deviations.  Slower but strictly IEEE 754 compliant: no running-sum
+    drift on large-magnitude inputs, and a NaN/inf propagates only to the
+    windows that contain it.
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -127,6 +150,7 @@ def stdev_numba(
         Window size.
     ddof : int, default 1
         Delta Degrees of Freedom (1 for sample std, 0 for population).
+        Must satisfy 0 <= ddof < length.
     offset : int, default 0
         Shift applied to the output array. Positive = forward shift.
     fillna : float or None, default None
@@ -142,6 +166,10 @@ def stdev_numba(
 
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if ddof < 0 or ddof >= length:
+        raise ValueError('ddof must satisfy 0 <= ddof < length')
     if not close.flags.writeable:
         close = close.copy()
     if not close.flags.c_contiguous:

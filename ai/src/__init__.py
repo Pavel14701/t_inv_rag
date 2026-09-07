@@ -194,6 +194,7 @@ from .datatypes import OrderBlock
 from .features import (
     compute_atr,
     compute_ob_distances,
+    compute_tp_sl,
     generate_labels_from_strategy,
 )
 from .io import (
@@ -222,6 +223,7 @@ __all__ = [
     'collate_ob',
     'compute_atr',
     'compute_ob_distances',
+    'compute_tp_sl',
     'generate_labels_from_strategy',
     'load_features_parquet',
     'load_labels_parquet',

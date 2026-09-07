@@ -24,7 +24,7 @@ from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=False, cache=True)
 def _variance_numba_core(
     close: np.ndarray,
     length: int,
@@ -32,7 +32,13 @@ def _variance_numba_core(
 ) -> np.ndarray:
     """Numba-compiled core for rolling variance.
 
-    Uses running sums and sums of squares for O(1) update per element.
+    For each window the mean is recomputed from scratch and the variance is
+    taken from the summed squared deviations (two-pass).  This uses
+    O(n * length) time, which is required for strict IEEE 754 compliance:
+    incremental running sums of squares accumulate floating-point drift and
+    a single NaN/inf would permanently poison every later value, whereas
+    the two-pass form propagates NaN/inf only while the affected value is
+    inside the window and stays exact on large-magnitude inputs.
 
     Parameters
     ----------
@@ -41,45 +47,34 @@ def _variance_numba_core(
     length : int
         Window size (must be >= 1).
     ddof : int
-        Delta Degrees of Freedom (0 for population, 1 for sample).
+        Delta Degrees of Freedom (must satisfy 0 <= ddof < length).
 
     Returns
     -------
     np.ndarray
         Float64 array of rolling variances, with first `length-1` elements
-        set to NaN.
+        set to NaN.  NaN/inf inputs propagate to windows containing them.
 
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < length:
         return out
-    # Initial sums for the first window
-    sum_x = 0.0
-    sum_x2 = 0.0
-    for i in range(length):
-        val = close[i]
-        sum_x += val
-        sum_x2 += val * val
-    # Compute variance for the first full window
-    mean = sum_x / length
-    variance = (
-        (sum_x2 - 2 * mean * sum_x + length * mean * mean)
-        / (length - ddof)
-    )
-    out[length - 1] = variance if variance >= 0 else np.nan
-    # Sliding update
-    for i in range(length, n):
-        new_val = close[i]
-        old_val = close[i - length]
-        sum_x += new_val - old_val
-        sum_x2 += new_val * new_val - old_val * old_val
-        mean = sum_x / length
-        variance = (
-            (sum_x2 - 2 * mean * sum_x + length * mean * mean)
-            / (length - ddof)
-        )
-        out[i] = variance if variance >= 0 else np.nan
+    denom = length - ddof
+    for i in range(length - 1, n):
+        # Fresh summation per window: no running-sum drift, and a NaN/inf
+        # affects only the windows that contain it.
+        s = 0.0
+        for j in range(i - length + 1, i + 1):
+            s += close[j]
+        mean = s / length
+
+        ss = 0.0
+        for j in range(i - length + 1, i + 1):
+            d = close[j] - mean
+            ss += d * d
+        # Sum of squared deviations is non-negative by construction.
+        out[i] = ss / denom
     return out
 
 
@@ -100,6 +95,7 @@ def variance_numba(
         Window size.
     ddof : int, default 1
         Delta Degrees of Freedom (1 for sample variance, 0 for population).
+        Must satisfy 0 <= ddof < length.
     offset : int, default 0
         Shift applied to the output array. Positive = forward shift.
     fillna : float or None, default None
@@ -119,6 +115,10 @@ def variance_numba(
 
     """
     close = np.asarray(close, dtype=np.float64)
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if ddof < 0 or ddof >= length:
+        raise ValueError('ddof must satisfy 0 <= ddof < length')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:

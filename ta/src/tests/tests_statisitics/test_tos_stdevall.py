@@ -237,3 +237,42 @@ def test_tos_stdevall_polars_without_length(df_random_walk: pl.DataFrame) -> Non
     assert 'TOS_STDEVALL_L_1' in result_df.columns
     assert 'TOS_STDEVALL_U_1' in result_df.columns
     assert len(result_df) == len(df_random_walk)
+
+
+# -----------------------------------------------------------------------------
+# IEEE-754 corner-case tests
+# -----------------------------------------------------------------------------
+
+def test_tos_stdevall_numpy_nan_propagates() -> None:
+    """NaN in the input yields NaN bands (no polyfit warnings or junk)."""
+    prices = np.array([1.0, 2.0, np.nan, 4.0, 5.0], dtype=np.float64)
+    result = tos_stdevall_numpy(prices, stds=[1], ddof=1)
+    for arr in result.values():
+        assert arr.shape == (5,)
+        assert np.isnan(arr).all()
+
+
+def test_tos_stdevall_numpy_inf_propagates() -> None:
+    """An inf in the input yields NaN bands."""
+    prices = np.array([1.0, 2.0, np.inf, 4.0, 5.0], dtype=np.float64)
+    result = tos_stdevall_numpy(prices, stds=[1], ddof=1)
+    for arr in result.values():
+        assert np.isnan(arr).all()
+
+
+def test_tos_stdevall_numpy_invalid_ddof_raises() -> None:
+    """Passing ddof >= number of points raises ValueError."""
+    prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64)
+    with pytest.raises(ValueError, match='ddof must satisfy'):
+        tos_stdevall_numpy(prices, ddof=5)
+    with pytest.raises(ValueError, match='ddof must satisfy'):
+        tos_stdevall_numpy(prices, length=3, ddof=3)
+
+
+def test_tos_stdevall_numpy_negative_std_raises() -> None:
+    """Negative or non-finite band multipliers are rejected."""
+    prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64)
+    with pytest.raises(ValueError, match='stds multipliers must be'):
+        tos_stdevall_numpy(prices, stds=[1.0, -2.0])
+    with pytest.raises(ValueError, match='stds multipliers must be'):
+        tos_stdevall_numpy(prices, stds=[float('nan')])

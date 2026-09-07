@@ -25,8 +25,23 @@ def bbands_numpy(
     """Numpy‑based Bollinger Bands calculation.
 
     Returns (lower, mid, upper, bandwidth, percent_b) as numpy arrays.
+
+    On a constant window the deviation is zero, so bandwidth is exactly 0
+    and percent_b is 0/0 = NaN (computed inside ``errstate`` so no
+    RuntimeWarning is raised).  NaN/inf inputs are rejected by the
+    underlying SMA backend (nan_policy='raise').
+
+    Raises
+    ------
+    ValueError
+        If `length` < 1 or a std multiplier is negative.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if lower_std < 0 or upper_std < 0:
+        raise ValueError('std multipliers must be >= 0')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     mid = cast(np.ndarray, ma_mode(
@@ -37,10 +52,12 @@ def bbands_numpy(
     upper_deviations = upper_std * std
     lower = mid - lower_deviations
     upper = mid + upper_deviations
-    # Bandwidth and %B
-    ulr = upper - lower
-    bandwidth = 100.0 * ulr / mid
-    percent_b = (close - lower) / ulr
+    # Bandwidth and %B; 0/0 can legitimately occur (zero deviation) and
+    # must yield NaN/0 silently instead of raising RuntimeWarnings.
+    with np.errstate(divide='ignore', invalid='ignore'):
+        ulr = upper - lower
+        bandwidth = 100.0 * ulr / mid
+        percent_b = (close - lower) / ulr
     # Apply offset and fillna to all five series
     lower = _apply_offset_fillna(lower, offset, fillna)
     mid = _apply_offset_fillna(mid, offset, fillna)

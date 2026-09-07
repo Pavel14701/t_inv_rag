@@ -24,13 +24,19 @@ from numba import jit
 from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
-def _entropy_numba_core(close: np.ndarray, length: int, base: float) -> np.ndarray:
+@jit(nopython=True, fastmath=False, cache=True)
+def _entropy_numba_core(
+    close: np.ndarray, length: int, base: float
+) -> np.ndarray:
     """Numba-compiled core for rolling Shannon entropy.
 
     For each window, the values are sorted and the frequency of each
     unique value is counted.  The entropy is computed as:
     -sum(p_i * log(p_i)) where p_i = count_i / length.
+
+    Follows IEEE 754 strictly (``fastmath=False``): a window containing
+    non-finite values (NaN, +/-inf) yields NaN for that window; later
+    windows recover once the non-finite value leaves the window.
 
     Parameters
     ----------
@@ -57,7 +63,16 @@ def _entropy_numba_core(close: np.ndarray, length: int, base: float) -> np.ndarr
     log_base = np.log(base)
 
     for i in range(length - 1, n):
-        window = close[i - length + 1 : i + 1].copy()
+        # IEEE 754: a window containing non-finite values yields NaN
+        finite_window = True
+        for j in range(i - length + 1, i + 1):
+            if not np.isfinite(close[j]):
+                finite_window = False
+                break
+        if not finite_window:
+            continue
+
+        window = close[i - length + 1: i + 1].copy()
         window.sort()
 
         entropy = 0.0
@@ -109,10 +124,14 @@ def entropy_numba(
     >>> import numpy as np
     >>> prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     >>> entropy_numba(prices, length=3, base=2.0)
-    array([       nan,        nan, 0.91829583, 0.91829583, 0.91829583])
+    array([       nan,        nan, 1.5849625 , 1.5849625 , 1.5849625 ])
 
     """
     close = np.asarray(close, dtype=np.float64)
+    if length < 2:
+        raise ValueError('length must be >= 2')
+    if base <= 0.0 or base == 1.0:
+        raise ValueError('base must be positive and != 1')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:

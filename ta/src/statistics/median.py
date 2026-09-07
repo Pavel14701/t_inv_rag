@@ -24,26 +24,38 @@ from numba import jit
 from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
+def _window_is_finite(window: np.ndarray) -> bool:
+    """Return True if every element of `window` is finite (no NaN/inf)."""
+    for j in range(len(window)):
+        if not np.isfinite(window[j]):
+            return False
+    return True
+
+
+@jit(nopython=True, fastmath=False, cache=True)
 def _median_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     """Numba-compiled core for rolling median.
 
     Uses NumPy's partition to find the median without fully sorting the
     window.  For odd length, the middle element is selected directly.
     For even length, the average of the two middle elements is computed.
+    Windows containing NaN/inf yield NaN: without the explicit check,
+    partition() would silently place the non-finite value at the end and
+    return a finite median for a window that contains it.
 
     Parameters
     ----------
     close : np.ndarray
         1D float64 array of close prices.
     length : int
-        Window size (must be >= 2).
+        Window size (must be >= 1).
 
     Returns
     -------
     np.ndarray
         Float64 array of rolling medians, with first `length-1` elements
-        set to NaN.
+        set to NaN.  NaN/inf inputs propagate to windows containing them.
 
     """
     n = len(close)
@@ -56,6 +68,8 @@ def _median_numba_core(close: np.ndarray, length: int) -> np.ndarray:
         kth = length // 2
         for i in range(length - 1, n):
             window = close[i - length + 1: i + 1].copy()
+            if not _window_is_finite(window):
+                continue  # keep NaN (out is pre-filled with NaN)
             part = np.partition(window, kth)
             out[i] = part[kth]
     else:
@@ -64,6 +78,8 @@ def _median_numba_core(close: np.ndarray, length: int) -> np.ndarray:
         kth2 = length // 2
         for i in range(length - 1, n):
             window = close[i - length + 1: i + 1].copy()
+            if not _window_is_finite(window):
+                continue  # keep NaN (out is pre-filled with NaN)
             part = np.partition(window, [kth1, kth2])
             out[i] = (part[kth1] + part[kth2]) * 0.5
 
@@ -83,7 +99,7 @@ def median_numba(
     close : np.ndarray
         1D float64 array of close prices.
     length : int, default 30
-        Window size (must be >= 2).
+        Window size (must be >= 1).
     offset : int, default 0
         Shift applied to the output array. Positive = forward shift.
     fillna : float or None, default None
@@ -104,6 +120,8 @@ def median_numba(
 
     """
     close = np.asarray(close, dtype=np.float64)
+    if length < 1:
+        raise ValueError('length must be >= 1')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:

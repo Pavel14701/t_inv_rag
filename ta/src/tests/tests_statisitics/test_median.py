@@ -100,7 +100,10 @@ def test_median_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64])
     result_offset = median_numba(close, length=length, offset=1, fillna=0.0)
 
     assert result_offset[0] == 0.0
-    assert_allclose(result_offset[1:], result_no_offset[:-1], rtol=1e-6, equal_nan=True)
+    # fillna also replaces the warm-up NaNs of the shifted series
+    no_offset_tail = result_no_offset[:-1]
+    expected = np.where(np.isnan(no_offset_tail), 0.0, no_offset_tail)
+    assert_allclose(result_offset[1:], expected, rtol=1e-6)
 
 
 @pytest.mark.statistics
@@ -186,3 +189,50 @@ def test_median_polars_with_offset_fillna(df_random_walk: pl.DataFrame) -> None:
     close_arr = df_random_walk['close'].to_numpy()
     expected = median_numba(close_arr, length=length, offset=1, fillna=0.0)
     assert_allclose(result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True)
+
+
+# -----------------------------------------------------------------------------
+# IEEE-754 corner-case tests
+# -----------------------------------------------------------------------------
+
+@pytest.mark.statistics
+def test_median_numba_nan_window_is_nan() -> None:
+    """A window containing NaN yields NaN (np.median parity).
+
+    Without the finite check, partition() pushes NaN to the end and the
+    median of [2, nan, 4] would silently come out as 4.0.
+    """
+    close = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+    result = median_numba(close, length=3)
+    assert np.isnan(result[2:5]).all()
+    assert result[5] == pytest.approx(5.0)  # median of [4, 5, 6]
+
+
+@pytest.mark.statistics
+def test_median_numba_inf_window_is_nan() -> None:
+    """A window containing +-inf yields NaN, later windows recover."""
+    close = np.array([1.0, np.inf, 3.0, 4.0, 5.0, 6.0, 7.0])
+    result = median_numba(close, length=4)
+    # Windows [0..3] and [1..4] contain the inf at index 1.
+    assert np.isnan(result[3:5]).all()
+    assert result[5] == pytest.approx(4.5)  # median of [3, 4, 5, 6]
+
+
+@pytest.mark.statistics
+def test_median_numba_numpy_parity(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
+    """Median values match np.median for every full window."""
+    close = prices_random_walk
+    length = 21
+    result = median_numba(close, length=length)
+    for i in range(length - 1, len(close), 13):
+        window = close[i - length + 1 : i + 1]
+        assert result[i] == pytest.approx(np.median(window), rel=1e-12)
+
+
+@pytest.mark.statistics
+def test_median_numba_invalid_length_raises() -> None:
+    """Passing length < 1 raises ValueError."""
+    with pytest.raises(ValueError, match='length must be >= 1'):
+        median_numba(np.array([1.0, 2.0, 3.0]), length=0)
