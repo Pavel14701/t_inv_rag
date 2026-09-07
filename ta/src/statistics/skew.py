@@ -7,8 +7,8 @@ over a rolling window.  Positive skewness indicates a longer right tail
 (downward outliers).
 
 This module provides Numba-accelerated computation of rolling skewness
-using the Fisher-Pearson coefficient (bias-corrected).  The implementation
-maintains running sums of powers for O(1) update per element.
+using the Fisher-Pearson coefficient (bias-corrected).  Central moments
+are recomputed per window (two-pass) for strict IEEE 754 compliance.
 
 Functions:
     skew_numba: Numba-accelerated rolling skewness.
@@ -25,13 +25,19 @@ from numba import njit
 from .._array_ops import _apply_offset_fillna
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=False, cache=True)
 def _skew_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     """Numba-compiled core for rolling skewness.
 
-    Uses running sums of powers (sum x, sum x², sum x³) for O(1) update per
-    element.  The skewness is computed using the Fisher-Pearson coefficient
-    (bias-corrected for sample data).
+    For each window the mean is recomputed from scratch and the central
+    moments are taken from the deviations (two-pass).  This uses
+    O(n * length) time, which is required for strict IEEE 754 compliance:
+    running sums of powers accumulate floating-point drift and a single
+    NaN/inf would permanently poison every later value, whereas the
+    two-pass form propagates NaN/inf only while the affected value is
+    inside the window and stays exact on large-magnitude inputs.  The
+    skewness is the Fisher-Pearson coefficient (bias-corrected for
+    sample data).
 
     Parameters
     ----------
@@ -44,46 +50,35 @@ def _skew_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     -------
     np.ndarray
         Float64 array of rolling skewness, with first `length-1` elements
-        set to NaN.
+        set to NaN.  NaN/inf inputs propagate to windows containing them;
+        constant windows yield NaN (zero variance).
 
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < length:
         return out
-    # Initial sums for the first window
-    sum1 = 0.0
-    sum2 = 0.0
-    sum3 = 0.0
-    for i in range(length):
-        x = close[i]
-        sum1 += x
-        sum2 += x * x
-        sum3 += x * x * x
+    for i in range(length - 1, n):
+        # Fresh summation per window: no running-sum drift, and a NaN/inf
+        # affects only the windows that contain it.
+        s = 0.0
+        for j in range(i - length + 1, i + 1):
+            s += close[j]
+        mean = s / length
 
-    # Helper to compute skewness from sums (reusable)
-    def compute_skew(s1, s2, s3, L):  # noqa: N803
-        if L < 3:
-            return np.nan
-        mean = s1 / L
-        # Central moments (not normalised)
-        m2 = s2 - L * mean * mean
-        m3 = s3 - 3.0 * mean * s2 + 2.0 * L * mean * mean * mean
+        m2 = 0.0
+        m3 = 0.0
+        for j in range(i - length + 1, i + 1):
+            d = close[j] - mean
+            d2 = d * d
+            m2 += d2
+            m3 += d2 * d
         if m2 <= 0.0:
-            return np.nan
-        std = np.sqrt(m2 / (L - 1))  # sample standard deviation
+            # Constant window: skewness undefined, keep NaN.
+            continue
+        std = np.sqrt(m2 / (length - 1))  # sample standard deviation
         # Fisher-Pearson skewness (bias-corrected)
-        return (L * m3) / ((L - 1) * (L - 2) * (std ** 3))
-
-    out[length - 1] = compute_skew(sum1, sum2, sum3, length)
-    # Sliding update
-    for i in range(length, n):
-        add = close[i]
-        rem = close[i - length]
-        sum1 += add - rem
-        sum2 += add * add - rem * rem
-        sum3 += add * add * add - rem * rem * rem
-        out[i] = compute_skew(sum1, sum2, sum3, length)
+        out[i] = (length * m3) / ((length - 1) * (length - 2) * (std ** 3))
     return out
 
 
@@ -121,6 +116,8 @@ def skew_numba(
 
     """
     close = np.asarray(close, dtype=np.float64)
+    if length < 3:
+        raise ValueError('length must be >= 3')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:

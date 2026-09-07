@@ -54,7 +54,63 @@ def test_entropy_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64]
     result_offset = entropy_numba(close, length=length, base=2.0, offset=1, fillna=0.0)
 
     assert result_offset[0] == 0.0
-    assert_allclose(result_offset[1:], result_no_offset[:-1], rtol=1e-6, equal_nan=True)
+    # fillna also replaces the warm-up NaNs of the shifted series
+    no_offset_tail = result_no_offset[:-1]
+    expected = np.where(np.isnan(no_offset_tail), 0.0, no_offset_tail)
+    assert_allclose(result_offset[1:], expected, rtol=1e-6)
+
+
+@pytest.mark.statistics
+def test_entropy_numba_nonfinite_window_is_nan() -> None:
+    """NaN/inf in a window force NaN there; later windows recover."""
+    close = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0])
+    result = entropy_numba(close, length=3)
+    # Windows [0..2], [1..3], [2..4] contain the NaN at index 2.
+    assert np.isnan(result[2:5]).all()
+    assert np.isfinite(result[5:]).all()
+    assert_allclose(result[5:], np.log2(3.0), rtol=1e-6)
+
+    close_inf = np.array([1.0, np.inf, 3.0, 4.0, 5.0, 6.0])
+    result_inf = entropy_numba(close_inf, length=3)
+    assert np.isnan(result_inf[2:4]).all()
+    assert np.isfinite(result_inf[4:]).all()
+
+
+@pytest.mark.statistics
+def test_entropy_numba_invalid_base_raises() -> None:
+    """Base <= 0 or base == 1 is invalid (log base zero or negative)."""
+    prices = np.array([1.0, 2.0, 3.0, 4.0])
+    for bad_base in (0.0, -2.0, 1.0):
+        with pytest.raises(ValueError, match='base must be positive'):
+            entropy_numba(prices, length=2, base=bad_base)
+
+
+@pytest.mark.statistics
+def test_entropy_numba_length_too_short_raises() -> None:
+    """Length < 2 is rejected (window of one point has no entropy)."""
+    prices = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match='length must be >= 2'):
+        entropy_numba(prices, length=1)
+    with pytest.raises(ValueError, match='length must be >= 2'):
+        entropy_numba(prices, length=0)
+
+
+@pytest.mark.statistics
+def test_entropy_numba_length_exceeds_data() -> None:
+    """If length > len(close), all outputs are NaN."""
+    result = entropy_numba(np.array([1.0, 2.0, 3.0]), length=5)
+    assert result.shape == (3,)
+    assert np.isnan(result).all()
+
+
+@pytest.mark.statistics
+def test_entropy_numba_base_scaling() -> None:
+    """base=e (nats) equals base=2 (bits) times ln(2)."""
+    prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    length = 4
+    bits = entropy_numba(prices, length=length, base=2.0)
+    nats = entropy_numba(prices, length=length, base=np.e)
+    assert_allclose(nats[length - 1:], bits[length - 1:] * np.log(2.0))
 
 
 @pytest.mark.statistics

@@ -15,43 +15,63 @@ from numba.typed import List
         float64,      # width (-1 = off)
         int64         # wlen (-1 = off)
     ),
-    nopython=True,
-    fastmath=True,
+    fastmath=False,  # strict IEEE 754; fastmath gave no speed-up here
+                     # (branch-heavy kernel) and its nnan/ninf/contract
+                     # flags could alter the `x[i] <= h` width boundary
     cache=True
 )
 def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wlen):
     n = len(x)
     peaks = List.empty_list(int64)
 
-    # ---- Step 1: local maxima + plateaus (as single peaks) ----
+    # ---- Step 1: local maxima incl. flat tops (plateaus) ----
+    # Walk rising slopes; a run [i, j] of equal values is a peak iff the
+    # value right of the run is strictly lower (the left side is already
+    # strictly lower by the loop guard).  The peak index is the midpoint
+    # of the run (scipy convention).  A run of length 1 is a plain peak.
     i = 1
     while i < n - 1:
-        # Single peak
-        if x[i] > x[i - 1] and x[i] > x[i + 1]:
-            peaks.append(i)
+        if x[i] > x[i - 1]:
+            j = i
+            while j < n - 1 and x[j + 1] == x[i]:
+                j += 1
+            # Right side must fall strictly for the run to be a maximum
+            if j < n - 1 and x[j + 1] < x[i]:
+                run_len = j - i + 1
+                if plateau_size < 0 or run_len >= plateau_size:
+                    peaks.append((i + j) // 2)
+            i = j + 1
+        else:
             i += 1
-            continue
-        # Plateau: flat region of at least plateau_size
-        if plateau_size >= 0 and x[i] == x[i - 1] and x[i] == x[i + 1]:
-            left = i
-            while left > 0 and x[left] == x[i]:
-                left -= 1
-            right = i
-            while right < n - 1 and x[right] == x[i]:
-                right += 1
-            length = right - left - 1
-            if length >= plateau_size:
-                # Check if plateau is a local maximum: 
-                # values left of left and right of right must be lower
-                left_ok = (left == 0) or (x[left] > x[left - 1])
-                right_ok = (right == n - 1) or (x[right] > x[right + 1])
-                if left_ok and right_ok:
-                    center = left + 1 + length // 2
-                    peaks.append(center)
-                    i = right  # skip the entire plateau
-                    continue
-        i += 1
-    # ---- Step 2: prominence and width filters ----
+    # scipy evaluates filters sequentially in the order
+    # plateau_size -> height -> threshold -> distance -> prominence ->
+    # width, and prominence is computed only for peaks that survived the
+    # previous filters.  So the distance greedy runs FIRST, over ALL
+    # local maxima, with the peak height as priority.
+    # ---- Step 2: distance filter (scipy-style greedy) ----
+    # Repeatedly keep the highest remaining peak and drop every peak
+    # closer than `distance` bars to it, so all surviving peaks are at
+    # least `distance` apart.
+    if distance > 1 and len(peaks) > 1:
+        m = len(peaks)
+        idx = np.empty(m, dtype=np.int64)
+        for i in range(m):
+            idx[i] = peaks[i]
+        active = np.ones(m, dtype=np.bool_)
+        kept = List.empty_list(int64)
+        while True:
+            best = -1
+            for i in range(m):
+                if active[i] and (best < 0 or x[idx[i]] > x[idx[best]]):
+                    best = i
+            if best < 0:
+                break
+            kept.append(idx[best])
+            for i in range(m):
+                if active[i] and abs(idx[i] - idx[best]) < distance:
+                    active[i] = False
+        peaks = kept
+    # ---- Step 3: prominence and width filters ----
     if prominence > 0 or width >= 0:
         filtered = List.empty_list(int64)
         for idx in range(len(peaks)):
@@ -69,16 +89,22 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
             else:
                 left_bound = 0
                 right_bound = n - 1
-            # Left base – full search to the bound
+            # Left base – scan outward until the first strictly higher
+            # sample (the "col" toward a higher peak, scipy definition)
+            # or the window border; track the minimum on the way.
             left_min = peak_val
-            for i in range(p - 1, left_bound - 1, -1):
-                if x[i] < left_min:
-                    left_min = x[i]
-            # Right base
+            for j in range(p - 1, left_bound - 1, -1):
+                if x[j] > peak_val:
+                    break
+                if x[j] < left_min:
+                    left_min = x[j]
+            # Right base – symmetric
             right_min = peak_val
-            for i in range(p + 1, right_bound + 1):
-                if x[i] < right_min:
-                    right_min = x[i]
+            for j in range(p + 1, right_bound + 1):
+                if x[j] > peak_val:
+                    break
+                if x[j] < right_min:
+                    right_min = x[j]
             prom = peak_val - max(left_min, right_min)
             if prom < prominence:
                 continue
@@ -87,45 +113,21 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
                 h = peak_val - prom * rel_height
                 # Find left intersection (closest to p)
                 wl = p
-                for i in range(p, left_bound - 1, -1):
-                    if x[i] <= h:
-                        wl = i
+                for j in range(p, left_bound - 1, -1):
+                    if x[j] <= h:
+                        wl = j
                         break
                 # Find right intersection (closest to p)
                 wr = p
-                for i in range(p, right_bound + 1):
-                    if x[i] <= h:
-                        wr = i
+                for j in range(p, right_bound + 1):
+                    if x[j] <= h:
+                        wr = j
                         break
                 w = wr - wl
                 if w < width:
                     continue
             filtered.append(p)
         peaks = filtered
-    # ---- Step 3: distance filter (keep highest peak among those too close) ----
-    if distance > 1 and len(peaks) > 1:
-        # Build groups of peaks that violate the distance constraint
-        # We'll walk through the sorted list and whenever the next peak is too close,
-        # we add it to a group and later keep the one with the highest value.
-        new_peaks = List.empty_list(int64)
-        i = 0
-        while i < len(peaks):
-            group = List.empty_list(int64)
-            group.append(peaks[i])
-            j = i + 1
-            while j < len(peaks) and peaks[j] - peaks[i] < distance:
-                group.append(peaks[j])
-                j += 1
-            # Now select the peak with the highest value from the group
-            best_idx = group[0]
-            best_val = x[best_idx]
-            for k in range(1, len(group)):
-                if x[group[k]] > best_val:
-                    best_idx = group[k]
-                    best_val = x[best_idx]
-            new_peaks.append(best_idx)
-            i = j  # move to next group
-        peaks = new_peaks
     # Convert to numpy array and sort (just in case)
     out = np.empty(len(peaks), dtype=np.int64)
     for i in range(len(peaks)):
@@ -210,22 +212,26 @@ def zigzag_numpy(
         Indices of detected valleys in the low series.
 
     """
-    # Input validation: check for NaNs
+    # Input validation
     if np.any(np.isnan(high)):
         raise ValueError('high array contains NaNs')
     if np.any(np.isnan(low)):
         raise ValueError('low array contains NaNs')
+    if np.any(np.isinf(high)) or np.any(np.isinf(low)):
+        raise ValueError('high/low arrays contain Inf values')
+    if len(high) != len(low):
+        raise ValueError(
+            'high and low must have the same length: '
+            f'got {len(high)} and {len(low)}.'
+        )
     # Convert optional parameters to sentinel values expected by Numba
     plateau = plateau_size if plateau_size is not None else -1
     width_ = width if width is not None else -1.0
     wlen_ = wlen if wlen is not None else -1
-    # Ensure arrays are float64 and contiguous
-    high = np.asarray(high, dtype=np.float64)
-    low = np.asarray(low, dtype=np.float64)
-    if not high.flags.c_contiguous:
-        high = np.ascontiguousarray(high)
-    if not low.flags.c_contiguous:
-        low = np.ascontiguousarray(low)
+    # Ensure arrays are float64, C-contiguous and writable
+    # (pl.Series.to_numpy() may return a read-only view)
+    high = np.require(high, dtype=np.float64, requirements=['C', 'W'])
+    low = np.require(low, dtype=np.float64, requirements=['C', 'W'])
     peaks = _find_peaks_nb(
         high,
         prominence_peak,
@@ -285,7 +291,6 @@ def zigzag_polars(
     df: pl.DataFrame,
     high_col: str = 'high',
     low_col: str = 'low',
-    date_col: str = 'date',
     prominence_peak: float = 0.01,
     prominence_valley: float = 0.01,
     distance: int = 5,
@@ -312,7 +317,9 @@ def zigzag_polars(
     Returns
     -------
     pl.DataFrame
-        Original DataFrame with two new columns: 'is_peak{suffix}', 'is_valley{suffix}'.
+        The original DataFrame with two added boolean columns:
+        'is_peak{suffix}' and 'is_valley{suffix}'.  The input
+        DataFrame is not modified in place.
 
     """
     high = df[high_col].to_numpy()
@@ -333,9 +340,7 @@ def zigzag_polars(
     is_valley = np.zeros(len(df), dtype=bool)
     is_peak[peak_idx] = True
     is_valley[valley_idx] = True
-    suffix = suffix or ''
-    return pl.DataFrame({
-        date_col: df[date_col],
-        f'is_peak{suffix}': is_peak,
-        f'is_valley{suffix}': is_valley,
-    })
+    return df.with_columns([
+        pl.Series(f'is_peak{suffix}', is_peak),
+        pl.Series(f'is_valley{suffix}', is_valley),
+    ])

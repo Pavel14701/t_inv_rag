@@ -36,6 +36,15 @@ def tos_stdevall_numpy(
     """Numpy-based calculation of TOS_STDEVALL bands.
 
     Returns arrays of length `length` (if specified) or full length.
+    NaN/inf values in the input propagate to NaN bands.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 2 data points are given, if `length` < 2 or exceeds
+        the data length, if `ddof` is outside [0, n), or if any multiplier
+        in `stds` is negative/non-finite.
+
     """
     close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
@@ -61,10 +70,20 @@ def tos_stdevall_numpy(
         stds = [1.0, 2.0, 3.0]
     else:
         stds = sorted(stds)
+        if any(m < 0 or not np.isfinite(m) for m in stds):
+            raise ValueError('stds multipliers must be finite and >= 0')
+    if ddof < 0 or ddof >= n:
+        raise ValueError('ddof must satisfy 0 <= ddof < number of points')
     x = np.arange(n, dtype=np.float64)
-    coeffs = np.polyfit(x, calc_close, 1)
-    lr = np.polyval(coeffs, x)
-    stdev = np.std(calc_close, ddof=ddof)
+    if np.isfinite(calc_close).all():
+        coeffs = np.polyfit(x, calc_close, 1)
+        lr = np.polyval(coeffs, x)
+        stdev = float(np.std(calc_close, ddof=ddof))
+    else:
+        # NaN/inf in the input make the regression undefined: propagate
+        # NaN instead of letting polyfit emit warnings and partial junk.
+        lr = np.full(n, np.nan)
+        stdev = np.nan
     base_name = f'TOS_STDEVALL{suffix}'
     res = {
         f'{base_name}_LR': lr,

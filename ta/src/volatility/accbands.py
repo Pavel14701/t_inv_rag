@@ -22,13 +22,30 @@ def accbands_numpy(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Numpy‑based Acceleration Bands calculation.
     Returns (upper, mid, lower) as numpy arrays.
+
+    NaN/inf inputs are rejected by the underlying moving average
+    (nan_policy='raise' in the SMA/MA backends).
+
+    Raises
+    ------
+    ValueError
+        If `length` < 1.
+
     """
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    # The contiguity fix must rebind the outer names: assigning to the
+    # loop variable inside a `for arr in (...)` loop is a no-op and left
+    # the arrays non-contiguous for the numba backends.
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     high_low_range = high - low
     hl_ratio = high_low_range / (high + low) * c
     lower_raw = low * (1.0 - hl_ratio)

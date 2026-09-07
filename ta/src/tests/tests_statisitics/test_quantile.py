@@ -51,7 +51,10 @@ def test_quantile_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64
     result_offset = quantile_numba(close, length=length, q=0.5, offset=1, fillna=0.0)
 
     assert result_offset[0] == 0.0
-    assert_allclose(result_offset[1:], result_no_offset[:-1], rtol=1e-6, equal_nan=True)
+    # fillna also replaces the warm-up NaNs of the shifted series
+    no_offset_tail = result_no_offset[:-1]
+    expected = np.where(np.isnan(no_offset_tail), 0.0, no_offset_tail)
+    assert_allclose(result_offset[1:], expected, rtol=1e-6)
 
 
 @pytest.mark.statistics
@@ -121,3 +124,59 @@ def test_quantile_polars_with_offset_fillna(df_random_walk: pl.DataFrame) -> Non
     close_arr = df_random_walk['close'].to_numpy()
     expected = quantile_numba(close_arr, length=length, q=q, offset=1, fillna=0.0)
     assert_allclose(result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True)
+
+
+# -----------------------------------------------------------------------------
+# IEEE-754 corner-case tests
+# -----------------------------------------------------------------------------
+
+@pytest.mark.statistics
+def test_quantile_numba_numpy_parity(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
+    """Nearest-rank quantile matches np.quantile(method='nearest')."""
+    close = prices_random_walk
+    length = 20
+    for q in (0.0, 0.25, 0.5, 0.75, 1.0):
+        result = quantile_numba(close, length=length, q=q)
+        for i in range(length - 1, len(close), 11):
+            window = close[i - length + 1 : i + 1]
+            expected = np.quantile(window, q, method='nearest')
+            assert_allclose(result[i], expected, rtol=1e-12)
+
+
+@pytest.mark.statistics
+def test_quantile_numba_nan_recovers() -> None:
+    """NaN poisons only the windows that contain it, then output recovers."""
+    close = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+    result = quantile_numba(close, length=3, q=0.5)
+    # Without the finite check, sort() would push the NaN to the end and
+    # silently return 4.0 for the window [2, 4, nan].
+    assert np.isnan(result[2:5]).all()
+    assert result[5] == pytest.approx(5.0)  # median of [4, 5, 6]
+
+
+@pytest.mark.statistics
+def test_quantile_numba_inf_is_nan_and_recovers() -> None:
+    """A +-inf value makes its windows NaN, later windows recover."""
+    close = np.array([1.0, np.inf, 3.0, 4.0, 5.0, 6.0, 7.0])
+    result = quantile_numba(close, length=3, q=0.0)
+    assert np.isnan(result[2:4]).all()
+    assert result[4] == pytest.approx(3.0)  # min of [3, 4, 5]
+
+
+@pytest.mark.statistics
+def test_quantile_numba_invalid_length_raises() -> None:
+    """Passing length < 1 raises ValueError."""
+    with pytest.raises(ValueError, match='length must be >= 1'):
+        quantile_numba(np.array([1.0, 2.0, 3.0]), length=0)
+
+
+@pytest.mark.statistics
+def test_quantile_numba_invalid_q_raises() -> None:
+    """Passing q outside [0, 1] raises ValueError."""
+    prices = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match='q must be between 0 and 1'):
+        quantile_numba(prices, length=2, q=-0.1)
+    with pytest.raises(ValueError, match='q must be between 0 and 1'):
+        quantile_numba(prices, length=2, q=1.1)

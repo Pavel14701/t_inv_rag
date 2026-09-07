@@ -6,9 +6,9 @@ over a rolling window.  Positive excess kurtosis (leptokurtic) indicates
 heavy tails and more extreme outliers, while negative excess kurtosis
 (platykurtic) indicates light tails.
 
-This module uses Fisher's definition of excess kurtosis (unbiased for normal
-distributions), computed via running sums of powers (x, x², x³, x⁴) for
-O(1) update per element.
+This module uses the standard bias-corrected excess kurtosis estimator
+(unbiased for normal distributions), computed per window with a two-pass
+central-moments algorithm for strict IEEE 754 compliance.
 
 Functions:
     kurtosis_numba: Numba-accelerated rolling kurtosis.
@@ -25,20 +25,35 @@ from numba import jit
 from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=False, cache=True)
 def _kurtosis_numba_core(close: np.ndarray, length: int) -> np.ndarray:
-    """Numba-compiled core for rolling excess kurtosis (Fisher's definition).
+    """Numba-compiled core for rolling excess kurtosis.
 
-    Uses running sums of powers (sum x, sum x², sum x³, sum x⁴) for O(1)
-    update per element.  The formula is the unbiased estimator for normal
-    distributions (excess kurtosis = 0 for a normal distribution).
+    Computes, per window, the sample mean and the central moments M2/M4
+    with a two-pass algorithm and returns the standard bias-corrected
+    (unbiased for normal distributions) excess kurtosis:
+
+        G2 = (n - 1) / ((n - 2) * (n - 3)) * ((n + 1) * g2 + 6)
+
+    where ``g2 = M4 / M2**2 - 3`` is the population excess kurtosis.
+    This matches ``scipy.stats.kurtosis(..., bias=False)``.
+
+    Follows IEEE 754 strictly (``fastmath=False``): NaN/inf inputs
+    propagate to the windows that contain them, and later windows
+    recover once the non-finite value leaves the window.  A constant
+    window (M2 == 0) yields NaN.
+
+    The O(n * length) two-pass form is intentional: incremental running
+    power sums both accumulate floating-point drift (catastrophic
+    cancellation on large-magnitude prices) and would be permanently
+    poisoned by a single NaN.
 
     Parameters
     ----------
     close : np.ndarray
         1D float64 array of close prices.
     length : int
-        Window size (must be >= 4 for a meaningful finite value).
+        Window size (must be >= 4; below that the estimator is undefined).
 
     Returns
     -------
@@ -49,50 +64,36 @@ def _kurtosis_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
-    if n < length:
+    if n < length or length < 4:
         return out
-    # Initial sums for the first window
-    s1 = 0.0
-    s2 = 0.0
-    s3 = 0.0
-    s4 = 0.0
-    for i in range(length):
-        x = close[i]
-        s1 += x
-        s2 += x * x
-        s3 += x * x * x
-        s4 += x * x * x * x
 
-    def compute_kurtosis(s1, s2, s3, s4, L):  # noqa: N803
-        if L < 4:
-            return np.nan
-        mean = s1 / L
-        # Central moments (not normalised)
-        M2 = s2 - L * mean * mean  # noqa: N806
-        M4 = (  # noqa: N806
-            s4
-            - 4.0 * mean * s3
-            + 6.0 * mean * mean * s2
-            - 3.0 * L * mean * mean * mean * mean
-        )
-        if M2 <= 0.0:
-            return np.nan
-        # Fisher's excess kurtosis (unbiased for normal)
-        return (
-            (L * (L + 1) * M4 - 3.0 * (L - 1) * M2 * M2)
-            / ((L - 2) * (L - 3) * M2 * M2)
+    for i in range(length - 1, n):
+        # Fresh per-window pass: no running-sum drift, NaN/inf affects
+        # only the windows that contain it.
+        mean = 0.0
+        for j in range(i - length + 1, i + 1):
+            mean += close[j]
+        mean /= length
+
+        m2 = 0.0
+        m4 = 0.0
+        for j in range(i - length + 1, i + 1):
+            d = close[j] - mean
+            d2 = d * d
+            m2 += d2
+            m4 += d2 * d2
+
+        if not np.isfinite(m2) or m2 <= 0.0:
+            # m2 == 0 -> constant window; non-finite -> NaN/inf input
+            continue
+
+        g2 = (length * m4) / (m2 * m2) - 3.0
+        out[i] = (
+            (length - 1)
+            * ((length + 1) * g2 + 6.0)
+            / ((length - 2) * (length - 3))
         )
 
-    out[length - 1] = compute_kurtosis(s1, s2, s3, s4, length)
-    # Sliding update
-    for i in range(length, n):
-        add = close[i]
-        rem = close[i - length]
-        s1 += add - rem
-        s2 += add * add - rem * rem
-        s3 += add * add * add - rem * rem * rem
-        s4 += add * add * add * add - rem * rem * rem * rem
-        out[i] = compute_kurtosis(s1, s2, s3, s4, length)
     return out
 
 
@@ -126,10 +127,12 @@ def kurtosis_numba(
     >>> import numpy as np
     >>> prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
     >>> kurtosis_numba(prices, length=4)
-    array([       nan,        nan,        nan, -2.       , -2.       , -2.       ])
+    array([ nan,  nan,  nan, -1.2, -1.2, -1.2])
 
-    """  # noqa: E501
+    """
     close = np.asarray(close, dtype=np.float64)
+    if length < 4:
+        raise ValueError('length must be >= 4')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
@@ -172,9 +175,9 @@ def kurtosis_ind(
     >>> import polars as pl
     >>> s = pl.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
     >>> kurtosis_ind(s, length=4)
-    array([       nan,        nan,        nan, -2.       , -2.       , -2.       ])
+    array([ nan,  nan,  nan, -1.2, -1.2, -1.2])
 
-    """  # noqa: E501
+    """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return kurtosis_numba(close, length, offset, fillna)
@@ -224,9 +227,9 @@ def kurtosis_polars(
     │ 1.0   ┆ NaN      │
     │ 2.0   ┆ NaN      │
     │ 3.0   ┆ NaN      │
-    │ 4.0   ┆ -2.0     │
-    │ 5.0   ┆ -2.0     │
-    │ 6.0   ┆ -2.0     │
+    │ 4.0   ┆ -1.2     │
+    │ 5.0   ┆ -1.2     │
+    │ 6.0   ┆ -1.2     │
     └───────┴──────────┘
 
     """

@@ -54,8 +54,8 @@ def test_trading_dataset_len(
         sig_feats=2,
         tp_sl_feats=2,
     )
-    expected_len = n - seq_len
-    assert len(dataset) == expected_len
+    expected_len = n - seq_len + 1
+    assert len(dataset) == expected_len  # noqa: E501
 
 
 @pytest.mark.unit

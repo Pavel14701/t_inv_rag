@@ -55,6 +55,7 @@ def quick_train(
     num_heads: int = 8,
     device: str | None = None,
     val_path: str | None = None,
+    val_labels_path: str | None = None,
     val_split: float = 0.2,
     class_weight: bool = True,
     log_dir: str | None = None,
@@ -98,10 +99,13 @@ def quick_train(
         device: Torch device string (e.g. 'cuda', 'cpu').  Auto-detected
             if not provided.
         val_path: Optional path to a separate validation Parquet file.
-            If not provided, a random split of the training data is used
-            (size controlled by ``val_split``).
+        val_labels_path: Path to the validation labels Parquet file.
+            Required when ``val_path`` is provided (the validation
+            features must have their own per-bar labels).
         val_split: Fraction of training data to use for validation when
-            ``val_path`` is not specified (default 0.2).
+            ``val_path`` is not specified (default 0.2).  The split is
+            chronological: the most recent windows are used for
+            validation, with no bar overlap between train and val.
         class_weight: If True, compute inverse-frequency class weights
             for the action loss (default True).
         log_dir: If set, TensorBoard logs are written there.
@@ -157,13 +161,17 @@ def quick_train(
     )
     # ---------- Validation split ----------
     if val_path:
-        # Separate validation file provided
+        # Separate validation file provided: it MUST come with its own
+        # labels file, otherwise the per-bar labels would not match the
+        # validation features.
+        if not val_labels_path:
+            raise ValueError(
+                'val_labels_path is required when val_path is provided: '
+                'validation features need their own per-bar labels.'
+            )
         val_loader, _ = build_loader_from_parquet(
             features_path=val_path,
-            labels_path=labels,  # reuse same labels? Typically labels
-                                 # are per-bar and should be matched;
-                                 # here we assume the same labels file
-                                 # works for the validation features.
+            labels_path=val_labels_path,
             order_blocks=obs,
             seq_len=seq_len,
             price_cols=price_cols,

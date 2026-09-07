@@ -10,7 +10,7 @@ from ..volatility.atr import atr_ind
 # ----------------------------------------------------------------------
 # Numba-ядро для вычисления RWI
 # ----------------------------------------------------------------------
-@njit((float64[:], float64[:], float64[:], int64), fastmath=True, cache=True)
+@njit((float64[:], float64[:], float64[:], int64), fastmath=False, cache=True)
 def _rwi_numba_core(
     high: np.ndarray,
     low: np.ndarray,
@@ -18,6 +18,11 @@ def _rwi_numba_core(
     length: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Numba-ускоренное вычисление RWI high и low.
+
+    Ядро работает с ``fastmath=False``: деление защищено явной проверкой
+    ``denom != 0``, и для строгой семантики IEEE 754 это ветвление должно
+    выполняться без переупорядочивания (NaN в ATR даёт NaN в RWI, нулевой
+    знаменатель оставляет NaN, а не inf).
 
     Parameters
     ----------
@@ -95,14 +100,25 @@ def rwi_numpy(
     high = _handle_nan_policy(high, nan_policy, 'high')
     low = _handle_nan_policy(low, nan_policy, 'low')
     close = _handle_nan_policy(close, nan_policy, 'close')
+    # The numba core is compiled for writable, C-contiguous float64[:].
+    # pl.Series.to_numpy() returns read-only arrays, so copy when needed.
     if not (
-        high.flags.c_contiguous and 
-        low.flags.c_contiguous and 
-        close.flags.c_contiguous
+        high.flags.c_contiguous
+        and low.flags.c_contiguous
+        and close.flags.c_contiguous
+        and high.flags.writeable
+        and low.flags.writeable
+        and close.flags.writeable
     ):
         high = np.ascontiguousarray(high)
         low = np.ascontiguousarray(low)
         close = np.ascontiguousarray(close)
+        if not high.flags.writeable:
+            high = high.copy()
+        if not low.flags.writeable:
+            low = low.copy()
+        if not close.flags.writeable:
+            close = close.copy()
     n = len(close)
     min_required = length + 1
     if n < min_required:

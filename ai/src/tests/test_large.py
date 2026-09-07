@@ -59,12 +59,13 @@ def test_compute_ob_distances_large(
 
     """
     atr: npt.NDArray[np.float32] = compute_atr(large_dataframe, period=14)
-    supply, demand, strongest = compute_ob_distances(
+    supply, demand, strongest, is_in_zone = compute_ob_distances(
         large_dataframe, large_order_blocks, atr, close_col='close'
     )
     assert len(supply) == len(large_dataframe)
     assert len(demand) == len(large_dataframe)
     assert len(strongest) == len(large_dataframe)
+    assert len(is_in_zone) == len(large_dataframe)
     assert not np.isnan(supply).any()
     assert not np.isnan(demand).any()
     assert not np.isnan(strongest).any()

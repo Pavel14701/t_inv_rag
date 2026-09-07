@@ -88,8 +88,14 @@ def rma_ind(
     offset: int = 0,
     fillna: float | None = None,
     nan_policy: str = 'raise',
+    use_talib: bool = True,
 ) -> np.ndarray:
-    """Universal RMA (always uses Numba) with NaN handling."""
+    """Universal RMA (always uses Numba) with NaN handling.
+
+    ``use_talib`` is accepted (and ignored) so that ``ma_mode`` can be
+    called with a uniform keyword set across MA modes; RMA has no
+    TA-Lib backend and always uses the Numba kernel.
+    """
     if isinstance(arr, pl.Series):
         arr = arr.to_numpy()
     return rma_numba(arr, length, offset, fillna, nan_policy)
@@ -114,7 +120,12 @@ def rma_polars(
         Column name to compute RMA on.
     length : int
         RMA period.
-    offset, fillna, nan_policy : as in rma_numba.
+    offset : int
+        Shift of the output series by ``offset`` bars (default 0).
+    fillna : float, optional
+        Value used to fill NaNs instead of the default NaN policy.
+    nan_policy : str, default 'raise'
+        How to handle NaNs in the input ('raise', 'ffill', 'bfill', 'both').
     output_col : str, optional
         Name of the output column (default "RMA_{length}").
 

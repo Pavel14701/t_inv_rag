@@ -104,7 +104,7 @@ def test_build_loader_from_parquet(
         features_path=sample_parquet_files['features_path'],
         labels_path=sample_parquet_files['labels_path'],
         order_blocks=sample_parquet_files['order_blocks'],
-        seq_len=128,
+        seq_len=32,
         price_cols=['open', 'high', 'low', 'close', 'volume'],
         ind_cols=['ind1', 'ind2', 'ind3'],
         sig_cols=['sig1', 'sig2'],
@@ -139,7 +139,7 @@ def test_build_unlabeled_loader_from_parquet(
     loader = build_unlabeled_loader_from_parquet(
         features_path=sample_parquet_files['unlabeled_path'],
         order_blocks=sample_parquet_files['order_blocks'],
-        seq_len=128,
+        seq_len=32,
         price_cols=['open', 'high', 'low', 'close', 'volume'],
         ind_cols=['ind1', 'ind2', 'ind3'],
         sig_cols=['sig1', 'sig2'],
@@ -185,7 +185,7 @@ def test_train_one_round(sample_parquet_files: dict[str, Any]) -> None:
         features_path=sample_parquet_files['features_path'],
         labels_path=sample_parquet_files['labels_path'],
         order_blocks=sample_parquet_files['order_blocks'],
-        seq_len=128,
+        seq_len=32,
         price_cols=['open', 'high', 'low', 'close', 'volume'],
         ind_cols=['ind1', 'ind2', 'ind3'],
         sig_cols=['sig1', 'sig2'],
@@ -254,7 +254,7 @@ def test_self_training_loop(sample_parquet_files: dict[str, Any]) -> None:
         ind_cols=['ind1', 'ind2', 'ind3'],
         sig_cols=['sig1', 'sig2'],
         tp_sl_cols=['tp', 'sl'],
-        seq_len=128,
+        seq_len=32,
         batch_size=2,
         device=device,
         outcome_mode='binary',
@@ -497,11 +497,50 @@ def test_split_train_val(
     total_len = len(dataset_obj)
     train_len = len(train_ds)
     val_len = len(val_ds)
-    assert train_len + val_len == total_len
-    assert val_len / total_len == pytest.approx(0.2, abs=0.01)
+    # Chronological split: val = most recent windows; train windows
+    # end strictly before val starts, so the sum may be < total
+    assert train_len + val_len <= total_len
+    assert val_len == int(total_len * 0.2)
+    expected_train_end = (total_len - int(total_len * 0.2))
+    assert train_len == expected_train_end - (seq_len - 1)
+    assert train_len > 0
     train_loader2, val_loader2 = _split_train_val(
         loader, val_split=0, batch_size=2
     )
     assert val_loader2 is None
     with pytest.raises(ValueError, match='val_split too small'):
         _split_train_val(loader, val_split=0.001, batch_size=2)
+
+    # No leakage: the last training window must end strictly before
+    # the first validation window starts
+    train_loader3, val_loader3 = _split_train_val(
+        loader, val_split=0.2, batch_size=2
+    )
+    train_ds3 = cast(TradingDataset, train_loader3.dataset)
+    val_ds3 = cast(TradingDataset, val_loader3.dataset)
+    train_idx = list(train_ds3.indices)
+    val_idx = list(val_ds3.indices)
+    max_train_end = max(i + seq_len - 1 for i in train_idx)
+    min_val_start = min(val_idx)
+    assert max_train_end < min_val_start
+    # Validation windows are the most recent ones
+    assert val_idx == list(range(total_len - len(val_idx), total_len))
+
+    # Degenerate case: seq_len too large relative to data
+    with pytest.raises(ValueError, match='no training windows'):
+        big_seq_loader: DataLoader[TradingDataset] = DataLoader(
+            TradingDataset(
+                data=data,
+                order_blocks=sample_order_blocks,
+                action_targets=action,
+                outcome_targets=outcome,
+                seq_len=n // 2,
+                price_feats=5,
+                ind_feats=3,
+                sig_feats=2,
+                tp_sl_feats=2,
+            ),
+            batch_size=2,
+            collate_fn=lambda b: b,
+        )
+        _split_train_val(big_seq_loader, val_split=0.2, batch_size=2)

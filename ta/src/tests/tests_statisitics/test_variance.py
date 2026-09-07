@@ -67,7 +67,10 @@ def test_variance_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64
     )
 
     assert result_offset[0] == 0.0
-    assert_allclose(result_offset[1:], result_no_offset[:-1], rtol=1e-6, equal_nan=True)
+    # fillna also replaces the warm-up NaNs of the shifted series
+    no_offset_tail = result_no_offset[:-1]
+    expected = np.where(np.isnan(no_offset_tail), 0.0, no_offset_tail)
+    assert_allclose(result_offset[1:], expected, rtol=1e-6)
 
 
 # -----------------------------------------------------------------------------
@@ -173,3 +176,60 @@ def test_variance_ind_with_pl_series(prices_random_walk: npt.NDArray[np.float64]
     result = variance_ind(s, length=length, ddof=ddof, use_talib=False)
     expected = variance_numba(prices_random_walk, length=length, ddof=ddof)
     assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
+
+
+# -----------------------------------------------------------------------------
+# IEEE-754 corner-case tests
+# -----------------------------------------------------------------------------
+
+@pytest.mark.statistics
+def test_variance_numba_nan_recovers() -> None:
+    """NaN poisons only the windows that contain it, then output recovers."""
+    close = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+    result = variance_numba(close, length=3, ddof=1)
+    # Windows [0..2], [1..3], [2..4] all contain the NaN at index 2.
+    assert np.isnan(result[2:5]).all()
+    # Windows from index 5 on no longer contain it.
+    assert np.isfinite(result[5:]).all()
+    expected = np.var(close[5:8], ddof=1)
+    assert_allclose(result[5], expected, rtol=1e-9)
+
+
+@pytest.mark.statistics
+def test_variance_numba_inf_is_nan_and_recovers() -> None:
+    """A +-inf value makes its windows NaN, later windows recover."""
+    close = np.array([1.0, np.inf, 3.0, 4.0, 5.0, 6.0, 7.0])
+    result = variance_numba(close, length=3, ddof=1)
+    assert np.isnan(result[2:4]).all()
+    assert np.isfinite(result[4:]).all()
+
+
+@pytest.mark.statistics
+def test_variance_numba_large_prices_accuracy() -> None:
+    """Two-pass form stays exact where running sums of squares cancel."""
+    rng = np.random.default_rng(0)
+    close = 100000.0 + rng.normal(0.0, 0.01, 120)
+    length = 20
+    result = variance_numba(close, length=length, ddof=1)
+
+    for i in range(length - 1, len(close), 9):
+        window = close[i - length + 1 : i + 1]
+        expected = np.var(window, ddof=1)
+        assert_allclose(result[i], expected, rtol=1e-9)
+
+
+@pytest.mark.statistics
+def test_variance_numba_invalid_length_raises() -> None:
+    """Passing length < 1 raises ValueError."""
+    with pytest.raises(ValueError, match='length must be >= 1'):
+        variance_numba(np.array([1.0, 2.0, 3.0]), length=0)
+
+
+@pytest.mark.statistics
+def test_variance_numba_invalid_ddof_raises() -> None:
+    """Passing ddof outside [0, length) raises ValueError."""
+    close = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match='ddof must satisfy'):
+        variance_numba(close, length=3, ddof=3)
+    with pytest.raises(ValueError, match='ddof must satisfy'):
+        variance_numba(close, length=3, ddof=-1)

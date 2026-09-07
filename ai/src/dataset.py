@@ -78,8 +78,8 @@ class TradingDataset(Dataset):
             self.bar_index = torch.tensor(bar_index, dtype=torch.long)
 
     def __len__(self) -> int:
-        """Return the number of possible windows."""
-        return len(self.data) - self.seq_len
+        """Return the number of possible sliding windows."""
+        return len(self.data) - self.seq_len + 1
 
     def __getitem__(self, idx: int):
         """Return a single window sample.

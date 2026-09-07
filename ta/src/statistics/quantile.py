@@ -5,8 +5,8 @@ This module provides Numba-accelerated computation of rolling quantiles
 quantile is computed by sorting each sliding window and picking the
 value at the desired position.
 
-The implementation supports any quantile q in (0, 1) and uses a simple
-rounding method for the index: idx = round(q * (length - 1)).
+The implementation supports any quantile q in (0, 1) and uses the
+nearest-rank method for the index: idx = round(q * (length - 1)).
 
 Functions:
     quantile_numba: Numba-accelerated rolling quantile.
@@ -23,7 +23,7 @@ from numba import jit
 from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=False, cache=True)
 def _quantile_numba_core(
     close: np.ndarray,
     length: int,
@@ -32,15 +32,15 @@ def _quantile_numba_core(
     """Numba-compiled core for rolling quantile.
 
     For each window, the values are sorted and the quantile is selected
-    using the index `int(round(q * (length - 1)))`.  This is equivalent
-    to the "linear" interpolation method in many statistical packages.
+    using the index `int(round(q * (length - 1)))` (nearest-rank method).
+    Windows containing NaN/inf yield NaN.
 
     Parameters
     ----------
     close : np.ndarray
         1D float64 array of close prices.
     length : int
-        Window size (must be >= 2).
+        Window size (must be >= 1).
     q : float
         Quantile value, between 0 and 1 inclusive.  For example:
         - 0.5  : median
@@ -51,7 +51,7 @@ def _quantile_numba_core(
     -------
     np.ndarray
         Float64 array of rolling quantiles, with first `length-1` elements
-        set to NaN.
+        set to NaN.  NaN/inf inputs propagate to windows containing them.
 
     """
     n = len(close)
@@ -64,6 +64,16 @@ def _quantile_numba_core(
 
     for i in range(length - 1, n):
         window = close[i - length + 1: i + 1].copy()  # copy for sorting
+        # NaN/inf in the window poison the quantile (IEEE-754 semantics);
+        # without this check sort()/partition() would silently place the
+        # non-finite value at the end and a finite number could be picked.
+        has_nonfinite = False
+        for j in range(length):
+            if not np.isfinite(window[j]):
+                has_nonfinite = True
+                break
+        if has_nonfinite:
+            continue
         window.sort()
         out[i] = window[idx]
 
@@ -84,7 +94,7 @@ def quantile_numba(
     close : np.ndarray
         1D float64 array of close prices.
     length : int, default 30
-        Window size (must be >= 2).
+        Window size (must be >= 1).
     q : float, default 0.5
         Quantile value, between 0 and 1 inclusive.
     offset : int, default 0
@@ -98,6 +108,11 @@ def quantile_numba(
         Float64 array of rolling quantiles, shifted and NaN-filled
         according to `offset` and `fillna`.
 
+    Raises
+    ------
+    ValueError
+        If `length` < 1 or `q` is outside [0, 1].
+
     Examples
     --------
     >>> import numpy as np
@@ -107,6 +122,10 @@ def quantile_numba(
 
     """
     close = np.asarray(close, dtype=np.float64)
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if q < 0.0 or q > 1.0:
+        raise ValueError('q must be between 0 and 1')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:

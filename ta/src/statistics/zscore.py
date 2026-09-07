@@ -83,7 +83,7 @@ def zscore_numpy(
     Raises
     ------
     ValueError
-        If `length` < 1, or if the input contains infinite values.
+        If `length` < 1.
 
     Examples
     --------
@@ -95,6 +95,8 @@ def zscore_numpy(
 
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
+    if length < 1:
+        raise ValueError('length must be >= 1')
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
 

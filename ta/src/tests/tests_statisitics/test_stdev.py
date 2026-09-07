@@ -67,7 +67,10 @@ def test_stdev_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64]) 
     result_offset = stdev_numba(close, length=length, ddof=ddof, offset=1, fillna=0.0)
 
     assert result_offset[0] == 0.0
-    assert_allclose(result_offset[1:], result_no_offset[:-1], rtol=1e-6, equal_nan=True)
+    # fillna also replaces the warm-up NaNs of the shifted series
+    no_offset_tail = result_no_offset[:-1]
+    expected = np.where(np.isnan(no_offset_tail), 0.0, no_offset_tail)
+    assert_allclose(result_offset[1:], expected, rtol=1e-6)
 
 
 @pytest.mark.statistics
@@ -84,6 +87,65 @@ def test_stdev_numba_negative_values() -> None:
         expected[i] = np.std(window, ddof=ddof)
 
     assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
+
+
+# -----------------------------------------------------------------------------
+# IEEE-754 corner-case tests
+# -----------------------------------------------------------------------------
+
+@pytest.mark.statistics
+@pytest.mark.parametrize('algorithm', ['online', 'two_pass'])
+def test_stdev_numba_nan_recovers(algorithm: str) -> None:
+    """NaN poisons only the windows that contain it, then output recovers."""
+    close = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+    result = stdev_numba(close, length=3, ddof=1, algorithm=algorithm)
+    # Windows [0..2], [1..3], [2..4] all contain the NaN at index 2.
+    assert np.isnan(result[2:5]).all()
+    # Windows from index 5 on no longer contain it.
+    assert np.isfinite(result[5:]).all()
+    expected = np.std(close[5:8], ddof=1)
+    assert_allclose(result[5], expected, rtol=1e-9)
+
+
+@pytest.mark.statistics
+@pytest.mark.parametrize('algorithm', ['online', 'two_pass'])
+def test_stdev_numba_inf_is_nan_and_recovers(algorithm: str) -> None:
+    """A +-inf value makes its windows NaN, later windows recover."""
+    close = np.array([1.0, np.inf, 3.0, 4.0, 5.0, 6.0, 7.0])
+    result = stdev_numba(close, length=3, ddof=1, algorithm=algorithm)
+    assert np.isnan(result[2:4]).all()
+    assert np.isfinite(result[4:]).all()
+
+
+@pytest.mark.statistics
+def test_stdev_numba_large_prices_twopass_accuracy() -> None:
+    """Two-pass form stays exact where running sums of squares cancel."""
+    rng = np.random.default_rng(0)
+    close = 100000.0 + rng.normal(0.0, 0.01, 120)
+    length = 20
+    result = stdev_numba(close, length=length, ddof=1, algorithm='two_pass')
+
+    for i in range(length - 1, len(close), 9):
+        window = close[i - length + 1 : i + 1]
+        expected = np.std(window, ddof=1)
+        assert_allclose(result[i], expected, rtol=1e-9)
+
+
+@pytest.mark.statistics
+def test_stdev_numba_invalid_length_raises() -> None:
+    """Passing length < 1 raises ValueError."""
+    with pytest.raises(ValueError, match='length must be >= 1'):
+        stdev_numba(np.array([1.0, 2.0, 3.0]), length=0)
+
+
+@pytest.mark.statistics
+def test_stdev_numba_invalid_ddof_raises() -> None:
+    """Passing ddof outside [0, length) raises ValueError."""
+    close = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match='ddof must satisfy'):
+        stdev_numba(close, length=3, ddof=3)
+    with pytest.raises(ValueError, match='ddof must satisfy'):
+        stdev_numba(close, length=3, ddof=-1)
 
 
 @pytest.mark.statistics

@@ -75,7 +75,10 @@ def test_zscore_numpy_offset_fillna(prices_random_walk: npt.NDArray[np.float64])
     result_offset = zscore_numpy(close, length=30, offset=1, fillna=0.0, use_talib=False)
 
     assert result_offset[0] == 0.0
-    assert_allclose(result_offset[1:], result_no_offset[:-1], rtol=1e-6)
+    # fillna also replaces the warm-up NaNs of the shifted series
+    no_offset_tail = result_no_offset[:-1]
+    expected = np.where(np.isnan(no_offset_tail), 0.0, no_offset_tail)
+    assert_allclose(result_offset[1:], expected, rtol=1e-6)
 
 
 # -----------------------------------------------------------------------------
@@ -232,3 +235,31 @@ def test_zscore_talib_vs_numba_twopass(
         atol=0.014,
         err_msg='TA-Lib and Numba two_pass differ beyond tolerance'
     )
+
+
+# -----------------------------------------------------------------------------
+# IEEE-754 corner-case tests
+# -----------------------------------------------------------------------------
+
+@pytest.mark.statistics
+def test_zscore_numpy_length_too_short_raises() -> None:
+    """Passing length < 1 raises ValueError (documented contract)."""
+    prices = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match='length must be >= 1'):
+        zscore_numpy(prices, length=0, use_talib=False)
+
+
+@pytest.mark.statistics
+def test_zscore_numpy_nan_input_raises() -> None:
+    """NaN input raises via the underlying SMA (nan_policy='raise')."""
+    close = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0])
+    with pytest.raises(ValueError, match='Input contains NaN'):
+        zscore_numpy(close, length=3, ddof=1, use_talib=False)
+
+
+@pytest.mark.statistics
+def test_zscore_numpy_inf_input_raises() -> None:
+    """An inf input is converted to NaN by SMA and raises the same way."""
+    close = np.array([1.0, np.inf, 3.0, 4.0, 5.0, 6.0, 7.0])
+    with pytest.raises(ValueError, match='Input contains NaN'):
+        zscore_numpy(close, length=3, ddof=1, use_talib=False)

@@ -20,14 +20,32 @@ def aberration_numpy(
     """Numpy‑based Aberration calculation.
 
     Returns (zg, sg, xg, atr) as numpy arrays.
+
+    NaN/inf inputs are rejected by the underlying SMA/ATR backends
+    (nan_policy='raise').
+
+    Raises
+    ------
+    ValueError
+        If `length` < 1 or `atr_length` < 1.
+
     """
     # Ensure contiguous
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if atr_length < 1:
+        raise ValueError('atr_length must be >= 1')
+    # Rebind the outer names: assigning to the loop variable is a no-op
+    # and left the arrays non-contiguous for the numba backends.
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     # ATR (uses RMA by default)
     atr_arr = atr_ind(
         high, low, close,
