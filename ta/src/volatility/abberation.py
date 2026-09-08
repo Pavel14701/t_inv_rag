@@ -58,7 +58,9 @@ def aberration_numpy(
     )
     # HLC3 and its SMA
     hlc3_arr = (high + low + close) / 3.0
-    zg = sma_ind(hlc3_arr, length=length, offset=0, fillna=None, use_talib=use_talib)
+    zg = sma_ind(
+        hlc3_arr, length=length, offset=0, fillna=None, use_talib=use_talib,
+    )
     sg = zg + atr_arr
     xg = zg - atr_arr
     # Apply offset and fillna to all four lines
@@ -123,7 +125,11 @@ def aberration_polars(
         Period for SMA of HLC3.
     atr_length : int
         Period for ATR.
-    offset, fillna, use_talib : as usual.
+    offset, fillna, use_talib :
+        Same semantics as in `aberration_numpy`: `offset` shifts all four
+        lines by `offset` bars, `fillna` replaces all NaN (including
+        warm-up) with the given value, `use_talib` selects the TA-Lib
+        backend for SMA/ATR.
     suffix : str
         Custom suffix (default f"_{length}_{atr_length}").
 

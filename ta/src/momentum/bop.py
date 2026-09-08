@@ -29,7 +29,8 @@ def bop_numpy(
     Returns
     -------
     np.ndarray
-        BOP values.
+        BOP values. Bars with ``high == low`` (zero range) yield 0.0,
+        matching the TA-Lib backend (not inf/NaN, no RuntimeWarning).
 
     """
     # Ensure contiguous
@@ -37,14 +38,23 @@ def bop_numpy(
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (open_, high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    # Rebind the outer names: assigning to the loop variable is a no-op
+    # and left the arrays non-contiguous.
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     hl_range = high - low
     co_range = close - open_
-    # Avoid division by zero – where hl_range == 0, 
-    # bop becomes inf. We'll keep as is (original behaviour).
-    bop = scalar * co_range / hl_range
+    # IEEE 754: 0/0 and x/0 must not emit RuntimeWarnings. Zero-range
+    # bars are defined as 0.0 so the numpy backend matches TA-Lib.
+    with np.errstate(divide='ignore', invalid='ignore'):
+        raw = scalar * co_range / hl_range
+    bop = np.where(hl_range == 0.0, 0.0, raw)
     return _apply_offset_fillna(bop, offset, fillna)
 
 
@@ -63,9 +73,14 @@ def bop_talib(
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (open_, high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     bop = talib.BOP(open_, high, low, close)
     return _apply_offset_fillna(bop, offset, fillna)
 

@@ -23,7 +23,7 @@ from .._array_ops import _apply_offset_fillna
 @njit(
     'int8[:](float64[:], float64)',
     cache=True,
-    fastmath=True,
+    fastmath=False,
 )  # type: ignore[call-overload]
 def _kagi_nb(prices: np.ndarray, reversal: float) -> np.ndarray:  # noqa: C901
     """Numba-accelerated Kagi line (yin/yang) aligned to bars.

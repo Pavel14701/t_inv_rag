@@ -9,7 +9,6 @@ from .._array_ops import _apply_offset_fillna
 
 @njit(
     (float64[:], float64[:], float64[:], float64[:]),
-    nopython=True,
     cache=True
 )
 def _cdl_shortline_nb(
@@ -18,31 +17,36 @@ def _cdl_shortline_nb(
     low: np.ndarray,
     close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Short Line Candle pattern.
-    Returns boolean mask where pattern completes (True at the candle).
+    """Numba‑accelerated Short Line Candle pattern (TA‑Lib semantics).
+
+    A candle is a Short Line when its real body, upper and lower shadows are
+    each smaller than 0.3x the corresponding average over the previous 5
+    candles. Returns boolean mask where pattern occurs.
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.bool_)
-    for i in range(n):
-        o = open_[i]
-        c = close[i]
-        h = high[i]
-        l = low[i]
-        rng = h - l
-        if rng <= 0.0:
-            continue
-        body = abs(c - o)
-        upper = h - max(o, c)
-        lower = min(o, c) - l
-        # Short body
-        if body > 0.3 * rng:
-            continue
-        # Short shadows
-        if upper > 0.3 * rng:
-            continue
-        if lower > 0.3 * rng:
-            continue
-        out[i] = True
+    period = 5
+    factor = 0.3
+    for i in range(period, n):
+        body_sum = 0.0
+        upper_sum = 0.0
+        lower_sum = 0.0
+        for k in range(i - period, i):
+            b = abs(close[k] - open_[k])
+            u = high[k] - max(open_[k], close[k])
+            lo = min(open_[k], close[k]) - low[k]
+            body_sum += b
+            upper_sum += u
+            lower_sum += lo
+        body = abs(close[i] - open_[i])
+        upper = high[i] - max(open_[i], close[i])
+        lower = min(open_[i], close[i]) - low[i]
+        if (
+            body < factor * (body_sum / period)
+            and upper < factor * (upper_sum / period)
+            and lower < factor * (lower_sum / period)
+        ):
+            out[i] = True
     return out
 
 
@@ -70,9 +74,22 @@ def cdl_shortline(
     high = np.asarray(high, dtype=np.float64)
     low_ = np.asarray(low_, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
-    for arr in (open_, high, low_, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low_.flags.c_contiguous:
+        low_ = np.ascontiguousarray(low_)
+    if not low_.flags.writeable:
+        low_ = low_.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
     if use_talib and talib_available:
         talib_out = talib.CDLSHORTLINE(open_, high, low_, close)
         talib_out = (talib_out != 0).astype(np.float64)

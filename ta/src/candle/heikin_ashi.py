@@ -26,7 +26,7 @@ from .._array_ops import _apply_offset_fillna
     'Tuple((float64[:], float64[:], float64[:], float64[:]))'
     '(float64[:], float64[:], float64[:], float64[:])',
     cache=True,
-    fastmath=True,
+    fastmath=False,
 )
 def _heikin_ashi_nb(
     open_: np.ndarray,
@@ -109,11 +109,22 @@ def ha_numpy(
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
-    for arr in (open_, high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
-        if not arr.flags.writeable:
-            arr = arr.copy()
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
     ha_open, ha_high, ha_low, ha_close = _heikin_ashi_nb(
         open_, high, low, close
     )

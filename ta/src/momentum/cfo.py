@@ -38,6 +38,8 @@ def cfo_numpy(
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
+    if length < 1:
+        raise ValueError('length must be >= 1')
     # Time Series Forecast (tsf mode)
     tsf = linreg_ind(
         close, length=length, mode='tsf', offset=0, fillna=None, use_talib=use_talib

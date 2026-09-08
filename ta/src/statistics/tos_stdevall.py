@@ -25,7 +25,7 @@ import polars as pl
 from .._array_ops import _apply_offset_fillna
 
 
-def tos_stdevall_numpy(
+def tos_stdevall_numpy(  # noqa: C901
     close: np.ndarray,
     length: int | None = None,
     stds: list[float] | None = None,

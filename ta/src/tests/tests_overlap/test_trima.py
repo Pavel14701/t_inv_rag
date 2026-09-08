@@ -14,14 +14,20 @@ from ...external import talib_available
 
 
 def _sma_np(arr: np.ndarray, w: int) -> np.ndarray:
-    """Simple moving average via cumulative sum (matches the Numba core)."""
+    """Simple moving average matching the Numba core.
+
+    A window containing NaN yields NaN; later windows recover
+    (mirrors ``_sma_numba_opt``).
+    """
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < w:
         return out
-    cum = np.concatenate(([0.0], np.cumsum(arr)))
     for i in range(w - 1, n):
-        out[i] = (cum[i + 1] - cum[i + 1 - w]) / w
+        window = arr[i + 1 - w : i + 1]
+        if np.isnan(window).any():
+            continue
+        out[i] = window.sum() / w
     return out
 
 
@@ -148,22 +154,23 @@ def test_trima_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
 # ---- IEEE 754 ----
 
 def test_trima_with_nan(prices_with_nan):
-    """NaN input poisons TRIMA from that point onward (ignore)."""  # noqa: D403, E501
+    """NaN only poisons TRIMA windows containing it (ignore)."""  # noqa: D403
     result = trima_numba(prices_with_nan, length=3, nan_policy='ignore')
     expected = _trima_reference(prices_with_nan, 3)
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
     assert np.isnan(result[:2]).all()
-    assert np.isnan(result[5:]).all()
+    assert np.isnan(result[5:]).any()
+    assert np.isfinite(result[8:]).all()
 
 
 def test_trima_with_inf(prices_with_inf):
-    """Inf is replaced with NaN, so poisons from that point onward."""
+    """Inf is replaced with NaN, so behaves like NaN."""
     result = trima_numba(prices_with_inf, length=3, nan_policy='ignore')
     cleaned = prices_with_inf.copy()
     cleaned[~np.isfinite(cleaned)] = np.nan
     expected = _trima_reference(cleaned, 3)
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
-    assert np.isnan(result[5:]).all()
+    assert np.isfinite(result[8:]).all()
 
 
 def test_trima_empty(prices_empty):

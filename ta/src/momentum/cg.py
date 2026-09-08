@@ -6,12 +6,15 @@ from numba import jit
 from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=False, cache=True)
 def _cg_numba_core(
-    close: np.ndarray, 
+    close: np.ndarray,
     length: int
 ) -> np.ndarray:
     """Center of Gravity core with O(1) sliding window update.
+
+    fastmath is disabled: the ``denominator != 0.0`` guard is a
+    value-dependent IEEE-754 comparison.
 
     Parameters
     ----------
@@ -41,12 +44,15 @@ def _cg_numba_core(
         out[length - 1] = -numerator / denominator
     else:
         out[length - 1] = np.nan
-    # Sliding window updates
+    # Sliding window updates. When the window advances, EVERY remaining
+    # element's weight grows by 1, so the numerator loses the whole old
+    # denominator (not just the oldest price):
+    #   num_new = num_old - den_old + length * newest
+    #   den_new = den_old - oldest + newest
     for i in range(length, n):
         oldest = close[i - length]      # price leaving the window
         newest = close[i]               # price entering the window
-        # Update numerator and denominator
-        numerator = numerator - oldest + length * newest
+        numerator = numerator - denominator + length * newest
         denominator = denominator - oldest + newest
         if denominator != 0.0:
             out[i] = -numerator / denominator
@@ -65,6 +71,10 @@ def cg_numba(
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
+    if length < 1:
+        raise ValueError('length must be >= 1')
     result = _cg_numba_core(close, length)
     return _apply_offset_fillna(result, offset, fillna)
 

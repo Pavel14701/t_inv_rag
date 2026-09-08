@@ -15,14 +15,19 @@ from .._array_ops import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @njit(cache=True)
 def _ssf_ehlers(x: np.ndarray, n: int, pi: float, sqrt2: float) -> np.ndarray:
+    """Ehlers 2-pole Super Smoother (pi in radians, e.g. 3.14159)."""
     m = len(x)
+    out = np.empty(m, dtype=np.float64)
+    if m == 0:
+        return out
     ratio = sqrt2 / n
     a = np.exp(-pi * ratio)
-    b = 2.0 * a * np.cos(180.0 * ratio)   # degrees
+    b = 2.0 * a * np.cos(pi * ratio)
     c = a * a - b + 1.0
     out = np.empty(m, dtype=np.float64)
     out[0] = x[0]
-    out[1] = x[1]
+    if m > 1:
+        out[1] = x[1]
     for i in range(2, m):
         out[i] = 0.5 * c * (
             x[i] + x[i - 1]
@@ -31,17 +36,21 @@ def _ssf_ehlers(x: np.ndarray, n: int, pi: float, sqrt2: float) -> np.ndarray:
 
 
 # ----------------------------------------------------------------------
-# Everget's version (uses pi instead of 180) with fastmath
+# Everget's version (uses the same recurrence; differs only by the value
+# of pi the caller passes, e.g. np.pi instead of 3.14159)
 # ----------------------------------------------------------------------
-@njit(fastmath=True, cache=True)
+@njit(fastmath=False, cache=True)
 def _ssf_everget(x: np.ndarray, n: int, pi: float, sqrt2: float) -> np.ndarray:
     m = len(x)
     arg = pi * sqrt2 / n
     a = np.exp(-arg)
     b = 2.0 * a * np.cos(arg)
     out = np.empty(m, dtype=np.float64)
+    if m == 0:
+        return out
     out[0] = x[0]
-    out[1] = x[1]
+    if m > 1:
+        out[1] = x[1]
     for i in range(2, m):
         out[i] = 0.5 * (
             a * a - b + 1.0
@@ -62,6 +71,8 @@ def ssf_numba(
     fillna: Optional[float] = None
 ) -> np.ndarray:
     """Super Smoother Filter using Numba."""
+    if length < 1:
+        raise ValueError('length must be >= 1')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)

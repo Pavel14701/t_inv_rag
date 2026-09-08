@@ -12,9 +12,8 @@ from .._array_ops import _apply_offset_fillna
         types.float64[:], types.float64[:], types.float64[:], types.float64[:],
         types.int64, types.boolean
     ),
-    nopython=True,
     cache=True,
-    fastmath=True,
+    fastmath=False,
 )
 def _cdl_hikkakemod_nb(
     open_, high, low, close,
@@ -98,6 +97,22 @@ def cdl_hikkakemod(
     high = np.asarray(high, np.float64)
     low = np.asarray(low, np.float64)
     close = np.asarray(close, np.float64)
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
     # TA-Lib fallback
     if use_talib and talib_available:
         out = talib.CDLHIKKAKEMOD(open_, high, low, close).astype(np.float64) / 100.0

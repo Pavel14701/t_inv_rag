@@ -271,12 +271,17 @@ def test_sma_ind_with_polars_series(prices_random_walk: npt.NDArray[np.float64])
 # -----------------------------------------------------------------------------
 
 def test_sma_numba_with_nan(prices_with_nan):
-    """NaN in input makes SMA NaN from that point onward."""
+    """NaN only poisons windows containing it; later windows recover.
+
+    NaN is at index 5, length=3 -> windows [3..5], [4..6], [5..7] are
+    NaN; from index 8 the window no longer contains it.
+    """
     length = 3
     result = _sma_numba(prices_with_nan, length=length, nan_policy='ignore')
     assert np.isnan(result[:2]).all()
     assert np.isfinite(result[2:5]).all()
-    assert np.isnan(result[5:]).all()
+    assert np.isnan(result[5:8]).all()
+    assert np.isfinite(result[8:]).all()
 
 
 def test_sma_numba_with_inf(prices_with_inf):
@@ -285,7 +290,8 @@ def test_sma_numba_with_inf(prices_with_inf):
     result = _sma_numba(prices_with_inf, length=length, nan_policy='ignore')
     assert np.isnan(result[:2]).all()
     assert np.isfinite(result[2:5]).all()
-    assert np.isnan(result[5:]).all()
+    assert np.isnan(result[5:8]).all()
+    assert np.isfinite(result[8:]).all()
 
 
 def test_sma_numba_empty(prices_empty):
@@ -324,4 +330,6 @@ def test_sma_polars_with_nan(df_random_walk):
     vals = result.to_numpy()
     assert np.isnan(vals[:2]).all()
     assert np.isfinite(vals[2:5]).all()
-    assert np.isnan(vals[5:]).all()
+    # NaN at index 5 poisons only the windows containing it (length=3)
+    assert np.isnan(vals[5:8]).all()
+    assert np.isfinite(vals[8:]).all()

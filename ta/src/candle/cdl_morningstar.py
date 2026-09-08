@@ -9,7 +9,6 @@ from .._array_ops import _apply_offset_fillna
 
 @njit(
     (float64[:], float64[:], float64[:], float64[:]),
-    nopython=True,
     cache=True
 )
 def _cdl_morningstar_nb(
@@ -94,9 +93,22 @@ def cdl_morningstar(
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
-    for arr in (open_, high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
     # TA‑Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLMORNINGSTAR(open_, high, low, close)

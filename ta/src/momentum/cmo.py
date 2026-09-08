@@ -10,7 +10,7 @@ from .._array_ops import _apply_offset_fillna
 # ----------------------------------------------------------------------
 # Numba‑accelerated rolling sums of positive and negative changes
 # ----------------------------------------------------------------------
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=False, cache=True)
 def _cmo_numba_core(
     close: np.ndarray,
     length: int,
@@ -18,6 +18,9 @@ def _cmo_numba_core(
     scalar: float,
 ) -> np.ndarray:
     """Compute CMO using sliding window sums of positive and negative changes.
+
+    The ``denom != 0.0`` guard is a value-dependent IEEE-754 comparison,
+    hence fastmath is disabled.
 
     Parameters
     ----------
@@ -40,8 +43,12 @@ def _cmo_numba_core(
     out = np.full(n, np.nan, dtype=np.float64)
     if n < length + drift:
         return out
-    # Pre‑compute differences (first `drift` values remain NaN)
-    diff = np.empty(n, dtype=np.float64)
+    # Pre-compute differences. The first `drift` positions are never
+    # referenced by any window (they are only accumulated into the
+    # prefix of the cumulative sums, which cancels out), but they MUST
+    # be finite: np.empty() garbage used to poison the cumsum and
+    # corrupt every window through catastrophic cancellation.
+    diff = np.zeros(n, dtype=np.float64)
     for i in range(drift, n):
         diff[i] = close[i] - close[i - drift]
     # Cumulative sums for positive and negative parts
@@ -94,10 +101,27 @@ def cmo_numpy(
     np.ndarray
         CMO values.
 
+    Raises
+    ------
+    ValueError
+        If `length` < 1 or `drift` < 1.
+
+    Notes
+    -----
+    The Numba core implements the textbook CMO (rolling window sums of
+    up/down changes). TA-Lib's CMO uses Wilder-style smoothing instead,
+    so the two backends intentionally differ for the same input.
+
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if drift < 1:
+        raise ValueError('drift must be >= 1')
     if use_talib and talib_available:
         # TA‑Lib CMO uses RMA internally; scalar is fixed at 100.
         result = talib.CMO(close, timeperiod=length)

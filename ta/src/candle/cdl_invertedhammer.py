@@ -10,7 +10,6 @@ from .._array_ops import _apply_offset_fillna
 # должно быть float8 для ускорения инференса и экономии памяти
 @njit(
     (float64[:], float64[:], float64[:], float64[:]),
-    nopython=True,
     cache=True
 )
 def _cdl_invertedhammer_nb(
@@ -71,16 +70,29 @@ def cdl_invertedhammer(
     if isinstance(open_, pl.Series): open_ = open_.to_numpy()
     if isinstance(high, pl.Series): high = high.to_numpy()
     if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close_.to_numpy() if isinstance(close, pl.Series) else close
+    if isinstance(close, pl.Series): close = close.to_numpy()
 
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
 
-    for arr in (open_, high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
 
     # TA‑Lib branch
     if use_talib and talib_available:

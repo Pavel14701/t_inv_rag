@@ -42,15 +42,22 @@ def cci_numpy(
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if length < 1:
+        raise ValueError('length must be >= 1')
     if use_talib and talib_available:
         # TA‑Lib CCI uses fixed c=0.015, parameter not exposed
         result = talib.CCI(high, low, close, timeperiod=length)
     else:
         # Typical price
-        tp = hlc3_ind(high, low, close, fillna=fillna)
+        # fillna must NOT be applied here: it would leak into the
+        # SMA/MAD inputs and change every value afterwards.
+        tp = hlc3_ind(high, low, close, fillna=None)
         # SMA of typical price
         mean_tp = sma_ind(tp, length=length, offset=0, fillna=None, use_talib=False)
         # Mean absolute deviation of typical price
