@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import cast
+
 import numpy as np
 import polars as pl
 
@@ -31,14 +33,24 @@ def bias_numpy(
     np.ndarray
         Bias values.
 
+    Raises
+    ------
+    ValueError
+        If `length` < 1.
+
     """
+    if length < 1:
+        raise ValueError('length must be >= 1')
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     ma = ma_mode(
         mamode, close, length=length, offset=0, fillna=None, use_talib=use_talib
     )
-    bias = (close / ma) - 1.0
+    ma = cast(np.ndarray, ma)
+    # IEEE 754: ma == 0 keeps inf/NaN per IEEE rules, but silently.
+    with np.errstate(divide='ignore', invalid='ignore'):
+        bias = (close / ma) - 1.0
     return _apply_offset_fillna(bias, offset, fillna)
 
 

@@ -37,7 +37,9 @@ def _supertrend_numba_core(
     """
     n = len(close)
     trend = np.full(n, np.nan, dtype=np.float64)
-    direction = np.full(n, np.nan, dtype=np.int64)
+    # float64 so the seed position can hold NaN (an int64 array would
+    # turn np.nan into an undefined int and break _apply_offset_fillna)
+    direction = np.full(n, np.nan, dtype=np.float64)
     long = np.full(n, np.nan, dtype=np.float64)
     short = np.full(n, np.nan, dtype=np.float64)
     if n < 2:
@@ -88,14 +90,23 @@ def supertrend_numba(
     """
     if atr_length is None:
         atr_length = length
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if atr_length < 1:
+        raise ValueError('atr_length must be >= 1')
+    if multiplier < 0:
+        raise ValueError('multiplier must be >= 0')
 
     # Ensure contiguous
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     # Midpoint (hl2)
     hl2 = (high + low) * 0.5
     # ATR using Numba
@@ -144,16 +155,19 @@ def supertrend_talib(
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     hl2 = (high + low) * 0.5
     atr = atr_ind(
-        high, low, close, 
-        length=atr_length, 
-        offset=0, 
-        fillna=None, 
-        percent=False, 
+        high, low, close,
+        length=atr_length,
+        offset=0,
+        fillna=None,
+        percent=False,
         use_talib=True
     )
     ub = hl2 + multiplier * atr

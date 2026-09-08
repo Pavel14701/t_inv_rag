@@ -30,9 +30,24 @@ def stochf_numpy(
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    # Numba rolling kernels require writable buffers: polars' zero-copy
+    # to_numpy() returns read-only arrays (TypeError otherwise).
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.writeable:
+        close = close.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if k < 1:
+        raise ValueError('k must be >= 1')
+    if d < 1:
+        raise ValueError('d must be >= 1')
     if use_talib and talib_available:
         # TA‑Lib STOCHF accepts fastd_matype parameter
         ma_type = cast(
@@ -54,9 +69,12 @@ def stochf_numpy(
         denom = highest_high - lowest_low
         with np.errstate(divide='ignore', invalid='ignore'):
             stoch_k = 100.0 * (close - lowest_low) / denom
-        # %D is a moving average of %K
+        # %D is a moving average of %K. The %K warm-up prefix is
+        # inherently NaN: smooth with nan_policy='ignore' so NaN only
+        # affects its own windows.
         stoch_d = cast(np.ndarray, ma_mode(
-            mamode, stoch_k, length=d, offset=0, fillna=None, use_talib=False
+            mamode, stoch_k, length=d, offset=0, fillna=None, use_talib=False,
+            nan_policy='ignore'
         ))
     # Apply global offset and fillna
     stoch_k = _apply_offset_fillna(stoch_k, offset, fillna)

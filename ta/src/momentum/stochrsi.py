@@ -77,12 +77,15 @@ def stochrsi_numpy(
     with np.errstate(divide='ignore', invalid='ignore'):
         stoch = np.where(denom != 0, 100.0 * (rsi - lowest_rsi) / denom, 50.0)
         # If denom == 0, we set stoch to 50 (neutral) to avoid division by zero
-    # 4. Smooth to get %K and %D
+    # 4. Smooth to get %K and %D. The stoch warm-up prefix is inherently
+    # NaN, so the smoothing MAs run on the numpy backend: TA-Lib's SMA
+    # never recovers after the first NaN (its sliding sum stays NaN),
+    # while the numpy backend yields NaN only for windows containing it.
     stoch_k = cast(np.ndarray, ma_mode(
-        mamode, stoch, length=k, use_talib=use_talib, nan_policy=nan_policy
+        mamode, stoch, length=k, use_talib=False, nan_policy='ignore'
     ))
     stoch_d = cast(np.ndarray, ma_mode(
-        mamode, stoch_k, length=d, use_talib=use_talib, nan_policy=nan_policy
+        mamode, stoch_k, length=d, use_talib=False, nan_policy='ignore'
     ))
     # 5. Trim if requested
     if trim:

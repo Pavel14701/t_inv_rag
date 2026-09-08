@@ -10,7 +10,7 @@ from .rsi import rsi_ind
 # ----------------------------------------------------------------------
 # Streak calculation (Numba) – corrected version
 # ----------------------------------------------------------------------
-@jit((float64[:],), nopython=True, fastmath=True, cache=True)
+@jit((float64[:],), nopython=True, fastmath=False, cache=True)
 def _streak_numba(close: np.ndarray) -> np.ndarray:
     """Calculate streak: length of consecutive up/down moves.
     Returns array of cumulative counts (positive for up, negative for down).
@@ -35,7 +35,7 @@ def _streak_numba(close: np.ndarray) -> np.ndarray:
 # ----------------------------------------------------------------------
 # Percent Rank (rolling) – Numba, strict comparison, direct indexing
 # ----------------------------------------------------------------------
-@jit((float64[:], int64), nopython=True, fastmath=True, cache=True)
+@jit((float64[:], int64), nopython=True, fastmath=False, cache=True)
 def _percent_rank_numba(close: np.ndarray, length: int) -> np.ndarray:
     """Rolling Percent Rank: for each window, compute percentage of values
     strictly less than the current value.
@@ -105,6 +105,12 @@ def crsi_numpy(
 
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
+    # Numba kernels require a writable buffer: polars' zero-copy
+    # to_numpy() returns a read-only array (TypeError otherwise).
+    if not close.flags.writeable:
+        close = close.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     # ---- Input validation ----
     if rsi_length < 1:
         raise ValueError('rsi_length must be >= 1')

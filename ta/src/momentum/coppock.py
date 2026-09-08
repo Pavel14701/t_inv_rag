@@ -37,10 +37,20 @@ def coppock_numpy(
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
+    if fast < 1:
+        raise ValueError('fast must be >= 1')
+    if slow < 1:
+        raise ValueError('slow must be >= 1')
+    if wma_length < 1:
+        raise ValueError('wma_length must be >= 1')
     roc_fast = roc_ind(close, length=fast, use_talib=use_talib)
     roc_slow = roc_ind(close, length=slow, use_talib=use_talib)
     total_roc = roc_fast + roc_slow
-    coppock = wma_ind(total_roc, length=wma_length, use_talib=use_talib)
+    # The ROC warm-up prefix is inherently NaN: smooth with nan_policy
+    # set to 'ignore' so NaN only affects its own windows.
+    coppock = wma_ind(
+        total_roc, length=wma_length, use_talib=use_talib, nan_policy='ignore',
+    )
     return _apply_offset_fillna(coppock, offset, fillna)
 
 

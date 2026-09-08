@@ -6,7 +6,44 @@ from numba import jit
 from .._array_ops import _apply_offset_fillna
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=False, cache=True)
+def _window_sums(x: np.ndarray, length: int) -> np.ndarray:
+    """Rolling window sums with pandas-like NaN semantics.
+
+    A window containing any NaN yields NaN (no value emitted). When the
+    last NaN leaves the window, the sum is recomputed from scratch so
+    later windows recover (plain sliding sums would stay NaN forever —
+    the original bug that zeroed out the whole BR line).
+    """
+    n = x.shape[0]
+    sums = np.full(n, np.nan)
+    s = 0.0
+    nan_count = 0
+    for i in range(n):
+        v = x[i]
+        if np.isnan(v):
+            nan_count += 1
+        if i >= length:
+            u = x[i - length]
+            if np.isnan(u):
+                nan_count -= 1
+        if nan_count > 0:
+            s = np.nan  # recompute once every NaN has left the window
+        else:
+            if np.isnan(s):
+                s = 0.0
+                for k in range(i - length + 1, i + 1):
+                    s += x[k]
+            else:
+                s += v
+                if i >= length:
+                    s -= x[i - length]
+        if i >= length - 1 and nan_count == 0:
+            sums[i] = s
+    return sums
+
+
+@jit(nopython=True, fastmath=False, cache=True)
 def _brar_numba_core(
     high_open_range: np.ndarray,
     open_low_range: np.ndarray,
@@ -15,36 +52,29 @@ def _brar_numba_core(
     length: int,
     scalar: float,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Compute AR and BR using sliding window sums (Numba)."""
+    """Compute AR and BR using sliding window sums (Numba).
+
+    fastmath is disabled: the ``sum != 0.0`` guards are value-dependent
+    IEEE-754 comparisons and sliding sums must not be re-associated.
+    Zero denominators leave NaN (never inf) by design.
+    AR is valid from index ``length - 1``; BR additionally waits out the
+    ``drift`` NaN prefix of the shifted close (first value at
+    ``length + drift - 1``).
+    """
     n = len(high_open_range)
     ar = np.full(n, np.nan, dtype=np.float64)
     br = np.full(n, np.nan, dtype=np.float64)
     if n < length:
         return ar, br
-    # Initial sums
-    sum_high_open = 0.0
-    sum_open_low = 0.0
-    sum_hcy = 0.0
-    sum_cyl = 0.0
-    for i in range(length):
-        sum_high_open += high_open_range[i]
-        sum_open_low += open_low_range[i]
-        sum_hcy += hcy[i]
-        sum_cyl += cyl[i]
-    if sum_open_low != 0.0:
-        ar[length - 1] = scalar * sum_high_open / sum_open_low
-    if sum_cyl != 0.0:
-        br[length - 1] = scalar * sum_hcy / sum_cyl
-    for i in range(length, n):
-        j = i - length
-        sum_high_open += high_open_range[i] - high_open_range[j]
-        sum_open_low += open_low_range[i] - open_low_range[j]
-        sum_hcy += hcy[i] - hcy[j]
-        sum_cyl += cyl[i] - cyl[j]
-        if sum_open_low != 0.0:
-            ar[i] = scalar * sum_high_open / sum_open_low
-        if sum_cyl != 0.0:
-            br[i] = scalar * sum_hcy / sum_cyl
+    sum_high_open = _window_sums(high_open_range, length)
+    sum_open_low = _window_sums(open_low_range, length)
+    sum_hcy = _window_sums(hcy, length)
+    sum_cyl = _window_sums(cyl, length)
+    for i in range(n):
+        if not np.isnan(sum_open_low[i]) and sum_open_low[i] != 0.0:
+            ar[i] = scalar * sum_high_open[i] / sum_open_low[i]
+        if not np.isnan(sum_cyl[i]) and sum_cyl[i] != 0.0:
+            br[i] = scalar * sum_hcy[i] / sum_cyl[i]
     return ar, br
 
 
@@ -77,7 +107,16 @@ def brar_ind(
     -------
     ar, br : tuple of np.ndarray
 
+    Raises
+    ------
+    ValueError
+        If `length` < 1 or `drift` < 1.
+
     """
+    if length < 1:
+        raise ValueError('length must be >= 1')
+    if drift < 1:
+        raise ValueError('drift must be >= 1')
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
     if isinstance(high, pl.Series):
@@ -91,9 +130,16 @@ def brar_ind(
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
-    for arr in (open_, high, low, close):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    # Rebind the outer names: assigning to the loop variable is a no-op
+    # and left the arrays non-contiguous for the numba backend.
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
     # Compute ranges
     high_open_range = high - open_
     open_low_range = open_ - low

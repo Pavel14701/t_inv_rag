@@ -23,7 +23,7 @@ from .._array_ops import _apply_offset_fillna
 @njit(
     'int8[:](float64[:], float64)',
     cache=True,
-    fastmath=True,
+    fastmath=False,
 )  # type: ignore[call-overload]
 def _renko_nb(prices: np.ndarray, box_size: float) -> np.ndarray:
     """Numba-accelerated core Renko brick generator.

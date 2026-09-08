@@ -21,7 +21,7 @@ from .._array_ops import _apply_offset_fillna
 @njit(
     'int8[:](float64[:], float64, int64)',
     cache=True,
-    fastmath=True,
+    fastmath=False,
 )  # type: ignore[call-overload]
 def _pf_trend_nb(  # noqa: C901
     prices: np.ndarray,

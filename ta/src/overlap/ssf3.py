@@ -22,6 +22,8 @@ def _ssf3_numba_core(
 ) -> np.ndarray:
     """John F. Ehlers' 3‑pole Super Smoother Filter (Everget variant)."""
     n = len(close)
+    if n == 0:
+        return np.empty(0, dtype=np.float64)
     out = np.empty(n, dtype=np.float64)
     # First three values are just the input (no filtering yet)
     out[0] = close[0]
@@ -81,6 +83,8 @@ def ssf3_numba(
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
+    if length < 1:
+        raise ValueError('length must be >= 1')
 
     result = _ssf3_numba_core(close, length, pi, sqrt3)
     return _apply_offset_fillna(result, offset, fillna)

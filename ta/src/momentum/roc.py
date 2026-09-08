@@ -7,10 +7,13 @@ from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna
 
 
-@jit((float64[:], int64, float64), nopython=True, fastmath=True, cache=True)
+@jit((float64[:], int64, float64), nopython=True, fastmath=False, cache=True)
 def _roc_numba_core(close: np.ndarray, length: int, scalar: float) -> np.ndarray:
     """Rate of Change core calculation.
     ROC = scalar * (close[i] - close[i-length]) / close[i-length].
+
+    fastmath is disabled: the ``denominator != 0.0`` guard is a
+    value-dependent IEEE-754 comparison.
     """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -55,6 +58,10 @@ def roc_numpy(
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
+    if length < 1:
+        raise ValueError('length must be >= 1')
     if use_talib and talib_available:
         # TA‑Lib ROC returns percentage (scalar=100)
         result = talib.ROC(close, timeperiod=length)

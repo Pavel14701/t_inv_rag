@@ -32,13 +32,25 @@ def ao_numpy(
     np.ndarray
         AO values.
 
+    Raises
+    ------
+    ValueError
+        If `fast` < 1 or `slow` < 1.
+
     """
+    if fast < 1:
+        raise ValueError('fast must be >= 1')
+    if slow < 1:
+        raise ValueError('slow must be >= 1')
     # Ensure arrays are contiguous
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
-    for arr in (high, low):
-        if not arr.flags.c_contiguous:
-            arr = np.ascontiguousarray(arr)
+    # Rebind the outer names: assigning to the loop variable is a no-op
+    # and left the arrays non-contiguous.
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
     # Swap if slow < fast (original behaviour)
     if slow < fast:
         fast, slow = slow, fast

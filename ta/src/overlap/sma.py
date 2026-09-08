@@ -14,30 +14,39 @@ from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
 
 @njit('float64[:](float64[:], int64)', cache=True)
 def _sma_numba_opt(arr: np.ndarray, length: int) -> np.ndarray:
-    """Numba-accelerated core for SMA using cumulative sum.
+    """Numba-accelerated core for SMA.
 
-    Parameters
-    ----------
-    arr : np.ndarray
-        1D float64 array of prices (assumed to have no NaNs or infinities).
-    length : int
-        Window size (must be >= 1).
-
-    Returns
-    -------
-    np.ndarray
-        SMA array with first `length-1` elements set to NaN.
-        If `len(arr) < length`, returns all NaN.
-
+    Two paths:
+    - NaN-free input: cumulative-sum sliding window (O(n)).
+    - Input containing NaN: per-window recompute; a window with any NaN
+      yields NaN (IEEE-754), later windows recover. A naive cumsum on
+      NaN input would poison every value after the first NaN.
     """
     n = len(arr)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < length:
         return out
-    cum = np.cumsum(arr)
-    out[length - 1:] = (
-        cum[length - 1:] - np.concatenate((np.array([0.0]), cum[:n - length]))
-    ) / length
+    has_nan = False
+    for i in range(n):
+        if np.isnan(arr[i]):
+            has_nan = True
+            break
+    if not has_nan:
+        cum = np.cumsum(arr)
+        head = np.concatenate((np.array([0.0]), cum[:n - length]))
+        out[length - 1:] = (cum[length - 1:] - head) / length
+        return out
+    for i in range(length - 1, n):
+        acc = 0.0
+        bad = False
+        for j in range(i - length + 1, i + 1):
+            v = arr[j]
+            if np.isnan(v):
+                bad = True
+                break
+            acc += v
+        if not bad:
+            out[i] = acc / length
     return out
 
 

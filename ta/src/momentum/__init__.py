@@ -12,18 +12,18 @@ from .coppock import coppock_ind, coppock_polars
 from .crsi import crsi_ind, crsi_polars
 # from .cti import cti_ind, cti_polars
 # from .dm import dm_ind, dm_polars
-# from .er import er_ind, er_polars
+from .er import er_ind, er_polars
 # from .eri import eri_ind, eri_polars
+from .fisher import fisher_ind, fisher_polars
 # from .exhc import exhc_ind, exhc_polars
-# from .fisher import fisher_ind, fisher_polars
 # from .inertia import inertia_ind, inertia_polars
 # from .kdj import kdj_ind, kdj_polars
-# from .kst import kst_ind, kst_polars
+from .kst import kst_ind, kst_polars
 from .macd import macd_ind
 # from .mom import mom_ind, mom_polars
-# from .pgo import pgo_ind, pgo_polars
-# from .ppo import ppo
-# from .psl import psl
+from .pgo import pgo_ind, pgo_polars
+from .ppo import ppo_ind, ppo_polars
+from .psl import psl_ind, psl_polars
 # from .qqe import qqe
 from .roc import roc_ind, roc_polars
 from .rsi import rsi_ind, rsi_polars
@@ -34,15 +34,15 @@ from .rsi import rsi_ind, rsi_polars
 # from .smi import smi
 # from .squeeze import squeeze
 # from .squeeze_pro import squeeze_pro
-# from .stc import stc
-# from .stoch import stoch
+from .stc import stc_ind, stc_polars
+from .stoch import stoch_ind, stoch_polars
 from .stochf import stochf_ind, stochf_polars
 from .stochrsi import stochrsi_ind, stochrsi_polars
-# from .tmo import tmo
+from .tmo import tmo_ind, tmo_polars
 # from .trix import trix
-# from .tsi import tsi
-# from .uo import uo
-# from .willr import willr
+from .tsi import tsi_ind, tsi_polars
+from .uo import uo_ind, uo_polars
+from .willr import willr_ind, willr_polars
 
 __all__ = [
     'ao_ind', 'ao_polars',
@@ -58,18 +58,18 @@ __all__ = [
     'crsi_ind', 'crsi_polars',
 #    'cti',
 #    'dm',
-#    'er',
+    'er_ind', 'er_polars',
 #    'eri',
 #    'exhc',
-#    'fisher',
+    'fisher_ind', 'fisher_polars',
 #    'inertia',
 #    'kdj',
-#    'kst',
+    'kst_ind', 'kst_polars',
     'macd_ind',
 #    'mom',
-#    'pgo',
-#    'ppo',
-#    'psl',
+    'pgo_ind', 'pgo_polars',
+    'ppo_ind', 'ppo_polars',
+    'psl_ind', 'psl_polars',
 #    'qqe',
     'roc_ind', 'roc_polars',
     'rsi_ind', 'rsi_polars',
@@ -80,13 +80,13 @@ __all__ = [
 #    'smi',
 #    'squeeze',
 #    'squeeze_pro',
-#    'stc',
-#    'stoch',
+    'stc_ind', 'stc_polars',
+    'stoch_ind', 'stoch_polars',
     'stochf_ind', 'stochf_polars',
-    'stochrsi_ind', 'stochrsi_polars', 
-#    'tmo',
+    'stochrsi_ind', 'stochrsi_polars',
+    'tmo_ind', 'tmo_polars',
 #    'trix',
-#    'tsi',
-#    'uo',
-#    'willr', 'cti_ind', 'cti_polars', 'dm_ind', 'dm_polars', 'er_ind', 'er_polars', 'eri_ind', 'exhc_ind', 'exhc_polars', 'fisher_ind', 'fisher_polars', 'inertia_ind', 'inertia_polars', 'kdj_ind', 'kdj_polars', 'kst_ind', 'kst_polars', 'mom_ind', 'mom_polars', 'pgo_ind', 'pgo_polars',
+    'tsi_ind', 'tsi_polars',
+    'uo_ind', 'uo_polars',
+    'willr_ind', 'willr_polars',
 ]
