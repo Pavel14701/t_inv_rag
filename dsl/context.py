@@ -99,6 +99,7 @@ class Context:
         """
         provider: IndicatorProvider
         self._validate(indicator, params, attributes)
+        first_error: ProviderError | None = None
         for provider in self.providers:
             if getattr(provider, 'resolve'):
                 try:
@@ -108,8 +109,15 @@ class Context:
                         attributes,
                         offset
                     )
-                except ProviderError:
+                except ProviderError as exc:
+                    # Preserve the most specific error (e.g. warmup
+                    # unavailability) instead of masking it with a
+                    # generic "No provider found" (TZ-01 п.1).
+                    if first_error is None:
+                        first_error = exc
                     continue
+        if first_error is not None:
+            raise first_error
         raise ProviderError(f"No provider found for indicator '{indicator}'")
 
     def get_history(
