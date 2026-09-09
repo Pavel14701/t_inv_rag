@@ -27,7 +27,7 @@ def _safe_z(x: np.ndarray, mean: float, std: float) -> np.ndarray:
     return (x - mean) / std
 
 
-def cdl_z_numpy(
+def cdl_z_numpy(  # noqa: C901
     open_: np.ndarray,
     high: np.ndarray,
     low: np.ndarray,

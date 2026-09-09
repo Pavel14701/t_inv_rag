@@ -85,7 +85,7 @@ def _cdl_xsidegap3methods_nb(
     return out
 
 
-def cdl_xsidegap3methods(
+def cdl_xsidegap3methods(  # noqa: C901
     open_: np.ndarray | pl.Series,
     high: np.ndarray | pl.Series,
     low: np.ndarray | pl.Series,

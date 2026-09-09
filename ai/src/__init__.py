@@ -188,9 +188,24 @@ Otherwise ``pattern_loss`` is zero and the head outputs are unused.
 
 """
 
+from .config import (
+    AIConfig,
+    ComputeConfig,
+    ModelConfig,
+    RiskConfig,
+    TrainingConfig,
+    load_config,
+    risk_kwargs,
+    set_seed,
+)
 from .contracts import validate_batch
 from .dataset import TradingDataset, collate_ob
 from .datatypes import OrderBlock
+from .device import (
+    export_onnx,
+    resolve_infer_device,
+    resolve_train_device,
+)
 from .features import (
     compute_atr,
     compute_ob_distances,
@@ -205,6 +220,14 @@ from .io import (
     save_labels_parquet,
 )
 from .losses import dual_loss
+from .bundle import (
+    EntryExitPredictor,
+    ModelBundle,
+    build_bundle,
+    load_bundle,
+    rebuild_model,
+    save_bundle,
+)
 from .metrics import (
     compute_action_accuracy,
     compute_trade_metrics,
@@ -218,6 +241,17 @@ from .training import (
 from .transformer import EntryExitTransformer
 
 __all__ = [
+    'AIConfig',
+    'RiskConfig',
+    'ModelConfig',
+    'TrainingConfig',
+    'ComputeConfig',
+    'load_config',
+    'set_seed',
+    'risk_kwargs',
+    'resolve_train_device',
+    'resolve_infer_device',
+    'export_onnx',
     'OrderBlock',
     'TradingDataset',
     'collate_ob',
@@ -232,6 +266,12 @@ __all__ = [
     'merge_features_labels',
     'dual_loss',
     'EntryExitTransformer',
+    'ModelBundle',
+    'EntryExitPredictor',
+    'build_bundle',
+    'save_bundle',
+    'load_bundle',
+    'rebuild_model',
     'build_loader_from_parquet',
     'train_one_round',
     'self_training_loop',

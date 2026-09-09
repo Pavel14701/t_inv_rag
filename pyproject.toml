@@ -25,8 +25,18 @@ dependencies = [
     "t-tech-investments>=0.3.3",
     "ta-lib>=0.7.0",
     "tensorboard>=2.20.0",
+    "torch>=2.4.1",
     "uuid6>=2025.0.1",
     "yfinance>=1.5.1",
+]
+
+[project.optional-dependencies]
+# Не-CUDA GPU-инференс (AMD/Intel/NVIDIA через DX12): 'vulkan' в конфиге — алиас этого пути.
+# Обучение по-прежнему только CUDA/CPU (TZ-06 п.11).
+gpu = [
+    "torch-directml>=0.2.4 ; sys_platform == 'win32' and python_full_version < '3.15'",
+    "onnx>=1.17",
+    "onnxruntime-directml>=1.20 ; sys_platform == 'win32' and python_full_version < '3.15'",
 ]
 
 [dependency-groups]
