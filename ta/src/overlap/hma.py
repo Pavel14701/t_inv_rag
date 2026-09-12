@@ -16,10 +16,10 @@ replaced with NaN before calculation.
 import numpy as np
 import polars as pl
 
+from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
 from ..overlap.ema import ema_ind
 from ..overlap.sma import sma_ind
 from ..overlap.wma import wma_ind
-from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
 
 
 # ----------------------------------------------------------------------

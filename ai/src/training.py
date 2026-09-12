@@ -21,12 +21,14 @@ from __future__ import annotations
 import itertools
 import logging
 import math
+
 from pathlib import Path
 
 import numpy as np
 import polars as pl
 import torch
 import torch.nn.functional as functional
+
 from torch.utils.data import DataLoader, Subset
 from torch.utils.tensorboard import SummaryWriter
 
@@ -40,6 +42,7 @@ from .io import (
 )
 from .losses import dual_loss
 from .metrics import compute_action_accuracy, compute_trade_metrics
+
 
 logger = logging.getLogger(__name__)
 

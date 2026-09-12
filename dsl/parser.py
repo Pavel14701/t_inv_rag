@@ -1,15 +1,28 @@
 """Recursive descent parser for DSL with all operators."""
-from .tokenizer import Tokenizer, Token
 from .ast import (
-    Number, IndicatorAccess, IndicatorWithParams,
-    Comparison, MultiComparison,
-    LogicalBinOp, LogicalNot,
-    Let, HistoricalAccess, Rising, Falling,
-    Add, Sub, Mul, Div, Mod, Pow, UnaryMinus,
+    Add,
+    ASTNode,
+    Comparison,
+    Div,
+    Falling,
+    HistoricalAccess,
+    IndicatorAccess,
+    IndicatorWithParams,
+    Let,
+    LogicalBinOp,
+    LogicalNot,
+    Mod,
+    Mul,
+    MultiComparison,
+    Number,
+    Pow,
+    Rising,
+    Sub,
+    UnaryMinus,
     Var,
-    ASTNode
 )
 from .exceptions import ParseError
+from .tokenizer import Token, Tokenizer
 
 
 class Parser:

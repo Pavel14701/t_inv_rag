@@ -126,7 +126,7 @@ def _empty_block_frame() -> pl.DataFrame:
 
 
 __all__ = [
-    'identify_order_blocks',
     'OrderBlock',
     'OrderBlockConfig',
+    'identify_order_blocks',
 ]

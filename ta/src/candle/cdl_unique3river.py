@@ -17,10 +17,11 @@ Functions:
 
 import numpy as np
 import polars as pl
+
 from numba import njit
 
-from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna
+from ..external import talib, talib_available
 
 
 @njit(
@@ -28,7 +29,7 @@ from .._array_ops import _apply_offset_fillna
     cache=True,
     fastmath=False,
 )
-def _cdl_unique3river_nb(  # noqa: C901
+def _cdl_unique3river_nb(
     open_: np.ndarray,
     high: np.ndarray,
     low: np.ndarray,

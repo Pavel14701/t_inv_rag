@@ -24,13 +24,13 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from ..external import _TALIB_MA_MAP, talib, talib_available
-from ..ma import ma_mode
 from .._array_ops import (
     _apply_offset_fillna,
     _rolling_max_numba,
     _rolling_min_numba,
 )
+from ..external import _TALIB_MA_MAP, talib, talib_available
+from ..ma import ma_mode
 
 
 def stoch_numpy(
@@ -83,6 +83,10 @@ def stoch_numpy(
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
+    # Empty input is a valid degenerate case: return empty outputs rather
+    # than raising inside the numba rolling kernels (TZ-14 stabilization).
+    if high.size == 0:
+        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
     # Numba rolling kernels require writable contiguous buffers.
     if not high.flags.writeable:
         high = high.copy()

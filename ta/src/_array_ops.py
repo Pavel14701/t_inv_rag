@@ -4,6 +4,7 @@ All floating‑point operations strictly follow IEEE 754 rules (no fastmath opti
 NaN and Inf propagate naturally, and no exceptions are raised for extreme values.
 """
 import numpy as np
+
 from numba import njit, types
 
 

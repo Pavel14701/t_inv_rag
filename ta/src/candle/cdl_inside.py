@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import polars as pl
+
 from numba import float64, njit
 
 from .._array_ops import _apply_offset_fillna

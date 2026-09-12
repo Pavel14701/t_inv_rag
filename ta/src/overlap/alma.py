@@ -3,6 +3,7 @@ from functools import lru_cache
 
 import numpy as np
 import polars as pl
+
 from numba import njit
 
 from .._array_ops import (

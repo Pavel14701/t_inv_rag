@@ -16,10 +16,11 @@ Functions:
 
 import numpy as np
 import polars as pl
+
 from numba import njit
 
-from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna
+from ..external import talib, talib_available
 
 
 @njit(
@@ -85,7 +86,7 @@ def _cdl_xsidegap3methods_nb(
     return out
 
 
-def cdl_xsidegap3methods(  # noqa: C901
+def cdl_xsidegap3methods(
     open_: np.ndarray | pl.Series,
     high: np.ndarray | pl.Series,
     low: np.ndarray | pl.Series,

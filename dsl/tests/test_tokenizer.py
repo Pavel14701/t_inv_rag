@@ -6,8 +6,9 @@ operator detection, number parsing, punctuation, and error handling.
 """
 
 import pytest
-from ..tokenizer import Tokenizer
+
 from ..exceptions import ParseError
+from ..tokenizer import Tokenizer
 
 
 @pytest.mark.unit
@@ -22,17 +23,17 @@ def test_basic_tokens() -> None:
     Expected: LET, IDENT, ASSIGN, NUMBER, IN, IDENT, PLUS, NUMBER
     """
     t = Tokenizer()
-    tokens = t.tokenize('let x = 5 in x + 2')
+    tokens = t.tokenize("let x = 5 in x + 2")
     types = [tok.type for tok in tokens]
     assert types == [
-        'LET',
-        'IDENT',
-        'ASSIGN',
-        'NUMBER',
-        'IN',
-        'IDENT',
-        'PLUS',
-        'NUMBER'
+        "LET",
+        "IDENT",
+        "ASSIGN",
+        "NUMBER",
+        "IN",
+        "IDENT",
+        "PLUS",
+        "NUMBER",
     ]
 
 
@@ -46,9 +47,9 @@ def test_keyword_priority() -> None:
     tokenized as their specific types, not as IDENT.
     """
     t = Tokenizer()
-    tokens = t.tokenize('let and or not rising falling')
+    tokens = t.tokenize("let and or not rising falling")
     types = [tok.type for tok in tokens]
-    assert types == ['LET', 'AND', 'OR', 'NOT', 'RISING', 'FALLING']
+    assert types == ["LET", "AND", "OR", "NOT", "RISING", "FALLING"]
 
 
 @pytest.mark.unit
@@ -60,10 +61,10 @@ def test_whole_word_keywords() -> None:
     a single IDENT.
     """
     t = Tokenizer()
-    tokens = t.tokenize('sublet')
+    tokens = t.tokenize("sublet")
     assert len(tokens) == 1
-    assert tokens[0].type == 'IDENT'
-    assert tokens[0].value == 'sublet'
+    assert tokens[0].type == "IDENT"
+    assert tokens[0].value == "sublet"
 
 
 @pytest.mark.unit
@@ -73,10 +74,10 @@ def test_identifier_with_underscore() -> None:
     and digits (not starting with digit).
     """
     t = Tokenizer()
-    tokens = t.tokenize('my_indicator_123')
+    tokens = t.tokenize("my_indicator_123")
     assert len(tokens) == 1
-    assert tokens[0].type == 'IDENT'
-    assert tokens[0].value == 'my_indicator_123'
+    assert tokens[0].type == "IDENT"
+    assert tokens[0].value == "my_indicator_123"
 
 
 @pytest.mark.unit
@@ -87,9 +88,9 @@ def test_comparison_operators() -> None:
     Operators: >=, <=, ==, !=, <, >
     """
     t = Tokenizer()
-    tokens = t.tokenize('a >= b <= c == d != e < f > g')
-    comp_ops = [tok.value for tok in tokens if tok.type == 'COMP_OP']
-    assert comp_ops == ['>=', '<=', '==', '!=', '<', '>']
+    tokens = t.tokenize("a >= b <= c == d != e < f > g")
+    comp_ops = [tok.value for tok in tokens if tok.type == "COMP_OP"]
+    assert comp_ops == [">=", "<=", "==", "!=", "<", ">"]
 
 
 @pytest.mark.unit
@@ -100,22 +101,22 @@ def test_arithmetic_operators() -> None:
     Numbers and operators should produce correct types. Whitespace is ignored.
     """
     t = Tokenizer()
-    tokens = t.tokenize('1 + 2 - 3 * 4 / 5 % 6 ^ 7')
-    types = [tok.type for tok in tokens if tok.type != 'WHITESPACE']
+    tokens = t.tokenize("1 + 2 - 3 * 4 / 5 % 6 ^ 7")
+    types = [tok.type for tok in tokens if tok.type != "WHITESPACE"]
     expected = [
-        'NUMBER',
-        'PLUS',
-        'NUMBER',
-        'MINUS',
-        'NUMBER',
-        'MUL',
-        'NUMBER',
-        'DIV',
-        'NUMBER',
-        'MOD',
-        'NUMBER',
-        'POW',
-        'NUMBER'
+        "NUMBER",
+        "PLUS",
+        "NUMBER",
+        "MINUS",
+        "NUMBER",
+        "MUL",
+        "NUMBER",
+        "DIV",
+        "NUMBER",
+        "MOD",
+        "NUMBER",
+        "POW",
+        "NUMBER",
     ]
     assert types == expected
 
@@ -125,16 +126,16 @@ def test_arithmetic_operators() -> None:
 def test_assignment_and_punctuation() -> None:
     """Test tokenization of assignment and punctuation: =, (, ), [, ], ,, ."""
     t = Tokenizer()
-    tokens = t.tokenize('( ) [ ] , . =')
+    tokens = t.tokenize("( ) [ ] , . =")
     types = [tok.type for tok in tokens]
     assert types == [
-        'LPAREN',
-        'RPAREN',
-        'LBRACKET',
-        'RBRACKET',
-        'COMMA',
-        'DOT',
-        'ASSIGN'
+        "LPAREN",
+        "RPAREN",
+        "LBRACKET",
+        "RBRACKET",
+        "COMMA",
+        "DOT",
+        "ASSIGN",
     ]
 
 
@@ -144,12 +145,12 @@ def test_integer_numbers() -> None:
     """Test integer numbers are tokenized as NUMBER with correct value."""
     t = Tokenizer()
     # Note: '-' is separate token, but the number is positive
-    tokens = t.tokenize('42 0 -5')
+    tokens = t.tokenize("42 0 -5")
     # Here we test only positive numbers; unary minus handled in parser
-    assert tokens[0].value == '42'
-    assert tokens[0].type == 'NUMBER'
-    assert tokens[1].value == '0'
-    assert tokens[1].type == 'NUMBER'
+    assert tokens[0].value == "42"
+    assert tokens[0].type == "NUMBER"
+    assert tokens[1].value == "0"
+    assert tokens[1].type == "NUMBER"
 
 
 @pytest.mark.unit
@@ -157,11 +158,11 @@ def test_integer_numbers() -> None:
 def test_float_numbers() -> None:
     """Test floating point numbers are tokenized correctly."""
     t = Tokenizer()
-    tokens = t.tokenize('3.14 0.5')
-    assert tokens[0].value == '3.14'
-    assert tokens[0].type == 'NUMBER'
-    assert tokens[1].value == '0.5'
-    assert tokens[1].type == 'NUMBER'
+    tokens = t.tokenize("3.14 0.5")
+    assert tokens[0].value == "3.14"
+    assert tokens[0].type == "NUMBER"
+    assert tokens[1].value == "0.5"
+    assert tokens[1].type == "NUMBER"
 
 
 @pytest.mark.unit
@@ -172,7 +173,7 @@ def test_line_column_tracking() -> None:
     Columns are zero-based; lines start at 1.
     """
     t = Tokenizer()
-    code = 'let\nx = 1'
+    code = "let\nx = 1"
     tokens = t.tokenize(code)
     assert tokens[0].line == 1
     assert tokens[0].column == 0
@@ -185,7 +186,7 @@ def test_line_column_tracking() -> None:
 def test_line_column_with_spaces() -> None:
     """Test column tracking with spaces and multiple tokens on same line."""
     t = Tokenizer()
-    code = 'let x = 1'
+    code = "let x = 1"
     tokens = t.tokenize(code)
     assert tokens[0].line == 1 and tokens[0].column == 0
     assert tokens[1].line == 1 and tokens[1].column == 0
@@ -200,7 +201,7 @@ def test_unknown_character_error() -> None:
     """Test that tokenizer raises ParseError on an unexpected character."""
     t = Tokenizer()
     with pytest.raises(ParseError, match="Unexpected character '@' at line 1"):
-        t.tokenize('a @ b')
+        t.tokenize("a @ b")
 
 
 @pytest.mark.unit
@@ -208,7 +209,7 @@ def test_unknown_character_error() -> None:
 def test_empty_input() -> None:
     """Test tokenization of an empty string returns empty list."""
     t = Tokenizer()
-    tokens = t.tokenize('')
+    tokens = t.tokenize("")
     assert tokens == []
 
 
@@ -217,7 +218,7 @@ def test_empty_input() -> None:
 def test_only_whitespace() -> None:
     """Test tokenization of whitespace-only string returns empty list."""
     t = Tokenizer()
-    tokens = t.tokenize('   \t\n  ')
+    tokens = t.tokenize("   \t\n  ")
     assert tokens == []
 
 
@@ -226,10 +227,10 @@ def test_only_whitespace() -> None:
 def test_long_identifier() -> None:
     """Test tokenization of a very long identifier (should still work)."""
     t = Tokenizer()
-    long_id = 'a' * 1000
+    long_id = "a" * 1000
     tokens = t.tokenize(long_id)
     assert len(tokens) == 1
-    assert tokens[0].type == 'IDENT'
+    assert tokens[0].type == "IDENT"
     assert tokens[0].value == long_id
 
 
@@ -240,24 +241,24 @@ def test_complex_expression_with_nested_parens() -> None:
     nested parentheses and brackets.
     """
     t = Tokenizer()
-    code = 'let x = (a + b)[1] in x > 0'
+    code = "let x = (a + b)[1] in x > 0"
     tokens = t.tokenize(code)
     types = [tok.type for tok in tokens]
     expected = [
-        'LET',
-        'IDENT',
-        'ASSIGN',
-        'LPAREN',
-        'IDENT',
-        'PLUS',
-        'IDENT',
-        'RPAREN',
-        'LBRACKET',
-        'NUMBER',
-        'RBRACKET',
-        'IN',
-        'IDENT',
-        'COMP_OP',
-        'NUMBER'
+        "LET",
+        "IDENT",
+        "ASSIGN",
+        "LPAREN",
+        "IDENT",
+        "PLUS",
+        "IDENT",
+        "RPAREN",
+        "LBRACKET",
+        "NUMBER",
+        "RBRACKET",
+        "IN",
+        "IDENT",
+        "COMP_OP",
+        "NUMBER",
     ]
     assert types == expected

@@ -9,19 +9,20 @@ This module provides:
 
 All floating-point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
-"""  # noqa: E501
+"""
 from typing import Literal, Optional
 
 import numpy as np
 import polars as pl
+
 from numba import jit
 
-from ..external import talib, talib_available
 from .._array_ops import (
     _apply_offset_fillna,
     _handle_nan_policy,
     replace_inf_with_nan,
 )
+from ..external import talib, talib_available
 
 
 # ----------------------------------------------------------------------

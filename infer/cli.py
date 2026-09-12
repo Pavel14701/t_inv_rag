@@ -1,12 +1,13 @@
-r"""CLI скрипта инференса (TZ-05 п.3.1).
+r"""Inference CLI (TZ-05 п.3.1).
 
-Пример:
+Example:
     python -m infer.cli --source synthetic --entry "close > ema(length=20)"
     python -m infer.cli --source parquet --parquet data.parquet \
         --strategy-file strategy.json --output out.csv
 
-Формат strategy-file (заготовка формата Strategy TZ-02):
+strategy-file format (a draft of the TZ-02 Strategy format):
     {"dsl_entry": "...", "dsl_exit": "..."}
+
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from .engine import run_inference
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """CLI-парсер."""
+    """CLI parser."""
     p = argparse.ArgumentParser(
         prog='infer',
         description='DSL strategy inference over OHLCV data (TZ-05).',
@@ -51,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Точка входа CLI. Возвращает код возврата процесса."""
+    """CLI entry point. Returns the process exit code."""
     args = build_parser().parse_args(argv)
 
     dsl_entry, dsl_exit = _resolve_strategy(args)
@@ -100,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _resolve_strategy(args) -> tuple[str | None, str | None]:
-    """Взять DSL из --strategy-file или из --entry/--exit."""
+    """Take DSL from --strategy-file or from --entry/--exit."""
     if args.strategy_file:
         with open(args.strategy_file, encoding='utf-8') as fh:
             data = json.load(fh)

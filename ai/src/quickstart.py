@@ -230,7 +230,7 @@ def quick_train(
         train_loader = train_loader_all
     else:
         # Random split from training data
-        train_loader, val_loader = _split_train_val(  # type: ignore[assignment]  # noqa: E501
+        train_loader, val_loader = _split_train_val(  # type: ignore[assignment]
             train_loader_all, val_split, batch_size
         )
     # ---------- Class weights (optional) ----------

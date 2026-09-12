@@ -22,6 +22,7 @@ from datetime import timedelta
 
 import numpy as np
 import polars as pl
+
 from numba import njit
 
 from .._array_ops import (
@@ -32,7 +33,7 @@ from .._array_ops import (
 
 
 @njit(cache=True)
-def _midprice_multi_numba(  # noqa: C901
+def _midprice_multi_numba(
     high: np.ndarray,
     low: np.ndarray,
     len1: int,
@@ -248,7 +249,7 @@ def ichimoku_core_numba(
     return tenkan_sen, kijun_sen, span_a, span_b, chikou_span
 
 
-def ichimoku_ind(  # noqa: C901
+def ichimoku_ind(
     df: pl.DataFrame,
     high_col: str = 'high',
     low_col: str = 'low',

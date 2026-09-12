@@ -17,12 +17,12 @@ IEEE 754 notes
 import numpy as np
 import polars as pl
 
-from ..overlap.ema import ema_ind
 from .._array_ops import (
     _apply_offset_fillna,
     _rolling_max_numba,
     _rolling_min_numba,
 )
+from ..overlap.ema import ema_ind
 
 
 def pgo_numpy(

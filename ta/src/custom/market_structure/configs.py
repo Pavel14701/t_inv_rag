@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from .config import OrderBlockConfig
 
+
 #: Canonical timeframe -> preset mapping keys (aliases are resolved by
 #: :func:`get_order_block_config`).
 TIMEFRAME_CONFIGS: dict[str, OrderBlockConfig] = {

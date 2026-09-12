@@ -11,6 +11,7 @@ provides the single inference entry point ``predict_p_win``.
 from __future__ import annotations
 
 import dataclasses
+
 from pathlib import Path
 
 import torch
@@ -218,10 +219,10 @@ class EntryExitPredictor:
 
 
 __all__ = [
-    'ModelBundle',
     'EntryExitPredictor',
+    'ModelBundle',
     'build_bundle',
-    'save_bundle',
     'load_bundle',
     'rebuild_model',
+    'save_bundle',
 ]

@@ -13,6 +13,7 @@ The core algorithm is implemented in Numba for high performance.
 
 import numpy as np
 import polars as pl
+
 from numba import njit
 
 from .._array_ops import _apply_offset_fillna
@@ -23,7 +24,7 @@ from .._array_ops import _apply_offset_fillna
     cache=True,
     fastmath=False,
 )  # type: ignore[call-overload]
-def _pf_trend_nb(  # noqa: C901
+def _pf_trend_nb(
     prices: np.ndarray,
     box_size: float,
     reversal: int

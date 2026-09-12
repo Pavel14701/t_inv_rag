@@ -4,8 +4,8 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from ..ma import ma_mode
 from .._array_ops import _apply_offset_fillna
+from ..ma import ma_mode
 
 
 def apo_numpy(

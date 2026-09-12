@@ -124,7 +124,7 @@ def validate_block_candidates(
     return confirmed
 
 
-def _find_retest(  # noqa: PLR0913
+def _find_retest(
     cand: dict,
     idx: int,
     break_idx: int,

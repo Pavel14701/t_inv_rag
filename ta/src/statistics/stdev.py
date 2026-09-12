@@ -19,10 +19,11 @@ from typing import Literal
 
 import numpy as np
 import polars as pl
+
 from numba import njit
 
-from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna
+from ..external import talib, talib_available
 
 
 @njit('float64[:](float64[:], int64, int64)', fastmath=False, cache=True)

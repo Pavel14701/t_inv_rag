@@ -13,6 +13,7 @@ from typing import Optional
 
 import numpy as np
 import polars as pl
+
 from numba import jit
 
 from .._array_ops import (

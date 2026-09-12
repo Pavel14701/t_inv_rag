@@ -1,10 +1,11 @@
 # TODO: Review
-from numba import njit, types
 import numpy as np
 import polars as pl
 
-from ..external import talib, talib_available
+from numba import njit, types
+
 from .._array_ops import _apply_offset_fillna
+from ..external import talib, talib_available
 
 
 @njit(

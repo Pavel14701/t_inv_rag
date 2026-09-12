@@ -2,8 +2,8 @@
 import numpy as np
 import polars as pl
 
-from ..overlap.linreg import linreg_ind
 from .._array_ops import _apply_offset_fillna
+from ..overlap.linreg import linreg_ind
 
 
 def cfo_numpy(

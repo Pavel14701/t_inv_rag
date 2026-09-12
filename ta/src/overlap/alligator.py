@@ -10,21 +10,22 @@ The shift (offset) is applied globally to all lines.
 """
 import numpy as np
 import polars as pl
+
 from numba import jit, prange
 
-from .smma import _smma_numba_core
 from .._array_ops import (
     _apply_offset_fillna,
     _handle_nan_policy,
     replace_inf_with_nan,
 )
+from .smma import _smma_numba_core
 
 
 # ----------------------------------------------------------------------
 # Parallel Alligator core (three lines computed simultaneously)
 # ----------------------------------------------------------------------
 @jit(nopython=True, parallel=True, fastmath=False, cache=True)
-def _alligator_numba_parallel(  # noqa: C901
+def _alligator_numba_parallel(
     close: np.ndarray,
     jaw_len: int,
     teeth_len: int,
@@ -104,7 +105,7 @@ def _alligator_numba_parallel(  # noqa: C901
 # ----------------------------------------------------------------------
 # Main Alligator function with mode selection
 # ----------------------------------------------------------------------
-def alligator_ind(  # noqa: C901
+def alligator_ind(
     close: np.ndarray | pl.Series,
     jaw: int = 13,
     teeth: int = 8,

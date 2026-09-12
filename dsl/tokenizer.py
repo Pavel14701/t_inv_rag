@@ -1,6 +1,7 @@
 """Lexer for DSL. Recognizes all operators and keywords."""
 
 import re
+
 from typing import NamedTuple
 
 from .exceptions import ParseError

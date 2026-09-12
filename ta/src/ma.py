@@ -24,6 +24,7 @@ from .overlap import (
     wma_ind,
 )
 
+
 _MA_MAP: dict[str, Callable[..., np.ndarray]] = {
     'sma': sma_ind,
     'ema': ema_ind,

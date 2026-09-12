@@ -5,8 +5,10 @@ It is safe to import from anywhere in the package without causing cycles.
 """
 
 import warnings
+
 from types import ModuleType
 from typing import Any
+
 
 _cache: dict[str, tuple[ModuleType | None, bool]] = {}
 
@@ -53,9 +55,9 @@ _TALIB_MA_MAP = {
 }
 
 __all__ = [
+    '_TALIB_MA_MAP',
     'talib',
     'talib_available',
     'yfinance',
     'yfinance_available',
-    '_TALIB_MA_MAP',
 ]

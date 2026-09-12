@@ -21,10 +21,11 @@ IEEE 754 notes
 """
 import numpy as np
 import polars as pl
+
 from numba import float64, int64, njit
 
-from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna
+from ..external import talib, talib_available
 
 
 @njit(

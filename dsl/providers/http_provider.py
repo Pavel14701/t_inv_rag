@@ -5,10 +5,11 @@ for communicating with remote indicator services.
 """
 
 from typing import Any
+
 import niquests
 
-from .base import IndicatorProvider, AsyncIndicatorProvider
 from ..exceptions import ProviderError
+from .base import AsyncIndicatorProvider, IndicatorProvider
 
 
 class HTTPProvider(IndicatorProvider):

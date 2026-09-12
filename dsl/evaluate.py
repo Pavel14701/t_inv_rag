@@ -1,8 +1,8 @@
 """Main entry point for evaluating DSL expressions."""
 
-from .parser import parse
-from .interpreter import Interpreter
 from .context import Context
+from .interpreter import Interpreter
+from .parser import parse
 
 
 def evaluate_dsl(code: str, context: Context) -> bool:

@@ -15,10 +15,10 @@ Split out of the former single-module ``market_structure.py``:
 - :mod:`configs`     - per-timeframe presets
 """
 from .blocks import identify_order_blocks
+from .candidates import generate_block_candidates
 from .clustering import cluster_order_blocks
 from .config import OrderBlockConfig
 from .configs import TIMEFRAME_CONFIGS, get_order_block_config
-from .candidates import generate_block_candidates
 from .indicators import compute_lookback, precompute_indicators
 from .online_zigzag import (
     OnlineZigZag,
@@ -33,21 +33,22 @@ from .structure import (
 from .types import OrderBlock
 from .validation import validate_block_candidates
 
+
 __all__ = [
-    'identify_order_blocks',
+    'TIMEFRAME_CONFIGS',
+    'OnlineZigZag',
     'OrderBlock',
     'OrderBlockConfig',
-    'OnlineZigZag',
     'Pivot',
-    'zigzag_reversal_numpy',
-    'confirmed_pivot_arrays',
     'classify_market_structure',
-    'is_block_aligned_with_trend',
     'cluster_order_blocks',
-    'generate_block_candidates',
-    'validate_block_candidates',
-    'precompute_indicators',
     'compute_lookback',
-    'TIMEFRAME_CONFIGS',
+    'confirmed_pivot_arrays',
+    'generate_block_candidates',
     'get_order_block_config',
+    'identify_order_blocks',
+    'is_block_aligned_with_trend',
+    'precompute_indicators',
+    'validate_block_candidates',
+    'zigzag_reversal_numpy',
 ]

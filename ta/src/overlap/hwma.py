@@ -9,9 +9,10 @@ This module provides:
 
 All floating-point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
-"""  # noqa: E501
+"""
 import numpy as np
 import polars as pl
+
 from numba import jit
 
 from .._array_ops import (

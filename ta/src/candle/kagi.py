@@ -15,6 +15,7 @@ The core algorithm is implemented in Numba for high performance.
 
 import numpy as np
 import polars as pl
+
 from numba import njit
 
 from .._array_ops import _apply_offset_fillna
@@ -25,7 +26,7 @@ from .._array_ops import _apply_offset_fillna
     cache=True,
     fastmath=False,
 )  # type: ignore[call-overload]
-def _kagi_nb(prices: np.ndarray, reversal: float) -> np.ndarray:  # noqa: C901
+def _kagi_nb(prices: np.ndarray, reversal: float) -> np.ndarray:
     """Numba-accelerated Kagi line (yin/yang) aligned to bars.
 
     The algorithm tracks the current direction (up/down) and the last extreme

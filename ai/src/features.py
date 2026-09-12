@@ -313,10 +313,10 @@ def _check_rr(
 
     """
     if (
-        direction == 'long'
-        and (sl_price >= entry_price or tp_price <= entry_price)
-        or direction != 'long'
-        and (sl_price <= entry_price or tp_price >= entry_price)
+        (direction == 'long'
+        and (sl_price >= entry_price or tp_price <= entry_price))
+        or (direction != 'long'
+        and (sl_price <= entry_price or tp_price >= entry_price))
     ):
         return False
     if direction == 'long':

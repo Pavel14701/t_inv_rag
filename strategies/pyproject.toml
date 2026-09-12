@@ -1,0 +1,20 @@
+[project]
+name = "dte-strategies"
+version = "0.1.0"
+description = "Strategy layer: PriceDataFramePolars, strategy format and registry (TZ-02)"
+requires-python = ">=3.12"
+dependencies = [
+    # pandas / pandas-ta удалены из проекта (TZ-14): легаси-адаптеры
+    # infrastructure/indicators, дублировавшие ta/, ликвидированы.
+    # Индикаторы — только каузальные ядра dte-ta; формат Strategy — TZ-02.
+    "polars>=1.42.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-mock>=3.15.1",
+]
+
+[tool.uv]
+package = false

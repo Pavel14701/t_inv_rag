@@ -6,10 +6,11 @@ Provides Numba-accelerated and TA-Lib implementations.
 
 import numpy as np
 import polars as pl
+
 from numba import njit
 
-from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
+from ..external import talib, talib_available
 
 
 @njit('float64[:](float64[:], int64)', cache=True)
@@ -50,7 +51,7 @@ def _sma_numba_opt(arr: np.ndarray, length: int) -> np.ndarray:
     return out
 
 
-def _sma_numba(  # noqa: C901
+def _sma_numba(
     close: np.ndarray,
     length: int = 10,
     offset: int = 0,

@@ -6,30 +6,30 @@ without going through the full parser. It tests each node type in isolation.
 
 import pytest
 
-from ..interpreter import Interpreter
 from ..ast import (
-    Number,
-    Var,
     Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    Pow,
-    UnaryMinus,
+    ASTNode,
     Comparison,
-    MultiComparison,
-    LogicalBinOp,
-    LogicalNot,
-    Let,
-    HistoricalAccess,
-    Rising,
+    Div,
     Falling,
+    HistoricalAccess,
     IndicatorAccess,
     IndicatorWithParams,
-    ASTNode,
+    Let,
+    LogicalBinOp,
+    LogicalNot,
+    Mod,
+    Mul,
+    MultiComparison,
+    Number,
+    Pow,
+    Rising,
+    Sub,
+    UnaryMinus,
+    Var,
 )
 from ..exceptions import EvaluationError, ProviderError
+from ..interpreter import Interpreter
 
 
 @pytest.mark.unit
@@ -47,12 +47,12 @@ def test_number_node(context_empty) -> None:
 def test_var_node(context_empty) -> None:
     """Test evaluation of Var node (requires let binding)."""
     interp = Interpreter(context_empty)
-    node = Let(var='x', value=Number(value=5), body=Var(name='x'))
+    node = Let(var="x", value=Number(value=5), body=Var(name="x"))
     # The interpreter sets _locals during Let evaluation
     assert interp.visit(node) is True  # 5 != 0
     # Undefined variable should raise
-    with pytest.raises(EvaluationError, match='Undefined variable'):
-        interp.visit(Var(name='undefined'))
+    with pytest.raises(EvaluationError, match="Undefined variable"):
+        interp.visit(Var(name="undefined"))
 
 
 @pytest.mark.unit
@@ -95,7 +95,7 @@ def test_div_node(context_empty) -> None:
     interp = Interpreter(context_empty)
     node = Div(left=Number(value=10), right=Number(value=2))
     assert interp.visit(node) is True  # 5 != 0
-    with pytest.raises(EvaluationError, match='Division by zero'):
+    with pytest.raises(EvaluationError, match="Division by zero"):
         interp.visit(Div(left=Number(value=1), right=Number(value=0)))
 
 
@@ -106,7 +106,7 @@ def test_mod_node(context_empty) -> None:
     interp = Interpreter(context_empty)
     node = Mod(left=Number(value=10), right=Number(value=3))
     assert interp.visit(node) is True  # 1 != 0
-    with pytest.raises(EvaluationError, match='Modulo by zero'):
+    with pytest.raises(EvaluationError, match="Modulo by zero"):
         interp.visit(Mod(left=Number(value=1), right=Number(value=0)))
 
 
@@ -138,96 +138,106 @@ def test_comparison_node(context_empty) -> None:
     """Test binary comparison."""
     interp = Interpreter(context_empty)
     # Test each operator
-    assert interp.visit(
-        Comparison(
-            operator='<',
-            left=Number(value=5),
-            right=Number(value=10)
-        )
-    ) is True
-    assert interp.visit(
-        Comparison(
-            operator='<',
-            left=Number(value=10),
-            right=Number(value=5)
-        )
-    ) is False
-    assert interp.visit(
-        Comparison(
-            operator='>',
-            left=Number(value=10),
-            right=Number(value=5)
-        )
-    ) is True
-    assert interp.visit(
-        Comparison(
-            operator='>',
-            left=Number(value=5),
-            right=Number(value=10)
-        )
-    ) is False
-    assert interp.visit(
-        Comparison(
-            operator='<=',
-            left=Number(value=5),
-            right=Number(value=5)
-        )
-    ) is True
-    assert interp.visit(
-        Comparison(
-            operator='<=',
-            left=Number(value=6),
-            right=Number(value=5)
-        )
-    ) is False
-    assert interp.visit(
-        Comparison(
-            operator='>=',
-            left=Number(value=5),
-            right=Number(value=5)
-        )
-    ) is True
-    assert interp.visit(
-        Comparison(
-            operator='>=',
-            left=Number(value=4),
-            right=Number(value=5)
-        )
-    ) is False
-    assert interp.visit(
-        Comparison(
-            operator='==',
-            left=Number(value=5),
-            right=Number(value=5)
-        )
-    ) is True
-    assert interp.visit(
-        Comparison(
-            operator='==',
-            left=Number(value=5),
-            right=Number(value=6)
-        )
-    ) is False
-    assert interp.visit(
-        Comparison(
-            operator='!=',
-            left=Number(value=5),
-            right=Number(value=6)
-        )
-    ) is True
-    assert interp.visit(
-        Comparison(
-            operator='!=',
-            left=Number(value=5),
-            right=Number(value=5)
-        )
-    ) is False
-    with pytest.raises(EvaluationError, match='Unknown comparison operator'):
+    assert (
         interp.visit(
             Comparison(
-                operator='???',
-                left=Number(value=1),
-                right=Number(value=2)
+                operator="<", left=Number(value=5), right=Number(value=10)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator="<", left=Number(value=10), right=Number(value=5)
+            )
+        )
+        is False
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator=">", left=Number(value=10), right=Number(value=5)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator=">", left=Number(value=5), right=Number(value=10)
+            )
+        )
+        is False
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator="<=", left=Number(value=5), right=Number(value=5)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator="<=", left=Number(value=6), right=Number(value=5)
+            )
+        )
+        is False
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator=">=", left=Number(value=5), right=Number(value=5)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator=">=", left=Number(value=4), right=Number(value=5)
+            )
+        )
+        is False
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator="==", left=Number(value=5), right=Number(value=5)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator="==", left=Number(value=5), right=Number(value=6)
+            )
+        )
+        is False
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator="!=", left=Number(value=5), right=Number(value=6)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            Comparison(
+                operator="!=", left=Number(value=5), right=Number(value=5)
+            )
+        )
+        is False
+    )
+    with pytest.raises(EvaluationError, match="Unknown comparison operator"):
+        interp.visit(
+            Comparison(
+                operator="???", left=Number(value=1), right=Number(value=2)
             )
         )
 
@@ -239,13 +249,15 @@ def test_multi_comparison_node(context_empty) -> None:
     interp = Interpreter(context_empty)
     # 5 < 10 <= 10
     node = MultiComparison(
-        operators=['<', '<='],
-        operands=[Number(value=5), Number(value=10), Number(value=10)])
+        operators=["<", "<="],
+        operands=[Number(value=5), Number(value=10), Number(value=10)],
+    )
     assert interp.visit(node) is True
     # 5 < 10 > 10
     node = MultiComparison(
-        operators=['<', '>'],
-        operands=[Number(value=5), Number(value=10), Number(value=10)])
+        operators=["<", ">"],
+        operands=[Number(value=5), Number(value=10), Number(value=10)],
+    )
     assert interp.visit(node) is False
 
 
@@ -255,70 +267,76 @@ def test_logical_binop_node(context_empty) -> None:
     """Test AND and OR."""
     interp = Interpreter(context_empty)
     # AND
-    assert interp.visit(
-        LogicalBinOp(
-            operator='and',
-            left=Number(value=1),
-            right=Number(value=1)
-        )
-    ) is True
-    assert interp.visit(
-        LogicalBinOp(
-            operator='and',
-            left=Number(value=1),
-            right=Number(value=0)
-        )
-    ) is False
-    assert interp.visit(
-        LogicalBinOp(
-            operator='and',
-            left=Number(value=0),
-            right=Number(value=1)
-        )
-    ) is False
-    assert interp.visit(
-        LogicalBinOp(
-            operator='and',
-            left=Number(value=0),
-            right=Number(value=0)
-        )
-    ) is False
-    # OR
-    assert interp.visit(
-        LogicalBinOp(
-            operator='or',
-            left=Number(value=1),
-            right=Number(value=1)
-        )
-    ) is True
-    assert interp.visit(
-        LogicalBinOp(
-            operator='or',
-            left=Number(value=1),
-            right=Number(value=0)
-        )
-    ) is True
-    assert interp.visit(
-        LogicalBinOp(
-            operator='or',
-            left=Number(value=0),
-            right=Number(value=1)
-        )
-    ) is True
-    assert interp.visit(
-        LogicalBinOp(
-            operator='or',
-            left=Number(value=0),
-            right=Number(value=0)
-        )
-    ) is False
-    # Unknown operator
-    with pytest.raises(EvaluationError, match='Unknown logical operator'):
+    assert (
         interp.visit(
             LogicalBinOp(
-                operator='xor',
-                left=Number(value=1),
-                right=Number(value=0)
+                operator="and", left=Number(value=1), right=Number(value=1)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            LogicalBinOp(
+                operator="and", left=Number(value=1), right=Number(value=0)
+            )
+        )
+        is False
+    )
+    assert (
+        interp.visit(
+            LogicalBinOp(
+                operator="and", left=Number(value=0), right=Number(value=1)
+            )
+        )
+        is False
+    )
+    assert (
+        interp.visit(
+            LogicalBinOp(
+                operator="and", left=Number(value=0), right=Number(value=0)
+            )
+        )
+        is False
+    )
+    # OR
+    assert (
+        interp.visit(
+            LogicalBinOp(
+                operator="or", left=Number(value=1), right=Number(value=1)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            LogicalBinOp(
+                operator="or", left=Number(value=1), right=Number(value=0)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            LogicalBinOp(
+                operator="or", left=Number(value=0), right=Number(value=1)
+            )
+        )
+        is True
+    )
+    assert (
+        interp.visit(
+            LogicalBinOp(
+                operator="or", left=Number(value=0), right=Number(value=0)
+            )
+        )
+        is False
+    )
+    # Unknown operator
+    with pytest.raises(EvaluationError, match="Unknown logical operator"):
+        interp.visit(
+            LogicalBinOp(
+                operator="xor", left=Number(value=1), right=Number(value=0)
             )
         )
 
@@ -339,22 +357,16 @@ def test_let_node(context_empty) -> None:
     interp = Interpreter(context_empty)
     # Numeric binding
     node = Let(
-        var='x',
+        var="x",
         value=Number(value=5),
         body=Comparison(
-            operator='>',
-            left=Var(name='x'),
-            right=Number(value=3)
-        )
+            operator=">", left=Var(name="x"), right=Number(value=3)
+        ),
     )
     assert interp.visit(node) is True
     # Boolean binding
     node = Let(
-        var='y',
-        value=Number(value=0),
-        body=LogicalNot(
-            operand=Var(name='y')
-        )
+        var="y", value=Number(value=0), body=LogicalNot(operand=Var(name="y"))
     )
     assert interp.visit(node) is True
 
@@ -364,13 +376,12 @@ def test_let_node(context_empty) -> None:
 def test_historical_access_node(context_with_history) -> None:
     """Test historical access evaluation."""
     interp = Interpreter(context_with_history)
-    node = HistoricalAccess(expr=IndicatorAccess(indicator='close'), offset=1)
+    node = HistoricalAccess(expr=IndicatorAccess(indicator="close"), offset=1)
     assert interp.visit(node) is True
     with pytest.raises(ProviderError):
-        interp.visit(HistoricalAccess(
-            expr=IndicatorAccess(indicator='close'),
-            offset=2
-        ))
+        interp.visit(
+            HistoricalAccess(expr=IndicatorAccess(indicator="close"), offset=2)
+        )
 
 
 @pytest.mark.unit
@@ -379,13 +390,13 @@ def test_rising_node(context_with_sample_data) -> None:
     """Test rising function."""
     interp = Interpreter(context_with_sample_data)
     # close history [10, 20, 30, 40]
-    node = Rising(expr=IndicatorAccess(indicator='close'), n=2)
+    node = Rising(expr=IndicatorAccess(indicator="close"), n=2)
     assert interp.visit(node) is True
-    node = Rising(expr=IndicatorAccess(indicator='close'), n=5)
+    node = Rising(expr=IndicatorAccess(indicator="close"), n=5)
     # insufficient history, should be False
     assert interp.visit(node) is False
     # invalid expression
-    with pytest.raises(EvaluationError, match='rising.*indicator expression'):
+    with pytest.raises(EvaluationError, match="rising.*indicator expression"):
         interp.visit(Rising(expr=Number(value=5), n=2))
 
 
@@ -395,11 +406,11 @@ def test_falling_node(context_with_sample_data) -> None:
     """Test falling function."""
     # Modify history to decreasing sequence
     provider = context_with_sample_data.providers[0]
-    provider.history[('close', (), ())] = [40, 30, 20, 10]
+    provider.history["close", (), ()] = [40, 30, 20, 10]
     interp = Interpreter(context_with_sample_data)
-    node = Falling(expr=IndicatorAccess(indicator='close'), n=2)
+    node = Falling(expr=IndicatorAccess(indicator="close"), n=2)
     assert interp.visit(node) is True
-    node = Falling(expr=IndicatorAccess(indicator='close'), n=5)
+    node = Falling(expr=IndicatorAccess(indicator="close"), n=5)
     assert interp.visit(node) is False
 
 
@@ -408,21 +419,15 @@ def test_falling_node(context_with_sample_data) -> None:
 def test_indicator_with_params_node(context_with_sample_data) -> None:
     """Test indicator access with parameters."""
     interp = Interpreter(context_with_sample_data)
-    params: dict[str, ASTNode] = {'period': Number(value=14)}
+    params: dict[str, ASTNode] = {"period": Number(value=14)}
     node = IndicatorWithParams(
-        indicator='rsi',
-        params=params,
-        attributes=['value']
+        indicator="rsi", params=params, attributes=["value"]
     )
     assert interp.visit(node) is True  # 80 != 0
     # Unknown indicator should raise
-    with pytest.raises(ValueError, match='Unknown indicator: unknown'):
+    with pytest.raises(ValueError, match="Unknown indicator: unknown"):
         interp.visit(
-            IndicatorWithParams(
-                indicator='unknown',
-                params={},
-                attributes=[]
-            )
+            IndicatorWithParams(indicator="unknown", params={}, attributes=[])
         )
 
 
@@ -433,12 +438,9 @@ def test_division_by_zero_in_subexpression(context_empty) -> None:
     interp = Interpreter(context_empty)
     node = Add(
         left=Number(value=5),
-        right=Div(
-            left=Number(value=1),
-            right=Number(value=0)
-        )
+        right=Div(left=Number(value=1), right=Number(value=0)),
     )
-    with pytest.raises(EvaluationError, match='Division by zero'):
+    with pytest.raises(EvaluationError, match="Division by zero"):
         interp.visit(node)
 
 
@@ -446,10 +448,12 @@ def test_division_by_zero_in_subexpression(context_empty) -> None:
 @pytest.mark.interpreter
 def test_unknown_node_type(context_empty) -> None:
     """Test that visiting an unknown node type raises EvaluationError."""
+
     class UnknownNode:
         pass
+
     interp = Interpreter(context_empty)
-    with pytest.raises(EvaluationError, match='Unknown AST node'):
+    with pytest.raises(EvaluationError, match="Unknown AST node"):
         interp.visit(UnknownNode())  # type: ignore
 
 
@@ -473,17 +477,11 @@ async def test_async_arithmetic(async_context_with_sample_data) -> None:
     interp = Interpreter(async_context_with_sample_data)
     node_add = Add(left=Number(value=5), right=Number(value=3))
     assert await interp.visit_async(node_add) is True
-    node_div = Div(
-        left=Number(value=10),
-        right=Number(value=2)
-    )
+    node_div = Div(left=Number(value=10), right=Number(value=2))
     assert await interp.visit_async(node_div) is True
-    with pytest.raises(EvaluationError, match='Division by zero'):
+    with pytest.raises(EvaluationError, match="Division by zero"):
         await interp.visit_async(
-            Div(
-                left=Number(value=1),
-                right=Number(value=0)
-            )
+            Div(left=Number(value=1), right=Number(value=0))
         )
 
 
@@ -494,12 +492,12 @@ async def test_async_arithmetic(async_context_with_sample_data) -> None:
 async def test_async_indicator_access(async_context_with_sample_data) -> None:
     """Test asynchronous indicator access."""
     interp = Interpreter(async_context_with_sample_data)
-    node_ind_acc = IndicatorAccess(indicator='close')
+    node_ind_acc = IndicatorAccess(indicator="close")
     assert await interp.visit_async(node_ind_acc) is True  # 100.0 != 0
     node_comp = Comparison(
-        operator='>',
-        left=IndicatorAccess(indicator='close'),
-        right=Number(value=50)
+        operator=">",
+        left=IndicatorAccess(indicator="close"),
+        right=Number(value=50),
     )
     assert await interp.visit_async(node_comp) is True
 
@@ -511,7 +509,7 @@ async def test_async_indicator_access(async_context_with_sample_data) -> None:
 async def test_async_historical_access(async_context_with_sample_data) -> None:
     """Test asynchronous historical access."""
     interp = Interpreter(async_context_with_sample_data)
-    node = HistoricalAccess(expr=IndicatorAccess(indicator='close'), offset=1)
+    node = HistoricalAccess(expr=IndicatorAccess(indicator="close"), offset=1)
     assert await interp.visit_async(node) is True
 
 
@@ -522,7 +520,7 @@ async def test_async_historical_access(async_context_with_sample_data) -> None:
 async def test_async_rising(async_context_with_sample_data) -> None:
     """Test asynchronous rising function."""
     interp = Interpreter(async_context_with_sample_data)
-    node = Rising(expr=IndicatorAccess(indicator='close'), n=2)
+    node = Rising(expr=IndicatorAccess(indicator="close"), n=2)
     assert await interp.visit_async(node) is True
 
 
@@ -534,7 +532,7 @@ async def test_async_falling(async_context_with_sample_data) -> None:
     """Test asynchronous falling function."""
     # Set decreasing history
     provider = async_context_with_sample_data.providers[0]
-    provider.history[('close', (), ())] = [40, 30, 20, 10]
+    provider.history["close", (), ()] = [40, 30, 20, 10]
     interp = Interpreter(async_context_with_sample_data)
-    node = Falling(expr=IndicatorAccess(indicator='close'), n=2)
+    node = Falling(expr=IndicatorAccess(indicator="close"), n=2)
     assert await interp.visit_async(node) is True

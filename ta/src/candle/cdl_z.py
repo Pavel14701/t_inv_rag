@@ -16,8 +16,8 @@ statistics.zscore_ind function (which itself may use TA-Lib if available).
 import numpy as np
 import polars as pl
 
-from ..statistics import zscore_ind
 from .._array_ops import _apply_offset_fillna
+from ..statistics import zscore_ind
 
 
 def _safe_z(x: np.ndarray, mean: float, std: float) -> np.ndarray:
@@ -27,7 +27,7 @@ def _safe_z(x: np.ndarray, mean: float, std: float) -> np.ndarray:
     return (x - mean) / std
 
 
-def cdl_z_numpy(  # noqa: C901
+def cdl_z_numpy(
     open_: np.ndarray,
     high: np.ndarray,
     low: np.ndarray,

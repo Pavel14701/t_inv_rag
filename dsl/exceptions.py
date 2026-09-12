@@ -39,10 +39,11 @@ class ProviderError(DSLError):
 class DslValidationError(DSLError, ValueError):
     """Raised when an indicator request violates the manifest schema.
 
-    Наследует и ``DSLError`` (единый контракт для RAG repair-loop —
-    TZ-01 п.2.2), и ``ValueError`` (обратная совместимость: ранее
-    ``Context._validate`` бросал голый ValueError, и существующие
-    клиенты ловят его). Текст содержит человекочитаемые формулировки
-    манифест-валидатора (``Unknown indicator: X``, ``Invalid parameter
-    'Y' for indicator 'Z'``) — они парсятся RAG-ом как repair-подсказки.
+    Inherits from ``DSLError`` (single contract for the RAG
+    repair loop — TZ-01 п.2.2) and from ``ValueError`` (backward
+    compatibility: ``Context._validate`` used to raise a bare ValueError,
+    and existing clients catch it). The message contains human-readable
+    manifest-validator phrasings (``Unknown indicator: X``, ``Invalid
+    parameter 'Y' for indicator 'Z'``) — the RAG parses them as repair
+    hints.
     """

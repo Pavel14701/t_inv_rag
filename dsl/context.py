@@ -1,13 +1,13 @@
 import asyncio
 
+from .exceptions import DslValidationError, ProviderError
 from .providers import (
+    AsyncIndicatorProvider,
+    IndicatorProvider,
+    IndicatorSchema,
     Manifest,
     ManifestValidator,
-    IndicatorSchema,
-    IndicatorProvider,
-    AsyncIndicatorProvider
 )
-from .exceptions import DslValidationError, ProviderError
 
 
 class Context:
@@ -214,7 +214,7 @@ class Context:
         for provider in self._candidates(indicator):
             if getattr(provider, 'resolve_async', None) is not None:
                 try:
-                    got = await provider.resolve_async(  # type: ignore[union-attr]  # noqa: E501
+                    got = await provider.resolve_async(  # type: ignore[union-attr]
                         indicator,
                         params,
                         attributes,
@@ -230,7 +230,7 @@ class Context:
                 try:
                     return await loop.run_in_executor(
                         None,
-                        provider.resolve,  # type: ignore[union-attr]  # noqa: E501
+                        provider.resolve,  # type: ignore[union-attr]
                         indicator,
                         params,
                         attributes,
