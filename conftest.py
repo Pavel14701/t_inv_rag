@@ -21,6 +21,7 @@ def pytest_collection_modifyitems(items) -> None:
         "ai": "ai",
         "infer": "infer",
         "rag": "rag",
+        "risk": "risk",
         "main": "main",
         "strategies": "strategies",
     }

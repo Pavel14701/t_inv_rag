@@ -1,0 +1,32 @@
+# Default risk configuration (TZ-11). Everything that influences a
+# decision is DATA here - the engine holds no rule logic and no hardcoded
+# thresholds. Edit this file (or pass --config) to change behavior without
+# touching source code.
+
+engine:
+  rules:                     # applied in order; first rejection blocks
+    - name: require_stop_loss
+      active: true
+      params:
+        sl: { min_mult: 0.0, use_atr: true, atr_lookback: 14 }
+        tp: { min_mult: 1.0 }
+    - name: position_limit
+      active: true
+      params: { }
+    - name: max_positions
+      active: true
+      params: { max_open: 5 }
+    - name: daily_loss_limit
+      active: true
+      params: { max_daily_loss_pct: 0.02 }
+    - name: drawdown_stop
+      active: true
+      params: { max_drawdown_pct: 0.2, pause_bars: 60 }
+
+portfolio:
+  max_capital_pct: 0.1       # fraction of capital per single order
+  max_units: null
+  instruments:                # per-instrument overrides (shadow the above)
+    "EXAMPLE.FIGI":
+      max_capital_pct: 0.05
+      max_units: 5000

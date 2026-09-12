@@ -66,7 +66,7 @@ class Parser:
         result = self._expression()
         if self.pos < len(self.tokens):
             raise ParseError(
-                f'Unexpected token at end: {self.tokens[self.pos].value}'
+                f"Unexpected token at end: {self.tokens[self.pos].value}"
             )
         return result
 

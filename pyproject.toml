@@ -20,6 +20,7 @@ members = [
     "ai",
     "infer",
     "rag",
+    "risk",
     "main",
 ]
 
@@ -159,6 +160,7 @@ testpaths = [
     "ai/tests",
     "infer/tests",
     "rag/tests",
+    "risk/tests",
 ]
 addopts = "-v --tb=short --strict-markers -m \"not deprecated\""
 python_files = ["test_*.py"]
@@ -179,6 +181,7 @@ markers = [
     "ai: belongs to the dte-ai package",
     "infer: belongs to the dte-infer package",
     "rag: belongs to the dte-rag package",
+    "risk: belongs to the dte-risk package",
     "main: belongs to the dte-main package",
     "strategies: belongs to the dte-strategies package",
     # --- доменные маркеры (унаследованы из per-package pytest.ini) ---
