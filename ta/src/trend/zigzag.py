@@ -8,20 +8,22 @@ from numba.typed import List
 
 @njit(
     (
-        float64[:],   # x
-        float64,      # prominence
-        int64,        # distance
-        int64,        # plateau_size (-1 = off)
-        float64,      # rel_height
-        float64,      # width (-1 = off)
-        int64         # wlen (-1 = off)
+        float64[:],  # x
+        float64,  # prominence
+        int64,  # distance
+        int64,  # plateau_size (-1 = off)
+        float64,  # rel_height
+        float64,  # width (-1 = off)
+        int64,  # wlen (-1 = off)
     ),
     fastmath=False,  # strict IEEE 754; fastmath gave no speed-up here
-                     # (branch-heavy kernel) and its nnan/ninf/contract
-                     # flags could alter the `x[i] <= h` width boundary
-    cache=True
+    # (branch-heavy kernel) and its nnan/ninf/contract
+    # flags could alter the `x[i] <= h` width boundary
+    cache=True,
 )
-def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wlen):
+def _find_peaks_nb(
+    x, prominence, distance, plateau_size, rel_height, width, wlen
+):
     n = len(x)
     peaks = List.empty_list(int64)
 
@@ -90,7 +92,7 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
             else:
                 left_bound = 0
                 right_bound = n - 1
-            # Left base – scan outward until the first strictly higher
+            # Left base - scan outward until the first strictly higher
             # sample (the "col" toward a higher peak, scipy definition)
             # or the window border; track the minimum on the way.
             left_min = peak_val
@@ -99,7 +101,7 @@ def _find_peaks_nb(x, prominence, distance, plateau_size, rel_height, width, wle
                     break
                 if x[j] < left_min:
                     left_min = x[j]
-            # Right base – symmetric
+            # Right base - symmetric
             right_min = peak_val
             for j in range(p + 1, right_bound + 1):
                 if x[j] > peak_val:
@@ -201,7 +203,7 @@ def zigzag_numpy(
     wlen : int, optional
         Window length for prominence calculation.
     rel_height : float
-        Relative height at which the width is measured (0 < rel_height ≤ 1).
+        Relative height at which the width is measured (0 < rel_height <= 1).
     plateau_size : int, optional
         Minimum plateau length.
 
@@ -215,15 +217,15 @@ def zigzag_numpy(
     """
     # Input validation
     if np.any(np.isnan(high)):
-        raise ValueError('high array contains NaNs')
+        raise ValueError("high array contains NaNs")
     if np.any(np.isnan(low)):
-        raise ValueError('low array contains NaNs')
+        raise ValueError("low array contains NaNs")
     if np.any(np.isinf(high)) or np.any(np.isinf(low)):
-        raise ValueError('high/low arrays contain Inf values')
+        raise ValueError("high/low arrays contain Inf values")
     if len(high) != len(low):
         raise ValueError(
-            'high and low must have the same length: '
-            f'got {len(high)} and {len(low)}.'
+            "high and low must have the same length: "
+            f"got {len(high)} and {len(low)}."
         )
     # Convert optional parameters to sentinel values expected by Numba
     plateau = plateau_size if plateau_size is not None else -1
@@ -231,8 +233,8 @@ def zigzag_numpy(
     wlen_ = wlen if wlen is not None else -1
     # Ensure arrays are float64, C-contiguous and writable
     # (pl.Series.to_numpy() may return a read-only view)
-    high = np.require(high, dtype=np.float64, requirements=['C', 'W'])
-    low = np.require(low, dtype=np.float64, requirements=['C', 'W'])
+    high = np.require(high, dtype=np.float64, requirements=["C", "W"])
+    low = np.require(low, dtype=np.float64, requirements=["C", "W"])
     peaks = _find_peaks_nb(
         high,
         prominence_peak,
@@ -243,7 +245,7 @@ def zigzag_numpy(
         wlen_,
     )
     valleys = _find_peaks_nb(
-        -low,                      # invert low to find valleys as peaks
+        -low,  # invert low to find valleys as peaks
         prominence_valley,
         distance,
         plateau,
@@ -274,7 +276,8 @@ def zigzag_ind(
     if isinstance(low, pl.Series):
         low = low.to_numpy()
     return zigzag_numpy(
-        high, low,
+        high,
+        low,
         prominence_peak=prominence_peak,
         prominence_valley=prominence_valley,
         distance=distance,
@@ -290,8 +293,8 @@ def zigzag_ind(
 # ----------------------------------------------------------------------
 def zigzag_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
+    high_col: str = "high",
+    low_col: str = "low",
     prominence_peak: float = 0.01,
     prominence_valley: float = 0.01,
     distance: int = 5,
@@ -299,7 +302,7 @@ def zigzag_polars(
     wlen: int | None = None,
     rel_height: float = 0.5,
     plateau_size: int | None = None,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add boolean columns 'is_peak' and 'is_valley' to the Polars DataFrame.
 
@@ -327,7 +330,8 @@ def zigzag_polars(
     low = df[low_col].to_numpy()
 
     peak_idx, valley_idx = zigzag_numpy(
-        high, low,
+        high,
+        low,
         prominence_peak=prominence_peak,
         prominence_valley=prominence_valley,
         distance=distance,
@@ -341,7 +345,9 @@ def zigzag_polars(
     is_valley = np.zeros(len(df), dtype=bool)
     is_peak[peak_idx] = True
     is_valley[valley_idx] = True
-    return df.with_columns([
-        pl.Series(f'is_peak{suffix}', is_peak),
-        pl.Series(f'is_valley{suffix}', is_valley),
-    ])
+    return df.with_columns(
+        [
+            pl.Series(f"is_peak{suffix}", is_peak),
+            pl.Series(f"is_valley{suffix}", is_valley),
+        ]
+    )

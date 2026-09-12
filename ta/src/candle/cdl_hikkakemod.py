@@ -10,23 +10,30 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.int64, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.int64,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
 )
 def _cdl_hikkakemod_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     lookahead,
     strict,
 ):
     """Optimized Hikkake Modified pattern.
 
     Returns:
-        1.0 → bullish hikkake modified
-       -1.0 → bearish hikkake modified
-        0.0 → none
+        1.0 -> bullish hikkake modified
+       -1.0 -> bearish hikkake modified
+        0.0 -> none
 
     """
     n = len(open_)
@@ -51,18 +58,18 @@ def _cdl_hikkakemod_nb(
         direction = 0.0
         # Modified confirmation: must CLOSE beyond inside bar boundary
         if bullish_break:
-            # breakout up → look for close below inside bar low
+            # breakout up -> look for close below inside bar low
             for k in range(1, lookahead + 1):
                 if close[i + k] < l1:
                     direction = -1.0
                     break
         elif bearish_break:
-            # breakout down → look for close above inside bar high
+            # breakout down -> look for close above inside bar high
             for k in range(1, lookahead + 1):
                 if close[i + k] > h1:
                     direction = 1.0
                     break
-        if direction == 0.0:
+        if direction == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             continue
         if strict:
             # Inside bar must be meaningful
@@ -77,7 +84,10 @@ def _cdl_hikkakemod_nb(
 
 
 def cdl_hikkakemod(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -85,14 +95,14 @@ def cdl_hikkakemod(
     lookahead=3,
 ):
     """Hikkake Modified pattern with strict support."""
-    # Polars → numpy
+    # Polars -> numpy
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     open_ = np.asarray(open_, np.float64)
     high = np.asarray(high, np.float64)
@@ -116,10 +126,16 @@ def cdl_hikkakemod(
         close = close.copy()
     # TA-Lib fallback
     if use_talib and talib_available:
-        out = talib.CDLHIKKAKEMOD(open_, high, low, close).astype(np.float64) / 100.0
+        out = (
+            talib.CDLHIKKAKEMOD(open_, high, low, close).astype(np.float64)
+            / 100.0
+        )
         return _apply_offset_fillna(out, offset, fillna)
     out = _cdl_hikkakemod_nb(
-        open_, high, low, close,
+        open_,
+        high,
+        low,
+        close,
         int(lookahead),
         strict,
     )
@@ -128,15 +144,15 @@ def cdl_hikkakemod(
 
 def cdl_hikkakemod_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     lookahead=3,
-    output_col='CDL_HIKKAKEMOD',
+    output_col="CDL_HIKKAKEMOD",
 ):
     out = cdl_hikkakemod(
         df[open_col].to_numpy(),

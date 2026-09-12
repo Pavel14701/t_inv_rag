@@ -26,9 +26,7 @@ from .._array_ops import _apply_offset_fillna
 
 @jit(nopython=True, fastmath=False, cache=True)
 def _quantile_numba_core(
-    close: np.ndarray,
-    length: int,
-    q: float
+    close: np.ndarray, length: int, q: float
 ) -> np.ndarray:
     """Numba-compiled core for rolling quantile.
 
@@ -61,10 +59,10 @@ def _quantile_numba_core(
         return out
 
     # Pre-compute the index based on the quantile and window length
-    idx = int(round(q * (length - 1)))
+    idx = round(q * (length - 1))
 
     for i in range(length - 1, n):
-        window = close[i - length + 1: i + 1].copy()  # copy for sorting
+        window = close[i - length + 1 : i + 1].copy()  # copy for sorting
         # NaN/inf in the window poison the quantile (IEEE-754 semantics);
         # without this check sort()/partition() would silently place the
         # non-finite value at the end and a finite number could be picked.
@@ -124,9 +122,9 @@ def quantile_numba(
     """
     close = np.asarray(close, dtype=np.float64)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if q < 0.0 or q > 1.0:
-        raise ValueError('q must be between 0 and 1')
+        raise ValueError("q must be between 0 and 1")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
@@ -182,7 +180,7 @@ def quantile_ind(
 
 def quantile_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 30,
     q: float = 0.5,
     offset: int = 0,
@@ -232,5 +230,5 @@ def quantile_polars(
     """
     close = df[close_col].to_numpy()
     result = quantile_ind(close, length, q, offset, fillna)
-    out_name = output_col or f'QTL_{length}_{q}'
+    out_name = output_col or f"QTL_{length}_{q}"
     return pl.Series(out_name, result)

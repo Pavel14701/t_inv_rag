@@ -42,9 +42,9 @@ def compute_atr(
     if period is None:
         period = risk.atr_period if risk is not None else 14
     atr_floor = risk.atr_floor if risk is not None else 1e-6
-    high = df['high'].to_numpy()
-    low = df['low'].to_numpy()
-    close = df['close'].to_numpy()
+    high = df["high"].to_numpy()
+    low = df["low"].to_numpy()
+    close = df["close"].to_numpy()
     prev_close = np.roll(close, 1)
     prev_close[0] = close[0]
     tr1 = high - low
@@ -68,7 +68,7 @@ def compute_tp_sl(
     atr: np.ndarray | None = None,
     tp_atr_multiplier: float | None = None,
     sl_atr_multiplier: float | None = None,
-    close_col: str = 'close',
+    close_col: str = "close",
     risk: RiskConfig | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute absolute TP/SL levels from the **previous bar's** ATR.
@@ -118,7 +118,7 @@ def compute_ob_distances(
     df: pl.DataFrame,
     order_blocks: list[OrderBlock],
     atr_series: np.ndarray,
-    close_col: str = 'close',
+    close_col: str = "close",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Compute ATR-normalised distances to order blocks per bar.
 
@@ -164,10 +164,10 @@ def compute_ob_distances(
             nearest_supply, nearest_demand, strongest_dist, is_in_zone
         )
     supply_blocks = [
-        ob for ob in order_blocks if ob.block_type.lower() == 'supply'
+        ob for ob in order_blocks if ob.block_type.lower() == "supply"
     ]
     demand_blocks = [
-        ob for ob in order_blocks if ob.block_type.lower() == 'demand'
+        ob for ob in order_blocks if ob.block_type.lower() == "demand"
     ]
 
     def _update_distances(blocks, target_array):
@@ -277,7 +277,7 @@ def _check_exit(
         A tuple (hit_tp, hit_sl) indicating which levels were triggered.
 
     """
-    if position.direction == 'long':
+    if position.direction == "long":
         hit_tp = bar_high >= position.tp_price
         hit_sl = bar_low <= position.sl_price
         if hit_tp and hit_sl:
@@ -313,13 +313,13 @@ def _check_rr(
 
     """
     if (
-        (direction == 'long'
+        (direction == "long"
         and (sl_price >= entry_price or tp_price <= entry_price))
-        or (direction != 'long'
+        or (direction != "long"
         and (sl_price <= entry_price or tp_price >= entry_price))
     ):
         return False
-    if direction == 'long':
+    if direction == "long":
         rr = (tp_price - entry_price) / (entry_price - sl_price)
     else:
         rr = (entry_price - tp_price) / (sl_price - entry_price)
@@ -385,7 +385,7 @@ def _effective_entry_price(
         The effective (slipped) entry price.
 
     """
-    if direction == 'long':
+    if direction == "long":
         return raw_price * (1.0 + slippage_pct)
     return raw_price * (1.0 - slippage_pct)
 
@@ -414,7 +414,7 @@ def _effective_exit_price(
     """
     if hit_tp:
         return raw_exit_price  # limit order: no slippage
-    if direction == 'long':
+    if direction == "long":
         return raw_exit_price * (1.0 - slippage_pct)
     return raw_exit_price * (1.0 + slippage_pct)
 
@@ -448,7 +448,7 @@ def _realised_r_multiple(
     if risk <= 0:
         return 0.0
     gross = exit_price - entry_price
-    if direction == 'short':
+    if direction == "short":
         gross = -gross
     costs = commission_pct * (entry_price + exit_price)
     return float((gross - costs) / risk)
@@ -509,6 +509,8 @@ def _process_exit(
         raw_exit = position.sl_price
     else:
         raw_exit = close_p  # time-based exit at the bar's close
+    raw_exit = raw_exit if raw_exit is not None else close_p
+    assert position.direction is not None  # active position invariant
     exit_price = _effective_exit_price(
         position.direction, hit_tp, raw_exit, slippage_pct
     )
@@ -572,7 +574,7 @@ def _find_decision(
     )
     if ob is None:
         return None, None
-    direction = 'long' if ob.block_type.lower() == 'demand' else 'short'
+    direction = "long" if ob.block_type.lower() == "demand" else "short"
     if not _check_rr(direction, close, tp, sl, min_rr):
         return None, None
     return direction, ob
@@ -640,7 +642,7 @@ def generate_labels_from_strategy(
             2 (ignore).  In R-multiple mode: realised R-multiple or NaN.
 
     """
-    # ---------- Risk parameter resolution (TZ-06 п.10) ----------
+    # ---------- Risk parameter resolution (TZ-06 item 10) ----------
     # explicit kwarg > risk config > legacy default
     _r = risk
     min_rr = (
@@ -673,12 +675,12 @@ def generate_labels_from_strategy(
     n = df.height
     action = np.full(n, -100, dtype=int)
     outcome = np.full(n, np.nan if use_r_multiple else 2, dtype=float)
-    open_p = df['open'].to_numpy()
-    high = df['high'].to_numpy()
-    low = df['low'].to_numpy()
-    close = df['close'].to_numpy()
-    tp = df['tp'].to_numpy()
-    sl = df['sl'].to_numpy()
+    open_p = df["open"].to_numpy()
+    high = df["high"].to_numpy()
+    low = df["low"].to_numpy()
+    close = df["close"].to_numpy()
+    tp = df["tp"].to_numpy()
+    sl = df["sl"].to_numpy()
 
     i = 0
     while i < n - 1:  # a decision on the last bar can never be filled

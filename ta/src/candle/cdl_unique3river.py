@@ -25,7 +25,7 @@ from ..external import talib, talib_available
 
 
 @njit(
-    'int8[:](float64[:], float64[:], float64[:], float64[:])',
+    "int8[:](float64[:], float64[:], float64[:], float64[:])",
     cache=True,
     fastmath=False,
 )
@@ -196,13 +196,13 @@ def cdl_unique3river(
 
 def cdl_unique3river_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_UNIQUE3RIVER',
+    output_col: str = "CDL_UNIQUE3RIVER",
 ) -> pl.DataFrame:
     """Add Unique 3 River pattern column to a Polars DataFrame.
 
@@ -233,23 +233,25 @@ def cdl_unique3river_polars(
     Examples
     --------
     >>> import polars as pl
-    >>> df = pl.DataFrame({
-    ...     "open": [100, 92, 91],
-    ...     "high": [101, 93, 94],
-    ...     "low": [99, 89, 90],
-    ...     "close": [90, 91, 93],
-    ... })
+    >>> df = pl.DataFrame(
+    ...     {
+    ...         "open": [100, 92, 91],
+    ...         "high": [101, 93, 94],
+    ...         "low": [99, 89, 90],
+    ...         "close": [90, 91, 93],
+    ...     }
+    ... )
     >>> cdl_unique3river_polars(df, output_col="PATTERN")
     shape: (3, 5)
-    ┌──────┬──────┬──────┬───────┬─────────┐
-    │ open ┆ high ┆ low  ┆ close ┆ PATTERN │
-    │ ---  ┆ ---  ┆ ---  ┆ ---   ┆ ---     │
-    │ f64  ┆ f64  ┆ f64  ┆ f64   ┆ f64     │
-    ╞══════╪══════╪══════╪═══════╪═════════╡
-    │ 100  ┆ 101  ┆ 99   ┆ 90    ┆ 0.0     │
-    │ 92   ┆ 93   ┆ 89   ┆ 91    ┆ 0.0     │
-    │ 91   ┆ 94   ┆ 90   ┆ 93    ┆ 1.0     │
-    └──────┴──────┴──────┴───────┴─────────┘
+    +------+------+------+-------+---------+
+    | open | high | low  | close | PATTERN |
+    | ---  | ---  | ---  | ---   | ---     |
+    | f64  | f64  | f64  | f64   | f64     |
+    +======+======+======+=======+=========+
+    | 100  | 101  | 99   | 90    | 0.0     |
+    | 92   | 93   | 89   | 91    | 0.0     |
+    | 91   | 94   | 90   | 93    | 1.0     |
+    +------+------+------+-------+---------+
 
     """
     out = cdl_unique3river(

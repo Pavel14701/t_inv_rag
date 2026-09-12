@@ -23,11 +23,11 @@ def stochrsi_numpy(
     rsi_length: int = 14,
     k: int = 3,
     d: int = 3,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Numpy-based Stochastic RSI calculation.
@@ -55,46 +55,56 @@ def stochrsi_numpy(
     """
     # Input validation
     if length < 1 or rsi_length < 1 or k < 1 or d < 1:
-        raise ValueError('All period lengths must be >= 1')
+        raise ValueError("All period lengths must be >= 1")
     close = np.asarray(close, dtype=np.float64)
     # Check for inf
     if np.isinf(close).any():
-        raise ValueError('Input contains non-finite values (inf or -inf).')
+        raise ValueError("Input contains non-finite values (inf or -inf).")
     # Handle NaN
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     # Ensure contiguous
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     # 1. RSI
-    rsi = cast(np.ndarray, rsi_ind(
-        close, length=rsi_length, use_talib=use_talib, nan_policy=nan_policy
-    ))
+    rsi = cast(
+        np.ndarray,
+        rsi_ind(
+            close,
+            length=rsi_length,
+            use_talib=use_talib,
+            nan_policy=nan_policy,
+        ),
+    )
     # 2. Rolling min and max of RSI
     lowest_rsi = _rolling_min_numba(rsi, length)
     highest_rsi = _rolling_max_numba(rsi, length)
     # 3. Stochastic
     denom = highest_rsi - lowest_rsi
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         stoch = np.where(denom != 0, 100.0 * (rsi - lowest_rsi) / denom, 50.0)
         # If denom == 0, we set stoch to 50 (neutral) to avoid division by zero
     # 4. Smooth to get %K and %D. The stoch warm-up prefix is inherently
     # NaN, so the smoothing MAs run on the numpy backend: TA-Lib's SMA
     # never recovers after the first NaN (its sliding sum stays NaN),
     # while the numpy backend yields NaN only for windows containing it.
-    stoch_k = cast(np.ndarray, ma_mode(
-        mamode, stoch, length=k, use_talib=False, nan_policy='ignore'
-    ))
-    stoch_d = cast(np.ndarray, ma_mode(
-        mamode, stoch_k, length=d, use_talib=False, nan_policy='ignore'
-    ))
+    stoch_k = cast(
+        np.ndarray,
+        ma_mode(mamode, stoch, length=k, use_talib=False, nan_policy="ignore"),
+    )
+    stoch_d = cast(
+        np.ndarray,
+        ma_mode(
+            mamode, stoch_k, length=d, use_talib=False, nan_policy="ignore"
+        ),
+    )
     # 5. Trim if requested
     if trim:
-        # Minimum required length: RSI needs rsi_length, 
+        # Minimum required length: RSI needs rsi_length,
         # then we need length for min/max,
         # then k and d for smoothing. The first valid value of %D appears at index:
         # rsi_length - 1 + (length - 1) + (k - 1) + (d - 1) = rsi_length + length + k + d - 4  # noqa: E501
         # But we'll use a simpler conservative approach: trim = True returns only values
-        # where all components are defined. Usually this is the 
+        # where all components are defined. Usually this is the
         # last `len - (rsi_length + length + k + d - 4)`.
         # However, to keep consistent with other indicators, we'll just return from
         # the index where stoch_d is first non-NaN.
@@ -122,11 +132,11 @@ def stochrsi_ind(
     rsi_length: int = 14,
     k: int = 3,
     d: int = 3,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Universal Stochastic RSI (accepts numpy array or Polars Series).
@@ -154,16 +164,16 @@ def stochrsi_ind(
 # ----------------------------------------------------------------------
 def stochrsi_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 14,
     rsi_length: int = 14,
     k: int = 3,
     d: int = 3,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col_k: str | None = None,
     output_col_d: str | None = None,
 ) -> pl.DataFrame:
@@ -203,10 +213,12 @@ def stochrsi_polars(
     )
     # Generate default column names
     if output_col_k is None:
-        output_col_k = f'STOCHRSIk_{length}_{rsi_length}_{k}_{d}'
+        output_col_k = f"STOCHRSIk_{length}_{rsi_length}_{k}_{d}"
     if output_col_d is None:
-        output_col_d = f'STOCHRSId_{length}_{rsi_length}_{k}_{d}'
-    return df.with_columns([
-        pl.Series(output_col_k, stoch_k),
-        pl.Series(output_col_d, stoch_d),
-    ])
+        output_col_d = f"STOCHRSId_{length}_{rsi_length}_{k}_{d}"
+    return df.with_columns(
+        [
+            pl.Series(output_col_k, stoch_k),
+            pl.Series(output_col_d, stoch_d),
+        ]
+    )

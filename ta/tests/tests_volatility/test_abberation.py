@@ -129,7 +129,7 @@ def test_aberration_numpy_non_contiguous_input(
         atr_length=15,
         use_talib=False,
     )
-    for res, exp in zip(result, expected):
+    for res, exp in zip(result, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 

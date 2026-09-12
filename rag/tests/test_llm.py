@@ -163,7 +163,7 @@ def test_router_async_completion():
     import asyncio
 
     async def run() -> str:
-        async def atransport(url: str, body: dict) -> dict:
+        async def atransport(url: str, body: dict) -> dict:  # noqa: RUF029 - async signature required by the protocol
             return {"message": {"content": "async-ok"}}
 
         provider = OllamaProvider(async_transport=atransport)
@@ -179,7 +179,7 @@ def test_openai_async_completion_uses_async_transport():
     async def run() -> str:
         calls: list[tuple[str, dict]] = []
 
-        async def atransport(url: str, body: dict) -> dict:
+        async def atransport(url: str, body: dict) -> dict:  # noqa: RUF029 - async signature required by the protocol
             calls.append((url, body))
             return {"choices": [{"message": {"content": "async-done"}}]}
 
@@ -201,7 +201,7 @@ def test_openai_async_transport_error_wrapped():
     """Async transport failures are wrapped into LLMError as well."""
     import asyncio
 
-    async def boom(url: str, body: dict) -> dict:
+    async def boom(url: str, body: dict) -> dict:  # noqa: RUF029 - async signature required by the protocol
         raise ConnectionError("down")
 
     async def run() -> None:

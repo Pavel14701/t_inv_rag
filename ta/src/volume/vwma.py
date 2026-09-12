@@ -14,6 +14,7 @@ All floating-point operations follow IEEE 754 rules.  Infinite values
 are replaced with NaN before calculation.  Windows whose total volume
 is zero produce NaN (0/0).
 """
+
 import numpy as np
 import polars as pl
 
@@ -32,9 +33,9 @@ def vwma_numpy(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
-    """Numpy‑based VWMA calculation.
+    """Numpy-based VWMA calculation.
 
     Parameters
     ----------
@@ -63,13 +64,13 @@ def vwma_numpy(
 
     """
     if length < 1:
-        raise ValueError(f'VWMA length must be >= 1, got {length}')
+        raise ValueError(f"VWMA length must be >= 1, got {length}")
     close = np.asarray(close, dtype=np.float64)
     volume = np.asarray(volume, dtype=np.float64)
     if len(close) != len(volume):
         raise ValueError(
-            f'close and volume must have the same length: '
-            f'got {len(close)} and {len(volume)}.'
+            f"close and volume must have the same length: "
+            f"got {len(close)} and {len(volume)}."
         )
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -86,13 +87,13 @@ def vwma_numpy(
     # Validate the policy (always) and handle NaN before the backend
     # runs.  This keeps 'raise'/'ffill'/... behaviour consistent and
     # rejects unknown policies even when no NaN is present.
-    close = _handle_nan_policy(close, nan_policy, 'close')
-    volume = _handle_nan_policy(volume, nan_policy, 'volume')
+    close = _handle_nan_policy(close, nan_policy, "close")
+    volume = _handle_nan_policy(volume, nan_policy, "volume")
 
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least {length} elements, '
-            f'got {len(close)}.'
+            f"Input series too short: need at least {length} elements, "
+            f"got {len(close)}."
         )
 
     # Price * volume
@@ -100,15 +101,23 @@ def vwma_numpy(
     # SMA of pv and volume; the nan_policy is forwarded so that any
     # remaining NaN (e.g. with 'ignore') is respected by the backend.
     sma_pv = sma_ind(
-        pv, length=length, offset=0, fillna=None, use_talib=use_talib,
+        pv,
+        length=length,
+        offset=0,
+        fillna=None,
+        use_talib=use_talib,
         nan_policy=nan_policy,
     )
     sma_vol = sma_ind(
-        volume, length=length, offset=0, fillna=None, use_talib=use_talib,
+        volume,
+        length=length,
+        offset=0,
+        fillna=None,
+        use_talib=use_talib,
         nan_policy=nan_policy,
     )
     # VWMA = SMA(pv) / SMA(vol); windows with zero total volume -> NaN
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         vwma = sma_pv / sma_vol
     return _apply_offset_fillna(vwma, offset, fillna)
 
@@ -120,7 +129,7 @@ def vwma_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal VWMA (accepts numpy arrays or Polars Series).
 
@@ -150,13 +159,13 @@ def vwma_ind(
 
 def vwma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
-    volume_col: str = 'volume',
+    close_col: str = "close",
+    volume_col: str = "volume",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add VWMA column to Polars DataFrame.
@@ -197,5 +206,5 @@ def vwma_polars(
     result = vwma_numpy(
         close, volume, length, offset, fillna, use_talib, nan_policy
     )
-    out_name = output_col or f'VWMA_{length}'
+    out_name = output_col or f"VWMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

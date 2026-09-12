@@ -24,8 +24,8 @@ from .._array_ops import _apply_offset_fillna
 
 
 @njit(
-    'Tuple((float64[:], float64[:], float64[:], float64[:]))'
-    '(float64[:], float64[:], float64[:], float64[:])',
+    "Tuple((float64[:], float64[:], float64[:], float64[:]))"
+    "(float64[:], float64[:], float64[:], float64[:])",
     cache=True,
     fastmath=False,
 )
@@ -190,14 +190,14 @@ def ha(
 
 def ha_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    date_col: str = 'date',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    date_col: str = "date",
     offset: int = 0,
     fillna: float | None = None,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add Heikin-Ashi candle columns to a Polars DataFrame.
 
@@ -232,25 +232,27 @@ def ha_polars(
     Examples
     --------
     >>> import polars as pl
-    >>> df = pl.DataFrame({
-    ...     "date": [1, 2, 3, 4],
-    ...     "open": [100, 102, 104, 106],
-    ...     "high": [101, 103, 105, 107],
-    ...     "low": [99, 101, 103, 105],
-    ...     "close": [102, 104, 106, 108],
-    ... })
+    >>> df = pl.DataFrame(
+    ...     {
+    ...         "date": [1, 2, 3, 4],
+    ...         "open": [100, 102, 104, 106],
+    ...         "high": [101, 103, 105, 107],
+    ...         "low": [99, 101, 103, 105],
+    ...         "close": [102, 104, 106, 108],
+    ...     }
+    ... )
     >>> ha_polars(df, suffix="_HA")
     shape: (4, 5)
-    ┌──────┬────────────┬────────────┬───────────┬─────────────┐
-    │ date ┆ HA_open_HA ┆ HA_high_HA ┆ HA_low_HA ┆ HA_close_HA │
-    │ ---  ┆ ---        ┆ ---        ┆ ---       ┆ ---         │
-    │ i64  ┆ f64        ┆ f64        ┆ f64       ┆ f64         │
-    ╞══════╪════════════╪════════════╪═══════════╪═════════════╡
-    │ 1    ┆ 101.0      ┆ 101.0      ┆ 99.0      ┆ 100.5       │
-    │ 2    ┆ 100.75     ┆ 103.0      ┆ 100.75    ┆ 102.5       │
-    │ 3    ┆ 101.625    ┆ 105.0      ┆ 101.625   ┆ 104.5       │
-    │ 4    ┆ 103.0625   ┆ 107.0      ┆ 103.0625  ┆ 106.5       │
-    └──────┴────────────┴────────────┴───────────┴─────────────┘
+    +------+------------+------------+-----------+-------------+
+    | date | HA_open_HA | HA_high_HA | HA_low_HA | HA_close_HA |
+    | ---  | ---        | ---        | ---       | ---         |
+    | i64  | f64        | f64        | f64       | f64         |
+    +======+============+============+===========+=============+
+    | 1    | 101.0      | 101.0      | 99.0      | 100.5       |
+    | 2    | 100.75     | 103.0      | 100.75    | 102.5       |
+    | 3    | 101.625    | 105.0      | 101.625   | 104.5       |
+    | 4    | 103.0625   | 107.0      | 103.0625  | 106.5       |
+    +------+------------+------------+-----------+-------------+
 
     """
     open_arr = df[open_col].to_numpy()
@@ -260,11 +262,13 @@ def ha_polars(
     ha_open, ha_high, ha_low, ha_close = ha_numpy(
         open_arr, high_arr, low_arr, close_arr, offset, fillna
     )
-    suffix = suffix or ''
-    return pl.DataFrame({
-        date_col: df[date_col],
-        f'HA_open{suffix}': ha_open,
-        f'HA_high{suffix}': ha_high,
-        f'HA_low{suffix}': ha_low,
-        f'HA_close{suffix}': ha_close,
-    })
+    suffix = suffix or ""
+    return pl.DataFrame(
+        {
+            date_col: df[date_col],
+            f"HA_open{suffix}": ha_open,
+            f"HA_high{suffix}": ha_high,
+            f"HA_low{suffix}": ha_low,
+            f"HA_close{suffix}": ha_close,
+        }
+    )

@@ -67,18 +67,18 @@ def load_order_blocks_parquet(path: str) -> list[OrderBlock]:
     obs: list[OrderBlock] = []
     obs.extend(
         OrderBlock(
-            id=row['id'],
-            block_type=row['block_type'],
-            start=row['start'],
-            break_=row['break_'],
-            retest=row['retest'],
-            zone_low=row['zone_low'],
-            zone_high=row['zone_high'],
-            strength=row.get('strength', 0.0),
-            structure_label=row.get('structure_label', None),
-            trend_direction=row.get('trend_direction', None),
-            start_idx=row.get('start_idx', -1),
-            end_idx=row.get('end_idx', -1),
+            id=row["id"],
+            block_type=row["block_type"],
+            start=row["start"],
+            break_=row["break_"],
+            retest=row["retest"],
+            zone_low=row["zone_low"],
+            zone_high=row["zone_high"],
+            strength=row.get("strength", 0.0),
+            structure_label=row.get("structure_label", None),
+            trend_direction=row.get("trend_direction", None),
+            start_idx=row.get("start_idx", -1),
+            end_idx=row.get("end_idx", -1),
         )
         for row in df.iter_rows(named=True)
     )
@@ -89,7 +89,7 @@ def merge_features_labels(
     df_feat: pl.DataFrame,
     df_lbl: pl.DataFrame,
     default_action: int = -100,
-    default_outcome: float = float('nan'),
+    default_outcome: float = float("nan"),
 ) -> pl.DataFrame:
     """Merge feature and label DataFrames, filling missing label columns.
 
@@ -116,34 +116,34 @@ def merge_features_labels(
 
     """
     # 1. Check for join key
-    if 'bar_index' in df_feat.columns and 'bar_index' in df_lbl.columns:
-        df = df_feat.join(df_lbl, on='bar_index', how='left')
+    if "bar_index" in df_feat.columns and "bar_index" in df_lbl.columns:
+        df = df_feat.join(df_lbl, on="bar_index", how="left")
     else:
         # 2. No common key -> assume same row order and hstack
         if len(df_feat) != len(df_lbl):
             raise ValueError(
-                f'Row count mismatch: df_feat has {len(df_feat)} rows, '
-                f'df_lbl has {len(df_lbl)} rows. Cannot hstack without',
+                f"Row count mismatch: df_feat has {len(df_feat)} rows, "
+                f"df_lbl has {len(df_lbl)} rows. Cannot hstack without",
                 "'bar_index'."
             )
         # Ensure action and outcome columns exist; if not, add with defaults
         lbl_cols = []
-        if 'action' in df_lbl.columns:
-            lbl_cols.append(pl.col('action'))
+        if "action" in df_lbl.columns:
+            lbl_cols.append(pl.col("action"))
         else:
-            lbl_cols.append(pl.lit(default_action).alias('action'))
-        if 'outcome' in df_lbl.columns:
-            lbl_cols.append(pl.col('outcome'))
+            lbl_cols.append(pl.lit(default_action).alias("action"))
+        if "outcome" in df_lbl.columns:
+            lbl_cols.append(pl.col("outcome"))
         else:
-            lbl_cols.append(pl.lit(default_outcome).alias('outcome'))
+            lbl_cols.append(pl.lit(default_outcome).alias("outcome"))
         df = df_feat.with_columns(lbl_cols)
     # 3. Ensure final columns exist (in case join did not produce them)
-    if 'action' not in df.columns:
-        df = df.with_columns(pl.lit(default_action).alias('action'))
+    if "action" not in df.columns:
+        df = df.with_columns(pl.lit(default_action).alias("action"))
     else:
-        df = df.with_columns(pl.col('action').fill_null(default_action))
-    if 'outcome' not in df.columns:
-        df = df.with_columns(pl.lit(default_outcome).alias('outcome'))
+        df = df.with_columns(pl.col("action").fill_null(default_action))
+    if "outcome" not in df.columns:
+        df = df.with_columns(pl.lit(default_outcome).alias("outcome"))
     else:
-        df = df.with_columns(pl.col('outcome').fill_null(default_outcome))
+        df = df.with_columns(pl.col("outcome").fill_null(default_outcome))
     return df

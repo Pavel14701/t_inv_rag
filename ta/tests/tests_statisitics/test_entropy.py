@@ -47,7 +47,7 @@ def test_entropy_numba_uniform() -> None:
     prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     length = 5
     result = entropy_numba(prices, length=length, base=2.0)
-    # Entropy of uniform 5 classes = log2(5) ≈ 2.3219
+    # Entropy of uniform 5 classes = log2(5) ~= 2.3219
     expected = np.log2(5)
     assert_allclose(result[-1], expected, rtol=1e-6)
 

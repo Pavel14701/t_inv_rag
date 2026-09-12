@@ -55,19 +55,21 @@ def _midpoint_reference(
 
 
 @pytest.mark.overlap
-def test_midpoint_numba_core_basic() -> None:
+@pytest.mark.parametrize(
+    "length", [2, 3, 5], ids=["len2", "len3", "len5"]
+)
+def test_midpoint_numba_core_basic(length: int) -> None:
     """Test _midpoint_numba_core against the pure-Python reference."""
     close = np.array(
         [10.0, 11.0, 12.0, 11.5, 13.0, 14.0, 13.5, 15.0, 16.0, 15.5],
         dtype=np.float64,
     )
-    for length in (2, 3, 5):
-        result = _midpoint_numba_core(close, length)
-        expected = _midpoint_reference(close, length)
-        assert result.shape == close.shape
-        assert_allclose(result, expected, rtol=1e-12, equal_nan=True)
-        # First `length - 1` values are the warm-up NaNs.
-        assert np.isnan(result[: length - 1]).all()
+    result = _midpoint_numba_core(close, length)
+    expected = _midpoint_reference(close, length)
+    assert result.shape == close.shape
+    assert_allclose(result, expected, rtol=1e-12, equal_nan=True)
+    # First `length - 1` values are the warm-up NaNs.
+    assert np.isnan(result[: length - 1]).all()
 
 
 @pytest.mark.overlap
@@ -118,20 +120,21 @@ def test_midpoint_numba_core_matches_random_walk(
 
 
 @pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
+@pytest.mark.parametrize("length", [2, 5, 14], ids=["len2", "len5", "len14"])
 @pytest.mark.overlap
 def test_midpoint_numba_vs_talib(
     prices_random_walk: npt.NDArray[np.float64],
+    length: int,
 ) -> None:
     """Numba and TA-Lib backends must agree on clean data."""
     close = prices_random_walk
-    for length in (2, 5, 14):
-        nb = midpoint_numba(close, length)
-        tl = midpoint_talib(close, length)
-        mask = ~np.isnan(tl)
-        assert_allclose(nb[mask], tl[mask], rtol=1e-10)
-        # Same warm-up NaN region.
-        assert np.isnan(nb[: length - 1]).all()
-        assert np.isnan(tl[: length - 1]).all()
+    nb = midpoint_numba(close, length)
+    tl = midpoint_talib(close, length)
+    mask = ~np.isnan(tl)
+    assert_allclose(nb[mask], tl[mask], rtol=1e-10)
+    # Same warm-up NaN region.
+    assert np.isnan(nb[: length - 1]).all()
+    assert np.isnan(tl[: length - 1]).all()
 
 
 @pytest.mark.overlap

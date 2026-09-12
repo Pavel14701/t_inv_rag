@@ -322,7 +322,7 @@ def test_rsi_invalid_nan_policy() -> None:
 
 
 # -----------------------------------------------------------------------------
-# NaN / Inf handling (nan_policy) — IEEE 754
+# NaN / Inf handling (nan_policy) -- IEEE 754
 # -----------------------------------------------------------------------------
 @pytest.mark.momentum
 def test_rsi_nan_policy_raise(prices_with_nan) -> None:

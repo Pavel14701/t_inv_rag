@@ -147,9 +147,9 @@ def test_fisher_ind_numpy_and_series(ohlc) -> None:
     from_series = fisher_ind(
         pl.Series(high), pl.Series(low), pl.Series(close), length=9
     )
-    for res, exp in zip(from_arrays, expected):
+    for res, exp in zip(from_arrays, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
-    for res, exp in zip(from_series, expected):
+    for res, exp in zip(from_series, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 

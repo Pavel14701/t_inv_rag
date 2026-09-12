@@ -14,13 +14,13 @@ def accbands_numpy(
     close: np.ndarray,
     length: int = 20,
     c: float = 4.0,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Numpy‑based Acceleration Bands calculation.
+    """Numpy-based Acceleration Bands calculation.
     Returns (upper, mid, lower) as numpy arrays.
 
     NaN/inf inputs are rejected by the underlying moving average
@@ -36,7 +36,7 @@ def accbands_numpy(
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     # The contiguity fix must rebind the outer names: assigning to the
     # loop variable inside a `for arr in (...)` loop is a no-op and left
     # the arrays non-contiguous for the numba backends.
@@ -50,18 +50,39 @@ def accbands_numpy(
     hl_ratio = high_low_range / (high + low) * c
     lower_raw = low * (1.0 - hl_ratio)
     upper_raw = high * (1.0 + hl_ratio)
-    lower = cast(np.ndarray, ma_mode(
-        mamode, lower_raw,
-        length=length, offset=0, fillna=None, use_talib=use_talib
-    ))
-    mid = cast(np.ndarray, ma_mode(
-        mamode, close,
-        length=length, offset=0, fillna=None, use_talib=use_talib
-    ))
-    upper = cast(np.ndarray, ma_mode(
-        mamode, upper_raw,
-        length=length, offset=0, fillna=None, use_talib=use_talib
-    ))
+    lower = cast(
+        np.ndarray,
+        ma_mode(
+            mamode,
+            lower_raw,
+            length=length,
+            offset=0,
+            fillna=None,
+            use_talib=use_talib,
+        ),
+    )
+    mid = cast(
+        np.ndarray,
+        ma_mode(
+            mamode,
+            close,
+            length=length,
+            offset=0,
+            fillna=None,
+            use_talib=use_talib,
+        ),
+    )
+    upper = cast(
+        np.ndarray,
+        ma_mode(
+            mamode,
+            upper_raw,
+            length=length,
+            offset=0,
+            fillna=None,
+            use_talib=use_talib,
+        ),
+    )
     lower = _apply_offset_fillna(lower, offset, fillna)
     mid = _apply_offset_fillna(mid, offset, fillna)
     upper = _apply_offset_fillna(upper, offset, fillna)
@@ -74,7 +95,7 @@ def accbands(
     close: np.ndarray | pl.Series,
     length: int = 20,
     c: float = 4.0,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
@@ -96,17 +117,17 @@ def accbands(
 
 def accbands_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 20,
     c: float = 4.0,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add Acceleration Bands columns to Polars DataFrame.
 
@@ -137,9 +158,11 @@ def accbands_polars(
     upper, mid, lower = accbands_numpy(
         high, low, close, length, c, mamode, drift, offset, fillna, use_talib
     )
-    suffix = suffix or f'_{length}'
-    return df.with_columns([
-        pl.Series(f'ACCBU{suffix}', upper),
-        pl.Series(f'ACCBM{suffix}', mid),
-        pl.Series(f'ACCBL{suffix}', lower),
-    ])
+    suffix = suffix or f"_{length}"
+    return df.with_columns(
+        [
+            pl.Series(f"ACCBU{suffix}", upper),
+            pl.Series(f"ACCBM{suffix}", mid),
+            pl.Series(f"ACCBL{suffix}", lower),
+        ]
+    )

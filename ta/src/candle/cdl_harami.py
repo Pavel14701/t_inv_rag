@@ -10,8 +10,14 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.float64, types.float64, types.boolean, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
@@ -29,9 +35,9 @@ def _cdl_harami_nb(
     """Optimized Harami pattern.
 
     Returns:
-        1.0 → bullish harami
-       -1.0 → bearish harami
-        0.0 → none
+        1.0 -> bullish harami
+       -1.0 -> bearish harami
+        0.0 -> none
 
     """
     n = len(open_)
@@ -60,15 +66,15 @@ def _cdl_harami_nb(
         bull0 = c0 > o0
         bear0 = c0 < o0
         direction = 0.0
-        # Bullish Harami: big bearish → small bullish inside
+        # Bullish Harami: big bearish -> small bullish inside
         if bear1 and bull0:
             if o0 >= c1 and c0 <= o1:
                 direction = 1.0
-        # Bearish Harami: big bullish → small bearish inside
+        # Bearish Harami: big bullish -> small bearish inside
         elif bull1 and bear0:
             if o0 <= c1 and c0 >= o1:
                 direction = -1.0
-        if direction == 0.0:
+        if direction == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             continue
         if strict:
             # Body size constraints
@@ -103,13 +109,13 @@ def cdl_harami(
     max_shadow_factor: float = 0.5,
 ) -> np.ndarray:
     """Harami pattern with strict support."""
-    if isinstance(open_, pl.Series): 
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -137,26 +143,31 @@ def cdl_harami(
         result = talib_out.astype(np.float64) / 100.0
         return _apply_offset_fillna(result, offset, fillna)
     out = _cdl_harami_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric,
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_harami_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.3,
     max_shadow_factor: float = 0.5,
-    output_col: str = 'CDL_HARAMI',
+    output_col: str = "CDL_HARAMI",
 ) -> pl.DataFrame:
     out = cdl_harami(
         df[open_col].to_numpy(),

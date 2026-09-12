@@ -22,7 +22,7 @@ def stochf_numpy(
     close: np.ndarray,
     k: int = 14,
     d: int = 3,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -49,20 +49,21 @@ def stochf_numpy(
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if k < 1:
-        raise ValueError('k must be >= 1')
+        raise ValueError("k must be >= 1")
     if d < 1:
-        raise ValueError('d must be >= 1')
+        raise ValueError("d must be >= 1")
     if use_talib and talib_available:
-        # TA‑Lib STOCHF accepts fastd_matype parameter
+        # TA-Lib STOCHF accepts fastd_matype parameter
         ma_type = cast(
-            talib.MA_Type, 
-            _TALIB_MA_MAP.get(mamode.lower(), talib.MA_Type.SMA)
+            talib.MA_Type, _TALIB_MA_MAP.get(mamode.lower(), talib.MA_Type.SMA)
         )
         k_arr, d_arr = talib.STOCHF(
-            high, low, close,
+            high,
+            low,
+            close,
             fastk_period=k,
             fastd_period=d,
-            fastd_matype=ma_type
+            fastd_matype=ma_type,
         )
         stoch_k = k_arr
         stoch_d = d_arr
@@ -71,15 +72,23 @@ def stochf_numpy(
         lowest_low = _rolling_min_numba(low, k)
         highest_high = _rolling_max_numba(high, k)
         denom = highest_high - lowest_low
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             stoch_k = 100.0 * (close - lowest_low) / denom
         # %D is a moving average of %K. The %K warm-up prefix is
         # inherently NaN: smooth with nan_policy='ignore' so NaN only
         # affects its own windows.
-        stoch_d = cast(np.ndarray, ma_mode(
-            mamode, stoch_k, length=d, offset=0, fillna=None, use_talib=False,
-            nan_policy='ignore'
-        ))
+        stoch_d = cast(
+            np.ndarray,
+            ma_mode(
+                mamode,
+                stoch_k,
+                length=d,
+                offset=0,
+                fillna=None,
+                use_talib=False,
+                nan_policy="ignore",
+            ),
+        )
     # Apply global offset and fillna
     stoch_k = _apply_offset_fillna(stoch_k, offset, fillna)
     stoch_d = _apply_offset_fillna(stoch_d, offset, fillna)
@@ -92,7 +101,7 @@ def stochf_ind(
     close: np.ndarray | pl.Series,
     k: int = 14,
     d: int = 3,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -107,22 +116,24 @@ def stochf_ind(
         low = low.to_numpy()
     if isinstance(close, pl.Series):
         close = close.to_numpy()
-    return stochf_numpy(high, low, close, k, d, mamode, offset, fillna, use_talib)
+    return stochf_numpy(
+        high, low, close, k, d, mamode, offset, fillna, use_talib
+    )
 
 
 def stochf_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    date_col: str = 'date',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    date_col: str = "date",
     k: int = 14,
     d: int = 3,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Compute Fast Stochastic columns (%K and %D) and return a new DataFrame
     containing the date column and the two indicator columns.
@@ -146,7 +157,7 @@ def stochf_polars(
     fillna : float, optional
         Value to fill NaNs after shifting.
     use_talib : bool
-        If True and TA‑Lib is available, use it; otherwise use Numba.
+        If True and TA-Lib is available, use it; otherwise use Numba.
     suffix : str
         Custom suffix for column names (default f"_{k}_{d}").
 
@@ -165,9 +176,11 @@ def stochf_polars(
     stoch_k, stoch_d = stochf_numpy(
         high, low, close, k, d, mamode, offset, fillna, use_talib
     )
-    suffix = suffix or f'_{k}_{d}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        f'STOCHFk{suffix}': stoch_k,
-        f'STOCHFd{suffix}': stoch_d,
-    })
+    suffix = suffix or f"_{k}_{d}"
+    return pl.DataFrame(
+        {
+            date_col: df[date_col],
+            f"STOCHFk{suffix}": stoch_k,
+            f"STOCHFd{suffix}": stoch_d,
+        }
+    )

@@ -8,7 +8,7 @@ from .._array_ops import _apply_offset_fillna, _handle_nan_policy
 
 
 # ----------------------------------------------------------------------
-# RMA (Wilder's Moving Average) – Numba core
+# RMA (Wilder's Moving Average) - Numba core
 # ----------------------------------------------------------------------
 @jit((float64[:], int64), nopython=True, cache=True)
 def _rma_numba_core(arr: np.ndarray, length: int) -> np.ndarray:
@@ -39,7 +39,7 @@ def rma_numba(
     length: int,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',   # 'raise', 'ffill', 'bfill', 'both'
+    nan_policy: str = "raise",  # 'raise', 'ffill', 'bfill', 'both'
 ) -> np.ndarray:
     """RMA using Numba with offset, fillna, and NaN handling.
 
@@ -69,12 +69,12 @@ def rma_numba(
     """
     # ---- Input validation ----
     if length < 1:
-        raise ValueError('RMA length must be >= 1')
+        raise ValueError("RMA length must be >= 1")
     arr = np.asarray(arr, dtype=np.float64)
     # ---- NaN handling on input ----
     # Supports 'raise', 'ignore', 'ffill', 'bfill', 'both' (same
     # convention as the rest of the codebase).
-    arr = _handle_nan_policy(arr, nan_policy, 'input')
+    arr = _handle_nan_policy(arr, nan_policy, "input")
     # Numba's typed dispatch requires a writable, C-contiguous array
     # (Polars `.to_numpy()` and read-only views may be non-writable).
     if not (arr.flags.c_contiguous and arr.flags.writeable):
@@ -88,7 +88,7 @@ def rma_ind(
     length: int,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     use_talib: bool = True,
 ) -> np.ndarray:
     """Universal RMA (always uses Numba) with NaN handling.
@@ -108,8 +108,8 @@ def rma_polars(
     length: int,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
-    output_col: str | None = None
+    nan_policy: str = "raise",
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """RMA for Polars DataFrame with NaN handling.
 
@@ -140,5 +140,5 @@ def rma_polars(
     result = rma_ind(
         arr, length=length, offset=offset, fillna=fillna, nan_policy=nan_policy
     )
-    out_name = output_col or f'RMA_{length}'
+    out_name = output_col or f"RMA_{length}"
     return df.with_columns(pl.Series(out_name, result))

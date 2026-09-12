@@ -9,18 +9,22 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_3linestrike_nb(
-    open_, high, low, close,
-    min_body_factor,
-    max_shadow_factor,
-    strict
+    open_, high, low, close, min_body_factor, max_shadow_factor, strict
 ):
-    """Numba‑accelerated Three‑Line Strike pattern with optional strict filtering.
+    """Numba-accelerated Three-Line Strike pattern with optional strict filtering.
 
     Parameters
     ----------
@@ -52,51 +56,51 @@ def _cdl_3linestrike_nb(
         h2, l2 = high[i - 2], low[i - 2]
         h1, l1 = high[i - 1], low[i - 1]
         h0, l0 = high[i], low[i]
-        # --- basic pattern (без strict) ---
-        # три белых, каждый выше предыдущего
+        # --- basic pattern (without strict filters) ---
+        # three white candles, each above the previous one
         bull3 = (
-            (c3 > o3) and (c2 > o2) and (c1 > o1) and
-            (c2 > c3) and (c1 > c2)
+            (c3 > o3) and (c2 > o2) and (c1 > o1) and (c2 > c3) and (c1 > c2)
         )
-        # три чёрных, каждый ниже предыдущего
+        # three black candles, each below the previous one
         bear3 = (
-            (c3 < o3) and (c2 < o2) and (c1 < o1) and
-            (c2 < c3) and (c1 < c2)
+            (c3 < o3) and (c2 < o2) and (c1 < o1) and (c2 < c3) and (c1 < c2)
         )
         direction = 0.0
         if bull3:
-            # чёрная ударная, открытие выше close третьей, закрытие ниже close первой
+            # black thrusting: opens above the third close, closes below the first close
             if (c0 < o0) and (o0 > c1) and (c0 < c3):
                 direction = 1.0
             else:
                 continue
         elif bear3:
-            # белая ударная, открытие ниже close третьей, закрытие выше close первой
+            # white thrusting: opens below the third close, closes above the first close
             if (c0 > o0) and (o0 < c1) and (c0 > c3):
                 direction = -1.0
             else:
                 continue
         else:
             continue
-        # --- strict‑фильтры одним блоком ---
+        # --- strict filters applied in one block ---
         if strict:
-            # диапазоны
+            # ranges
             r3 = h3 - l3
             r2 = h2 - l2
             r1 = h1 - l1
             r0 = h0 - l0
-            # тела
+            # bodies
             b3 = abs(c3 - o3)
             b2 = abs(c2 - o2)
             b1 = abs(c1 - o1)
             b0 = abs(c0 - o0)
-            if (b3 < min_body_factor * r3 or
-                b2 < min_body_factor * r2 or
-                b1 < min_body_factor * r1 or
-                b0 < min_body_factor * r0):
+            if (
+                b3 < min_body_factor * r3
+                or b2 < min_body_factor * r2
+                or b1 < min_body_factor * r1
+                or b0 < min_body_factor * r0
+            ):
                 continue
 
-            # тени без max/min
+            # shadows without max/min
             up3 = o3 if o3 > c3 else c3
             lo3 = c3 if o3 > c3 else o3
             sh3 = (h3 - up3) + (lo3 - l3)
@@ -113,10 +117,12 @@ def _cdl_3linestrike_nb(
             lo0 = c0 if o0 > c0 else o0
             sh0 = (h0 - up0) + (lo0 - l0)
 
-            if (sh3 > max_shadow_factor * r3 or
-                sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh3 > max_shadow_factor * r3
+                or sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = direction
@@ -136,7 +142,7 @@ def cdl_3linestrike(
     min_body_factor: float = 0.0,
     max_shadow_factor: float = 1.0,
 ) -> np.ndarray:
-    """Universal Three‑Line Strike pattern with optional strict mode.
+    """Universal Three-Line Strike pattern with optional strict mode.
 
     Parameters
     ----------
@@ -187,10 +193,10 @@ def cdl_3linestrike(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDL3LINESTRIKE(open_, high, low, close)
-        # TA‑Lib returns 100, -100, 0 → convert to -1,0,1
+        # TA-Lib returns 100, -100, 0 -> convert to -1,0,1
         result = talib_out.astype(np.float64) / 100.0
         return _apply_offset_fillna(result, offset, fillna)
     # Numba branch with strict parameters
@@ -202,18 +208,18 @@ def cdl_3linestrike(
 
 def cdl_3linestrike_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     min_body_factor: float = 0.0,
     max_shadow_factor: float = 1.0,
-    output_col: str = 'CDL_3LINESTRIKE',
+    output_col: str = "CDL_3LINESTRIKE",
 ) -> pl.DataFrame:
-    """Add Three‑Line Strike column to Polars DataFrame."""
+    """Add Three-Line Strike column to Polars DataFrame."""
     out = cdl_3linestrike(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

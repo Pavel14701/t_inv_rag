@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""OHLC4 indicator – vectorised NumPy implementation.
+"""OHLC4 indicator - vectorised NumPy implementation.
 
 All floating-point operations follow IEEE 754 rules: NaN in any of the
 four components makes that bar's average NaN, and infinite values
 propagate naturally through addition and multiplication by 0.25.
 """
+
 from typing import Optional
 
 import numpy as np
@@ -19,7 +20,7 @@ def ohlc4_numpy(
     low: np.ndarray,
     close: np.ndarray,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
     """OHLC4 using pure NumPy (vectorised, no JIT needed).
 
@@ -55,7 +56,7 @@ def ohlc4_ind(
     low: np.ndarray | pl.Series,
     close: np.ndarray | pl.Series,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
     """Universal OHLC4 (always uses NumPy).
 
@@ -87,13 +88,13 @@ def ohlc4_ind(
 
 def ohlc4_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: Optional[float] = None,
-    output_col: str = 'OHLC4'
+    output_col: str = "OHLC4",
 ) -> pl.DataFrame:
     """Add OHLC4 column to Polars DataFrame.
 
@@ -121,7 +122,6 @@ def ohlc4_polars(
     low_arr = df[low_col].to_numpy()
     close_arr = df[close_col].to_numpy()
     result = ohlc4_numpy(
-        open_arr, high_arr, low_arr,
-        close_arr, offset, fillna
+        open_arr, high_arr, low_arr, close_arr, offset, fillna
     )
     return df.with_columns([pl.Series(output_col, result)])

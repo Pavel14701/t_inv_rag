@@ -75,7 +75,7 @@ Module overview
         validation metrics, checkpointing, early stopping, and optional
         TensorBoard logging.
     :func:`self_training_loop`
-        Iterative self-training: train → pseudo-label → update labels →
+        Iterative self-training: train -> pseudo-label -> update labels ->
         repeat.
 
 **metrics**
@@ -176,8 +176,8 @@ All tensors entering the model must:
 * Have no NaN or Inf values.
 * Have consistent batch and sequence lengths.
 * TP/SL must be positive absolute prices.
-* Order blocks must have valid ``start_idx``, ``end_idx`` (0 ≤ idx <
-    seq_len), ``zone_low < zone_high``, and ``strength ≥ 0``.
+* Order blocks must have valid ``start_idx``, ``end_idx`` (0 <= idx <
+    seq_len), ``zone_low < zone_high``, and ``strength >= 0``.
 
 Use :func:`validate_batch` during development to catch violations early.
 
@@ -242,42 +242,42 @@ from .transformer import EntryExitTransformer
 
 
 __all__ = [
-    'AIConfig',
-    'ComputeConfig',
-    'EntryExitPredictor',
-    'EntryExitTransformer',
-    'ModelBundle',
-    'ModelConfig',
-    'OrderBlock',
-    'RiskConfig',
-    'TradingDataset',
-    'TrainingConfig',
-    'build_bundle',
-    'build_loader_from_parquet',
-    'collate_ob',
-    'compute_action_accuracy',
-    'compute_atr',
-    'compute_ob_distances',
-    'compute_tp_sl',
-    'compute_trade_metrics',
-    'dual_loss',
-    'export_onnx',
-    'generate_labels_from_strategy',
-    'load_bundle',
-    'load_config',
-    'load_features_parquet',
-    'load_labels_parquet',
-    'load_order_blocks_parquet',
-    'merge_features_labels',
-    'quick_train',
-    'rebuild_model',
-    'resolve_infer_device',
-    'resolve_train_device',
-    'risk_kwargs',
-    'save_bundle',
-    'save_labels_parquet',
-    'self_training_loop',
-    'set_seed',
-    'train_one_round',
-    'validate_batch',
+    "AIConfig",
+    "ComputeConfig",
+    "EntryExitPredictor",
+    "EntryExitTransformer",
+    "ModelBundle",
+    "ModelConfig",
+    "OrderBlock",
+    "RiskConfig",
+    "TradingDataset",
+    "TrainingConfig",
+    "build_bundle",
+    "build_loader_from_parquet",
+    "collate_ob",
+    "compute_action_accuracy",
+    "compute_atr",
+    "compute_ob_distances",
+    "compute_tp_sl",
+    "compute_trade_metrics",
+    "dual_loss",
+    "export_onnx",
+    "generate_labels_from_strategy",
+    "load_bundle",
+    "load_config",
+    "load_features_parquet",
+    "load_labels_parquet",
+    "load_order_blocks_parquet",
+    "merge_features_labels",
+    "quick_train",
+    "rebuild_model",
+    "resolve_infer_device",
+    "resolve_train_device",
+    "risk_kwargs",
+    "save_bundle",
+    "save_labels_parquet",
+    "self_training_loop",
+    "set_seed",
+    "train_one_round",
+    "validate_batch",
 ]

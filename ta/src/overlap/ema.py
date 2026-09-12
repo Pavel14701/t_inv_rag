@@ -11,6 +11,7 @@ Provides:
 All floating-point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
 """
+
 import numpy as np
 import polars as pl
 
@@ -71,7 +72,7 @@ def ema_numba(
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Exponential Moving Average using Numba.
@@ -108,19 +109,19 @@ def ema_numba(
 
     """
     if length < 1:
-        raise ValueError('EMA length must be >= 1')
+        raise ValueError("EMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64)
     # Replace infinities with NaN (IEEE 754 compliance)
     close = close.copy()
     replace_inf_with_nan(close)
     # Apply NaN policy
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least {length} elements, '
-            f'got {len(close)}.'
+            f"Input series too short: need at least {length} elements, "
+            f"got {len(close)}."
         )
     ema = _ema_numba_opt(close, length)
     if trim:
@@ -133,14 +134,14 @@ def ema_numba(
 
 
 # ----------------------------------------------------------------------
-# EMA using TA-Lib (with NaN handling – TA-Lib itself doesn't handle NaNs)
+# EMA using TA-Lib (with NaN handling - TA-Lib itself doesn't handle NaNs)
 # ----------------------------------------------------------------------
 def ema_talib(
     close: np.ndarray,
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """EMA via TA-Lib, with pre-processing of NaNs and infinities.
@@ -174,18 +175,18 @@ def ema_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     if length < 1:
-        raise ValueError('EMA length must be >= 1')
+        raise ValueError("EMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64)
     # Replace infinities with NaN
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least {length} elements, '
-            f'got {len(close)}.'
+            f"Input series too short: need at least {length} elements, "
+            f"got {len(close)}."
         )
     ema = talib.EMA(close, timeperiod=length)
     if trim:
@@ -206,7 +207,7 @@ def ema_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Universal EMA with automatic backend selection.
@@ -268,12 +269,12 @@ def ema_ind(
 # ----------------------------------------------------------------------
 def ema_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add EMA column to a Polars DataFrame.
@@ -318,5 +319,5 @@ def ema_polars(
         nan_policy=nan_policy,
         trim=False,
     )
-    out_name = output_col or f'EMA_{length}'
+    out_name = output_col or f"EMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

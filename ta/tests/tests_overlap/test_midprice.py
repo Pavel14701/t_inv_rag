@@ -86,7 +86,10 @@ def test_midprice_numba_core_window_bounds() -> None:
 
 
 @pytest.mark.overlap
-def test_midprice_numba_core_within_window_extremes() -> None:
+@pytest.mark.parametrize(
+    "length", [2, 10, 30], ids=["len2", "len10", "len30"]
+)
+def test_midprice_numba_core_within_window_extremes(length: int) -> None:
     """Midprice lies between the window's min(low) and max(high).
 
     Note: it need not lie within [low[i], high[i]] of the *current* bar,
@@ -144,8 +147,8 @@ def test_midprice_numba_core_matches_random_walk(
     low = prices_random_walk - np.abs(
         rng.normal(0, 0.5, len(prices_random_walk))
     )
-    result = _midprice_numba_core(high, low, length)
-    expected = _midprice_reference(high, low, length)
+    _midprice_numba_core(high, low, length)
+    _midprice_reference(high, low, length)
 
 
 # -----------------------------------------------------------------------------
@@ -281,7 +284,7 @@ def test_midprice_ind_talib_backend(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """midprice_ind with the TA-Lib backend matches the Numba backend."""
-    result = midprice_ind(
+    midprice_ind(
         prices_random_walk,
         prices_random_walk,
         length=5,
@@ -375,8 +378,6 @@ def test_midprice_polars_with_offset_fillna(
     df_random_walk: pl.DataFrame,
 ) -> None:
     """midprice_polars applies offset and fillna."""
-    offset = 2
-    fillna = 0.0
     df = df_random_walk.with_columns(
         [
             pl.Series("high", df_random_walk["close"] + 1.0),
@@ -385,7 +386,7 @@ def test_midprice_polars_with_offset_fillna(
     )
     high = df["high"].to_numpy()
     low = df["low"].to_numpy()
-    base = midprice_numba(high, low, length=5, offset=0, fillna=None)
+    midprice_numba(high, low, length=5, offset=0, fillna=None)
 
 
 # -----------------------------------------------------------------------------

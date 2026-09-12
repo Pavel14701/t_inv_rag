@@ -1,4 +1,4 @@
-"""Data loaders for the inference script (TZ-05 п.2.3).
+"""Data loaders for the inference script (TZ-05 item 2.3).
 
 Sources: synthetic (tests/dev), parquet (tests), yfinance (dev fallback),
 T-Invest (production; lazy import, requires ``INVEST_TOKEN``).
@@ -14,7 +14,7 @@ import polars as pl
 from .provider import _COLUMN_ALIASES
 
 
-_DATE_CANDIDATES = ('date', 'time', 'datetime', 'timestamp')
+_DATE_CANDIDATES = ("date", "time", "datetime", "timestamp")
 
 
 def normalize(df: pl.DataFrame) -> pl.DataFrame:
@@ -34,15 +34,15 @@ def normalize(df: pl.DataFrame) -> pl.DataFrame:
                 break
     if rename:
         df = df.rename(rename)
-    if 'date' not in df.columns:
+    if "date" not in df.columns:
         for cand in _DATE_CANDIDATES:
             if cand in df.columns:
-                df = df.rename({cand: 'date'})
+                df = df.rename({cand: "date"})
                 break
         else:
             raise ValueError(
-                'no date column found; expected one of '
-                f'{_DATE_CANDIDATES}'
+                "no date column found; expected one of "
+                f"{_DATE_CANDIDATES}"
             )
     return df
 
@@ -63,16 +63,16 @@ def load_synthetic(n_bars: int = 1000, seed: int = 42) -> pl.DataFrame:
     low = np.minimum(open_, close) - spread
     volume = rng.integers(1_000, 100_000, n_bars).astype(np.int64)
     dates = pl.Series(
-        'date',
+        "date",
         [dt.date(2024, 1, 1) + dt.timedelta(days=i) for i in range(n_bars)],
-    ).cast(pl.Datetime('us'))
+    ).cast(pl.Datetime("us"))
     return pl.DataFrame({
-        'date': dates[:n_bars],
-        'open': open_,
-        'high': high,
-        'low': low,
-        'close': close,
-        'volume': volume,
+        "date": dates[:n_bars],
+        "open": open_,
+        "high": high,
+        "low": low,
+        "close": close,
+        "volume": volume,
     })
 
 
@@ -88,21 +88,21 @@ def load_yfinance(ticker: str, period_from: str, period_to: str):
     raw = yf.download(ticker, start=period_from, end=period_to,
                       progress=False, auto_adjust=False)
     if raw is None or raw.empty:
-        raise ValueError(f'yfinance returned no data for {ticker!r}')
+        raise ValueError(f"yfinance returned no data for {ticker!r}")
     if isinstance(raw.columns, __import__(
-        'pandas'
+        "pandas"
     ).MultiIndex):
         raw.columns = raw.columns.get_level_values(0)
     df = pl.from_pandas(raw.reset_index())
     df = df.rename({
-        'Date': 'date', 'Open': 'open', 'High': 'high',
-        'Low': 'low', 'Close': 'close', 'Volume': 'volume',
+        "Date": "date", "Open": "open", "High": "high",
+        "Low": "low", "Close": "close", "Volume": "volume",
     })
     return normalize(df)
 
 
 def load_tinvest(ticker: str, period_from: str, period_to: str,
-                 interval: str = '1d'):
+                 interval: str = "1d"):
     """Primary source: T-Invest (t_tech.invest). Requires INVEST_TOKEN.
 
     Lazy import: the trading API package is not needed for dev runs.
@@ -110,53 +110,68 @@ def load_tinvest(ticker: str, period_from: str, period_to: str,
     """
     import os
 
-    from t_tech.invest import Client
+    from t_tech.invest import CandleInterval, Client, InstrumentIdType
+    from t_tech.invest.utils import quotation_to_decimal
 
-    token = os.environ.get('INVEST_TOKEN')
+    interval_map = {
+        "1m": CandleInterval.CANDLE_INTERVAL_1_MIN,
+        "5m": CandleInterval.CANDLE_INTERVAL_5_MIN,
+        "15m": CandleInterval.CANDLE_INTERVAL_15_MIN,
+        "1h": CandleInterval.CANDLE_INTERVAL_HOUR,
+        "1d": CandleInterval.CANDLE_INTERVAL_DAY,
+    }
+    if interval not in interval_map:
+        raise ValueError(
+            f"unsupported interval {interval!r}; "
+            f"expected one of {sorted(interval_map)}"
+        )
+    token = os.environ.get("INVEST_TOKEN")
     if not token:
-        raise RuntimeError('INVEST_TOKEN is not set')
+        raise RuntimeError("INVEST_TOKEN is not set")
     from datetime import datetime
 
     start = datetime.fromisoformat(period_from)
     end = datetime.fromisoformat(period_to)
     with Client(token) as client:
         instrument = client.instruments.share_by(
-            id_type=2, class_code='TQBR', ticker=ticker
+            id_type=InstrumentIdType.INSTRUMENT_ID_TYPE_TICKER,
+            class_code="TQBR",
+            id=ticker,
         ).instrument
         candles = client.market_data.get_candles(
             instrument_id=instrument.uid,
-            interval=interval,
+            interval=interval_map[interval],
             from_=start,
             to=end,
         )
     rows = [
         {
-            'date': c.time,
-            'open': float(c.open),
-            'high': float(c.high),
-            'low': float(c.low),
-            'close': float(c.close),
-            'volume': int(c.volume),
+            "date": c.time,
+            "open": float(quotation_to_decimal(c.open)),
+            "high": float(quotation_to_decimal(c.high)),
+            "low": float(quotation_to_decimal(c.low)),
+            "close": float(quotation_to_decimal(c.close)),
+            "volume": int(c.volume),
         }
         for c in candles.candles
     ]
     if not rows:
-        raise ValueError(f'T-Invest returned no candles for {ticker!r}')
+        raise ValueError(f"T-Invest returned no candles for {ticker!r}")
     return pl.DataFrame(rows)
 
 
 def load(source: str, **kwargs) -> pl.DataFrame:
     """Source dispatcher."""
-    if source == 'synthetic':
+    if source == "synthetic":
         return load_synthetic(**kwargs)
-    if source == 'parquet':
-        return load_parquet(kwargs['path'])
-    if source == 'yfinance':
+    if source == "parquet":
+        return load_parquet(kwargs["path"])
+    if source == "yfinance":
         return load_yfinance(
-            kwargs['ticker'], kwargs['period_from'], kwargs['period_to']
+            kwargs["ticker"], kwargs["period_from"], kwargs["period_to"]
         )
-    if source == 'tinvest':
+    if source == "tinvest":
         return load_tinvest(
-            kwargs['ticker'], kwargs['period_from'], kwargs['period_to']
+            kwargs["ticker"], kwargs["period_from"], kwargs["period_to"]
         )
-    raise ValueError(f'unknown source {source!r}')
+    raise ValueError(f"unknown source {source!r}")

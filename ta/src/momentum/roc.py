@@ -9,7 +9,9 @@ from ..external import talib, talib_available
 
 
 @jit((float64[:], int64, float64), nopython=True, fastmath=False, cache=True)
-def _roc_numba_core(close: np.ndarray, length: int, scalar: float) -> np.ndarray:
+def _roc_numba_core(
+    close: np.ndarray, length: int, scalar: float
+) -> np.ndarray:
     """Rate of Change core calculation.
     ROC = scalar * (close[i] - close[i-length]) / close[i-length].
 
@@ -23,7 +25,7 @@ def _roc_numba_core(close: np.ndarray, length: int, scalar: float) -> np.ndarray
     for i in range(length, n):
         numerator = close[i] - close[i - length]
         denominator = close[i - length]
-        if denominator != 0.0:
+        if denominator != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             out[i] = scalar * numerator / denominator
         else:
             out[i] = np.nan  # division by zero
@@ -38,7 +40,7 @@ def roc_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based ROC calculation.
+    """Numpy-based ROC calculation.
 
     Parameters
     ----------
@@ -62,11 +64,11 @@ def roc_numpy(
     if not close.flags.writeable:
         close = close.copy()
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if use_talib and talib_available:
-        # TA‑Lib ROC returns percentage (scalar=100)
+        # TA-Lib ROC returns percentage (scalar=100)
         result = talib.ROC(close, timeperiod=length)
-        if scalar != 100.0:
+        if scalar != 100.0:  # noqa: RUF069 - exact IEEE zero/sign check
             result = result * (scalar / 100.0)
     else:
         result = _roc_numba_core(close, length, scalar)
@@ -89,8 +91,8 @@ def roc_ind(
 
 def roc_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
-    date_col: str = 'date',
+    close_col: str = "close",
+    date_col: str = "date",
     length: int = 10,
     scalar: float = 100.0,
     offset: int = 0,
@@ -120,8 +122,10 @@ def roc_polars(
     """
     close = df[close_col].to_numpy()
     result = roc_numpy(close, length, scalar, offset, fillna, use_talib)
-    out_name = output_col or f'ROC_{length}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        out_name: result,
-    })
+    out_name = output_col or f"ROC_{length}"
+    return pl.DataFrame(
+        {
+            date_col: df[date_col],
+            out_name: result,
+        }
+    )

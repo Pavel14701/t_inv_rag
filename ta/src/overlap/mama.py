@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""MAMA (Mesa Adaptive Moving Average) – Ehlers' adaptive filter.
+"""MAMA (Mesa Adaptive Moving Average) - Ehlers' adaptive filter.
 
 This module provides:
 - Numba-accelerated core (`_mama_numba_core`)
@@ -12,6 +12,7 @@ All floating-point operations follow IEEE 754 rules (no fastmath
 optimisations). Infinite values are replaced with NaN before calculation.
 A NaN in the input poisons the recursive filter from that point onward.
 """
+
 from typing import Optional, Tuple
 
 import numpy as np
@@ -32,10 +33,7 @@ from ..external import talib, talib_available
 # ----------------------------------------------------------------------
 @jit(nopython=True, cache=True, fastmath=False)
 def _mama_numba_core(
-    close: np.ndarray,
-    fastlimit: float,
-    slowlimit: float,
-    prenan: int
+    close: np.ndarray, fastlimit: float, slowlimit: float, prenan: int
 ) -> Tuple[np.ndarray, np.ndarray]:
     """MAMA core loop (Numba). Returns (mama, fama).
 
@@ -98,7 +96,7 @@ def _mama_numba_core(
         im[i] = i2[i] * q2[i - 1] + q2[i] * i2[i - 1]
         re[i] = p_w * re[i] + (1 - p_w) * re[i - 1]
         im[i] = p_w * im[i] + (1 - p_w) * im[i - 1]
-        if im[i] != 0.0 and re[i] != 0.0:
+        if im[i] != 0.0 and re[i] != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             period[i] = 360.0 / np.arctan(im[i] / re[i])
         else:
             period[i] = 0.0
@@ -112,7 +110,7 @@ def _mama_numba_core(
         if period[i] > 50.0:
             period[i] = 50.0
         period[i] = p_w * period[i] + (1 - p_w) * period[i - 1]
-        if q1[i] != 0.0:
+        if q1[i] != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             phase[i] = np.arctan(i1[i] / q1[i])
         else:
             phase[i] = phase[i - 1]
@@ -142,7 +140,7 @@ def mama_numba(
     prenan: int = 3,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> Tuple[np.ndarray, np.ndarray]:
     """MAMA using Numba with IEEE 754 compliant NaN/Inf handling.
 
@@ -183,15 +181,15 @@ def mama_numba(
     """
     if not (0.0 < slowlimit <= fastlimit <= 1.0):
         raise ValueError(
-            f'Invalid limits: require 0 < slowlimit <= fastlimit <= 1, '
-            f'got {slowlimit=} {fastlimit=}.'
+            f"Invalid limits: require 0 < slowlimit <= fastlimit <= 1, "
+            f"got {slowlimit=} {fastlimit=}."
         )
     if prenan < 0:
-        raise ValueError(f'prenan must be >= 0, got {prenan}.')
+        raise ValueError(f"prenan must be >= 0, got {prenan}.")
     close = np.asarray(close, dtype=np.float64)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
 
@@ -240,7 +238,7 @@ def mama_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     close = np.asarray(close, dtype=np.float64)
     close = close.copy()
     replace_inf_with_nan(close)
@@ -258,7 +256,7 @@ def mama_ind(
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Universal MAMA with automatic backend selection.
 
@@ -317,19 +315,21 @@ def mama_ind(
     if use_talib and talib_available:
         return mama_talib(close, fastlimit, slowlimit, offset, fillna)
     else:
-        return mama_numba(close, fastlimit, slowlimit, prenan, offset, fillna, nan_policy)
+        return mama_numba(
+            close, fastlimit, slowlimit, prenan, offset, fillna, nan_policy
+        )
 
 
 def mama_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     fastlimit: float = 0.5,
     slowlimit: float = 0.05,
     prenan: int = 3,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: Optional[str] = None,
 ) -> Tuple[pl.Series, pl.Series]:
     """Return MAMA and FAMA as Polars Series.
@@ -365,8 +365,8 @@ def mama_polars(
     Examples
     --------
     >>> import polars as pl
-    >>> df = pl.DataFrame({'close': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]})
-    >>> mama, fama = mama_polars(df, fastlimit=0.5, slowlimit=0.05, output_col='M')
+    >>> df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]})
+    >>> mama, fama = mama_polars(df, fastlimit=0.5, slowlimit=0.05, output_col="M")
     >>> mama
     shape: (10,)
     Series: 'M_MAMA' [f64]
@@ -410,6 +410,6 @@ def mama_polars(
         use_talib=use_talib,
         nan_policy=nan_policy,
     )
-    mama_name = output_col + '_MAMA' if output_col else 'MAMA'
-    fama_name = output_col + '_FAMA' if output_col else 'FAMA'
+    mama_name = output_col + "_MAMA" if output_col else "MAMA"
+    fama_name = output_col + "_FAMA" if output_col else "FAMA"
     return pl.Series(mama_name, mama), pl.Series(fama_name, fama)

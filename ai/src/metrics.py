@@ -23,15 +23,15 @@ def compute_action_accuracy(
     """
     mask = action_targets != ignore_index
     if not mask.any():
-        return {'overall': 0.0, 'hold': 0.0, 'entry': 0.0, 'exit': 0.0}
+        return {"overall": 0.0, "hold": 0.0, "entry": 0.0, "exit": 0.0}
 
     preds = action_logits.argmax(dim=-1)
     targets = action_targets[mask]
     correct = (preds[mask] == targets).float()
 
     overall = correct.mean().item()
-    results = {'overall': overall}
-    for cls, name in enumerate(['hold', 'entry', 'exit']):
+    results = {"overall": overall}
+    for cls, name in enumerate(["hold", "entry", "exit"]):
         cls_mask = targets == cls
         results[name] = (
             correct[cls_mask].mean().item()
@@ -67,21 +67,21 @@ def compute_trade_metrics(
     action_pred = action_logits.argmax(dim=-1)
     entry_mask = action_pred == 1
     if not entry_mask.any():
-        return {'win_rate': 0.0, 'profit_factor': 0.0, 'num_trades': 0}
+        return {"win_rate": 0.0, "profit_factor": 0.0, "num_trades": 0}
 
     outcome_true = outcome_targets[entry_mask].float()
     valid = outcome_true != ignore_index
     if not valid.any():
-        return {'win_rate': 0.0, 'profit_factor': 0.0, 'num_trades': 0}
+        return {"win_rate": 0.0, "profit_factor": 0.0, "num_trades": 0}
 
-    wins = (outcome_true[valid] == 1.0).sum().item()
-    losses = (outcome_true[valid] == 0.0).sum().item()
+    wins = (outcome_true[valid] == 1.0).sum().item()  # noqa: RUF069 - exact IEEE zero/sign check
+    losses = (outcome_true[valid] == 0.0).sum().item()  # noqa: RUF069 - exact IEEE zero/sign check
     total = wins + losses
     win_rate = wins / total if total else 0.0
-    profit_factor = wins / losses if losses > 0 else float('inf')
+    profit_factor = wins / losses if losses > 0 else float("inf")
 
     return {
-        'win_rate': win_rate,
-        'profit_factor': profit_factor,
-        'num_trades': total,
+        "win_rate": win_rate,
+        "profit_factor": profit_factor,
+        "num_trades": total,
     }

@@ -26,11 +26,9 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit('float64[:](float64[:], int64, int64)', fastmath=False, cache=True)
+@njit("float64[:](float64[:], int64, int64)", fastmath=False, cache=True)
 def _stdev_numba_core_online(
-    close: np.ndarray,
-    length: int,
-    ddof: int
+    close: np.ndarray, length: int, ddof: int
 ) -> np.ndarray:
     """Online (one-pass) rolling standard deviation.
 
@@ -53,9 +51,8 @@ def _stdev_numba_core_online(
         sum_x += val
         sum_x2 += val * val
     mean = sum_x / length
-    variance = (
-        (sum_x2 - 2 * mean * sum_x + length * mean * mean)
-        / (length - ddof)
+    variance = (sum_x2 - 2 * mean * sum_x + length * mean * mean) / (
+        length - ddof
     )
     out[length - 1] = np.sqrt(variance) if variance >= 0 else np.nan
     for i in range(length, n):
@@ -79,19 +76,16 @@ def _stdev_numba_core_online(
                 sum_x += val
                 sum_x2 += val * val
         mean = sum_x / length
-        variance = (
-            (sum_x2 - 2 * mean * sum_x + length * mean * mean)
-            / (length - ddof)
+        variance = (sum_x2 - 2 * mean * sum_x + length * mean * mean) / (
+            length - ddof
         )
         out[i] = np.sqrt(variance) if variance >= 0 else np.nan
     return out
 
 
-@njit('float64[:](float64[:], int64, int64)', fastmath=False, cache=True)
+@njit("float64[:](float64[:], int64, int64)", fastmath=False, cache=True)
 def _stdev_numba_core_twopass(
-    close: np.ndarray,
-    length: int,
-    ddof: int
+    close: np.ndarray, length: int, ddof: int
 ) -> np.ndarray:
     """Two-pass rolling standard deviation.
 
@@ -124,10 +118,10 @@ def _stdev_numba_core(
     close: np.ndarray,
     length: int,
     ddof: int,
-    algorithm: Literal['online', 'two_pass'] = 'online',
+    algorithm: Literal["online", "two_pass"] = "online",
 ) -> np.ndarray:
     """Dispatch to the appropriate Numba core function."""
-    if algorithm == 'online':
+    if algorithm == "online":
         return _stdev_numba_core_online(close, length, ddof)
     else:
         return _stdev_numba_core_twopass(close, length, ddof)
@@ -139,7 +133,7 @@ def stdev_numba(
     ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
-    algorithm: Literal['online', 'two_pass'] = 'online',
+    algorithm: Literal["online", "two_pass"] = "online",
 ) -> np.ndarray:
     """Numba-accelerated rolling standard deviation.
 
@@ -168,9 +162,9 @@ def stdev_numba(
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if ddof < 0 or ddof >= length:
-        raise ValueError('ddof must satisfy 0 <= ddof < length')
+        raise ValueError("ddof must satisfy 0 <= ddof < length")
     if not close.flags.writeable:
         close = close.copy()
     if not close.flags.c_contiguous:
@@ -187,7 +181,7 @@ def stdev_talib(
 ) -> np.ndarray:
     """TA-Lib-based rolling standard deviation (ddof=0)."""
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -202,7 +196,7 @@ def stdev_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    algorithm: Literal['online', 'two_pass'] = 'online',
+    algorithm: Literal["online", "two_pass"] = "online",
 ) -> np.ndarray:
     """Universal rolling standard deviation (numpy array or Polars Series).
 
@@ -240,13 +234,13 @@ def stdev_ind(
 
 def stdev_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 30,
     ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    algorithm: Literal['online', 'two_pass'] = 'online',
+    algorithm: Literal["online", "two_pass"] = "online",
     output_col: str | None = None,
 ) -> pl.Series:
     """Add rolling standard deviation column to a Polars DataFrame."""
@@ -260,7 +254,7 @@ def stdev_polars(
         use_talib=use_talib,
         algorithm=algorithm,
     )
-    out_name = output_col or f'STDEV_{length}'
+    out_name = output_col or f"STDEV_{length}"
     return pl.Series(out_name, result)
 
 
@@ -271,9 +265,9 @@ def stdev_polars_multi(
     ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
-    suffix: str = '_stdev',
+    suffix: str = "_stdev",
     use_talib: bool = False,
-    algorithm: Literal['online', 'two_pass'] = 'online',
+    algorithm: Literal["online", "two_pass"] = "online",
 ) -> pl.DataFrame:
     """Add rolling standard deviation columns for multiple columns."""
     for col in columns:
@@ -287,5 +281,5 @@ def stdev_polars_multi(
             use_talib=use_talib,
             algorithm=algorithm,
         )
-        df = df.with_columns(pl.Series(f'{col}{suffix}', result))
+        df = df.with_columns(pl.Series(f"{col}{suffix}", result))
     return df

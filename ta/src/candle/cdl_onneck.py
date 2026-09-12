@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_onneck_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated On-Neck pattern.
+    """Numba-accelerated On-Neck pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -43,7 +37,7 @@ def _cdl_onneck_nb(
         # gap down: second opens below first low
         if not (o2 < l1):
             continue
-        # On-Neck: close of second ≈ close of first
+        # On-Neck: close of second ~= close of first
         if abs(c2 - c1) > 0.1 * body1:
             continue
         out[i] = True
@@ -62,14 +56,14 @@ def cdl_onneck(
     """Universal On-Neck pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    # Polars → numpy
-    if isinstance(open_, pl.Series): 
+    # Polars -> numpy
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     # Ensure float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -92,7 +86,7 @@ def cdl_onneck(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLONNECK(open_, high, low, close)
         talib_out = (talib_out != 0).astype(np.float64)
@@ -105,13 +99,13 @@ def cdl_onneck(
 
 def cdl_onneck_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_ONNECK',
+    output_col: str = "CDL_ONNECK",
 ) -> pl.DataFrame:
     """Add On-Neck column to Polars DataFrame."""
     out = cdl_onneck(

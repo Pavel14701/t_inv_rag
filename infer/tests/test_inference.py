@@ -67,7 +67,7 @@ def test_normalize_legacy_schema():
 
 
 def test_run_inference_signals_and_summary():
-    """End-to-end: signals, summary, warm-up skips (TZ-05 п.3.3)."""
+    """End-to-end: signals, summary, warm-up skips (TZ-05 item 3.3)."""
     df = load_synthetic(n_bars=500)
     result = run_inference(df, DSL_ENTRY, "close < ema(length=20)")
     assert result.num_bars == 500

@@ -31,8 +31,8 @@ from ..overlap.sma import sma_ind
 def ma_numba(
     arr: np.ndarray,
     length: int,
-    mamode: str = 'sma',
-    nan_policy: str = 'ignore',
+    mamode: str = "sma",
+    nan_policy: str = "ignore",
 ) -> np.ndarray:
     """Unified moving average using Numba backend.
 
@@ -60,19 +60,19 @@ def ma_numba(
     """
     arr = arr.astype(np.float64)
     mamode = mamode.lower()
-    if mamode == 'sma':
+    if mamode == "sma":
         return sma_ind(arr, length, use_talib=False, nan_policy=nan_policy)
-    elif mamode == 'ema':
+    elif mamode == "ema":
         return ema_ind(arr, length, use_talib=False, nan_policy=nan_policy)
     else:
-        raise ValueError(f'Unsupported mamode: {mamode}')
+        raise ValueError(f"Unsupported mamode: {mamode}")
 
 
 def ma_talib(
     arr: np.ndarray,
     length: int,
-    mamode: str = 'sma',
-    nan_policy: str = 'ignore',
+    mamode: str = "sma",
+    nan_policy: str = "ignore",
 ) -> np.ndarray:
     """Unified moving average using TA-Lib.
 
@@ -101,23 +101,23 @@ def ma_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib not available')
+        raise ImportError("TA-Lib not available")
     arr = arr.astype(np.float64)
     mamode = mamode.lower()
-    if mamode == 'sma':
+    if mamode == "sma":
         return sma_ind(arr, length, use_talib=True, nan_policy=nan_policy)
-    elif mamode == 'ema':
+    elif mamode == "ema":
         return ema_ind(arr, length, use_talib=True, nan_policy=nan_policy)
     else:
-        raise ValueError(f'Unsupported mamode: {mamode}')
+        raise ValueError(f"Unsupported mamode: {mamode}")
 
 
 def ma(
     arr: np.ndarray,
     length: int,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     use_talib: bool = True,
-    nan_policy: str = 'ignore',
+    nan_policy: str = "ignore",
 ) -> np.ndarray:
     """Universal moving average with automatic backend selection.
 
@@ -173,7 +173,7 @@ def _hilo_numba_core(
     Returns
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
-        (hilo, long, short) – all arrays have the same length as `close`.
+        (hilo, long, short) - all arrays have the same length as `close`.
         The first element is NaN; subsequent elements follow the rules:
         - if close[i] > high_ma[i-1]  -> hilo[i] = low_ma[i], long = low_ma[i]
         - if close[i] < low_ma[i-1]   -> hilo[i] = high_ma[i], short = high_ma[i]
@@ -214,7 +214,7 @@ def _hilo_numba(
     close: np.ndarray,
     high_length: int = 13,
     low_length: int = 21,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -236,7 +236,7 @@ def _hilo_numba(
     Returns
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
-        (hilo, long, short) – all arrays have the same length as `close`.
+        (hilo, long, short) - all arrays have the same length as `close`.
 
     Notes
     -----
@@ -267,10 +267,12 @@ def _hilo_numba(
     replace_inf_with_nan(low)
     replace_inf_with_nan(close)
 
-    high_ma = ma_numba(high, high_length, mamode, nan_policy='ignore')
-    low_ma = ma_numba(low, low_length, mamode, nan_policy='ignore')
+    high_ma = ma_numba(high, high_length, mamode, nan_policy="ignore")
+    low_ma = ma_numba(low, low_length, mamode, nan_policy="ignore")
 
-    hilo, long_arr, short_arr = _hilo_numba_core(high, low, close, high_ma, low_ma)
+    hilo, long_arr, short_arr = _hilo_numba_core(
+        high, low, close, high_ma, low_ma
+    )
 
     hilo = _apply_offset_fillna(hilo, offset, fillna)
     long_arr = _apply_offset_fillna(long_arr, offset, fillna)
@@ -287,7 +289,7 @@ def _hilo_talib(
     close: np.ndarray,
     high_length: int = 13,
     low_length: int = 21,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -309,7 +311,7 @@ def _hilo_talib(
     Returns
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
-        (hilo, long, short) – all arrays have the same length as `close`.
+        (hilo, long, short) - all arrays have the same length as `close`.
 
     Raises
     ------
@@ -325,7 +327,7 @@ def _hilo_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib not available')
+        raise ImportError("TA-Lib not available")
 
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -348,10 +350,12 @@ def _hilo_talib(
     replace_inf_with_nan(low)
     replace_inf_with_nan(close)
 
-    high_ma = ma_talib(high, high_length, mamode, nan_policy='ignore')
-    low_ma = ma_talib(low, low_length, mamode, nan_policy='ignore')
+    high_ma = ma_talib(high, high_length, mamode, nan_policy="ignore")
+    low_ma = ma_talib(low, low_length, mamode, nan_policy="ignore")
 
-    hilo, long_arr, short_arr = _hilo_numba_core(high, low, close, high_ma, low_ma)
+    hilo, long_arr, short_arr = _hilo_numba_core(
+        high, low, close, high_ma, low_ma
+    )
 
     hilo = _apply_offset_fillna(hilo, offset, fillna)
     long_arr = _apply_offset_fillna(long_arr, offset, fillna)
@@ -368,7 +372,7 @@ def hilo_ind(
     close: np.ndarray | pl.Series,
     high_length: int = 13,
     low_length: int = 21,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -393,7 +397,7 @@ def hilo_ind(
     Returns
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
-        (hilo, long, short) – numpy arrays of float64.
+        (hilo, long, short) - numpy arrays of float64.
 
     Notes
     -----
@@ -423,16 +427,16 @@ def hilo_ind(
 # ----------------------------------------------------------------------
 def hilo_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     high_length: int = 13,
     low_length: int = 21,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add HiLo Activator columns to a Polars DataFrame.
 
@@ -470,7 +474,9 @@ def hilo_polars(
     close = df[close_col].to_numpy()
 
     hilo_arr, long_arr, short_arr = hilo_ind(
-        high, low, close,
+        high,
+        low,
+        close,
         high_length=high_length,
         low_length=low_length,
         mamode=mamode,
@@ -480,10 +486,12 @@ def hilo_polars(
     )
 
     if not suffix:
-        suffix = f'_{high_length}_{low_length}'
+        suffix = f"_{high_length}_{low_length}"
 
-    return df.with_columns([
-        pl.Series(f'HILO{suffix}', hilo_arr),
-        pl.Series(f'HILOl{suffix}', long_arr),
-        pl.Series(f'HILOs{suffix}', short_arr),
-    ])
+    return df.with_columns(
+        [
+            pl.Series(f"HILO{suffix}", hilo_arr),
+            pl.Series(f"HILOl{suffix}", long_arr),
+            pl.Series(f"HILOs{suffix}", short_arr),
+        ]
+    )

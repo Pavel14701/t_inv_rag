@@ -16,6 +16,7 @@ The module provides:
 All floating-point operations follow IEEE 754 rules (no fastmath).
 Infinite values are replaced with NaN before calculation.
 """
+
 import numpy as np
 import polars as pl
 
@@ -30,7 +31,7 @@ from ..external import talib, talib_available
 
 
 # ----------------------------------------------------------------------
-# True Range – Numba core
+# True Range - Numba core
 # ----------------------------------------------------------------------
 @njit(fastmath=False, cache=True)
 def _true_range_numba_core(
@@ -91,18 +92,18 @@ def _validate_tr_inputs(
     """
     if drift < 1:
         raise ValueError(
-            f'TR drift must be >= 1 (got {drift}); drift < 1 would '
-            'either compare a bar with itself or look into the future.'
+            f"TR drift must be >= 1 (got {drift}); drift < 1 would "
+            "either compare a bar with itself or look into the future."
         )
     if not (len(high) == len(low) == len(close)):
         raise ValueError(
-            f'high, low and close must have the same length: '
-            f'got {len(high)}, {len(low)} and {len(close)}.'
+            f"high, low and close must have the same length: "
+            f"got {len(high)}, {len(low)} and {len(close)}."
         )
     if len(high) < drift + 1:
         raise ValueError(
-            f'Input series too short: need at least {drift + 1} '
-            f'elements, got {len(high)}.'
+            f"Input series too short: need at least {drift + 1} "
+            f"elements, got {len(high)}."
         )
 
 
@@ -114,7 +115,7 @@ def true_range_numba(
     prenan: bool = False,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """True Range using Numba.
 
@@ -159,16 +160,16 @@ def true_range_numba(
     replace_inf_with_nan(high)
     replace_inf_with_nan(low)
     replace_inf_with_nan(close)
-    high = _handle_nan_policy(high, nan_policy, 'high')
-    low = _handle_nan_policy(low, nan_policy, 'low')
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    high = _handle_nan_policy(high, nan_policy, "high")
+    low = _handle_nan_policy(low, nan_policy, "low")
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     tr = _true_range_numba_core(high, low, close, drift)
     return _apply_offset_fillna(tr, offset, fillna)
 
 
 # ----------------------------------------------------------------------
-# True Range – TA-Lib wrapper
+# True Range - TA-Lib wrapper
 # ----------------------------------------------------------------------
 def true_range_talib(
     high: np.ndarray,
@@ -178,7 +179,7 @@ def true_range_talib(
     prenan: bool = False,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """True Range using TA-Lib (C implementation, fixed drift=1).
 
@@ -205,11 +206,11 @@ def true_range_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     if drift != 1:
         raise ValueError(
-            f'TA-Lib TRANGE supports drift=1 only, got drift={drift}. '
-            'Use use_talib=False for the Numba backend.'
+            f"TA-Lib TRANGE supports drift=1 only, got drift={drift}. "
+            "Use use_talib=False for the Numba backend."
         )
     _validate_tr_inputs(high, low, close, drift)
     high = np.asarray(high, dtype=np.float64)
@@ -229,9 +230,9 @@ def true_range_talib(
     replace_inf_with_nan(high)
     replace_inf_with_nan(low)
     replace_inf_with_nan(close)
-    high = _handle_nan_policy(high, nan_policy, 'high')
-    low = _handle_nan_policy(low, nan_policy, 'low')
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    high = _handle_nan_policy(high, nan_policy, "high")
+    low = _handle_nan_policy(low, nan_policy, "low")
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     tr = talib.TRANGE(high, low, close)
     return _apply_offset_fillna(tr, offset, fillna)
@@ -249,7 +250,7 @@ def true_range_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal True Range with automatic backend selection.
 
@@ -301,16 +302,16 @@ def true_range_ind(
 # ----------------------------------------------------------------------
 def true_range_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     drift: int = 1,
     prenan: bool = False,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
-    output_col: str | None = None
+    nan_policy: str = "raise",
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """True Range for Polars DataFrame.
 
@@ -351,13 +352,15 @@ def true_range_polars(
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     result = true_range_ind(
-        high, low, close,
+        high,
+        low,
+        close,
         drift=drift,
         prenan=prenan,
         offset=offset,
         fillna=fillna,
         use_talib=use_talib,
-        nan_policy=nan_policy
+        nan_policy=nan_policy,
     )
-    out_name = output_col or f'TRUERANGE_{drift}'
+    out_name = output_col or f"TRUERANGE_{drift}"
     return df.with_columns([pl.Series(out_name, result)])

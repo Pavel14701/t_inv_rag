@@ -276,7 +276,7 @@ def test_dema_numba_with_nan(prices_with_nan):
     # Therefore, result should be NaN from index 5 to the end.
     assert np.isnan(
         result[:5]
-    ).all()  # indices 0-4 are NaN due to insufficient data  # noqa: E501
+    ).all()  # indices 0-4 are NaN due to insufficient data
     assert np.isnan(result[5:]).all()  # from 5 onward all NaN
 
 

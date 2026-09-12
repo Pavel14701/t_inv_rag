@@ -17,7 +17,7 @@ def aberration_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Numpy‑based Aberration calculation.
+    """Numpy-based Aberration calculation.
 
     Returns (zg, sg, xg, atr) as numpy arrays.
 
@@ -35,9 +35,9 @@ def aberration_numpy(
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if atr_length < 1:
-        raise ValueError('atr_length must be >= 1')
+        raise ValueError("atr_length must be >= 1")
     # Rebind the outer names: assigning to the loop variable is a no-op
     # and left the arrays non-contiguous for the numba backends.
     if not high.flags.c_contiguous:
@@ -48,9 +48,11 @@ def aberration_numpy(
         close = np.ascontiguousarray(close)
     # ATR (uses RMA by default)
     atr_arr = atr_ind(
-        high, low, close,
+        high,
+        low,
+        close,
         length=atr_length,
-        mamode='rma',
+        mamode="rma",
         offset=0,
         fillna=None,
         percent=False,
@@ -59,7 +61,11 @@ def aberration_numpy(
     # HLC3 and its SMA
     hlc3_arr = (high + low + close) / 3.0
     zg = sma_ind(
-        hlc3_arr, length=length, offset=0, fillna=None, use_talib=use_talib,
+        hlc3_arr,
+        length=length,
+        offset=0,
+        fillna=None,
+        use_talib=use_talib,
     )
     sg = zg + atr_arr
     xg = zg - atr_arr
@@ -97,15 +103,15 @@ def aberration_ind(
 
 def aberration_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 5,
     atr_length: int = 15,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add Aberration columns to Polars DataFrame.
 
@@ -145,10 +151,12 @@ def aberration_polars(
     zg, sg, xg, atr_arr = aberration_numpy(
         high, low, close, length, atr_length, offset, fillna, use_talib
     )
-    suffix = suffix or f'_{length}_{atr_length}'
-    return df.with_columns([
-        pl.Series(f'ABER_ZG{suffix}', zg),
-        pl.Series(f'ABER_SG{suffix}', sg),
-        pl.Series(f'ABER_XG{suffix}', xg),
-        pl.Series(f'ABER_ATR{suffix}', atr_arr),
-    ])
+    suffix = suffix or f"_{length}_{atr_length}"
+    return df.with_columns(
+        [
+            pl.Series(f"ABER_ZG{suffix}", zg),
+            pl.Series(f"ABER_SG{suffix}", sg),
+            pl.Series(f"ABER_XG{suffix}", xg),
+            pl.Series(f"ABER_ATR{suffix}", atr_arr),
+        ]
+    )

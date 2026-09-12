@@ -22,7 +22,7 @@ from .._array_ops import _apply_offset_fillna
 
 
 @njit(
-    'int8[:](float64[:], float64)',
+    "int8[:](float64[:], float64)",
     cache=True,
     fastmath=False,
 )  # type: ignore[call-overload]
@@ -173,11 +173,11 @@ def kagi(
 
 def kagi_polars(
     df: pl.DataFrame,
-    price_col: str = 'close',
+    price_col: str = "close",
     reversal: float = 1.0,
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'KAGI',
+    output_col: str = "KAGI",
 ) -> pl.DataFrame:
     """Add a Kagi yin/yang column to a Polars DataFrame.
 
@@ -212,16 +212,16 @@ def kagi_polars(
     >>> df = pl.DataFrame({"close": [100.0, 102.0, 104.0, 106.0]})
     >>> kagi_polars(df, reversal=2.0, output_col="KAGI")
     shape: (4, 2)
-    ┌───────┬───────┐
-    │ close ┆ KAGI  │
-    │ ---   ┆ ---   │
-    │ f64   ┆ f64   │
-    ╞═══════╪═══════╡
-    │ 100.0 ┆ 0.0   │
-    │ 102.0 ┆ 1.0   │
-    │ 104.0 ┆ 1.0   │
-    │ 106.0 ┆ 1.0   │
-    └───────┴───────┘
+    +-------+-------+
+    | close | KAGI  |
+    | ---   | ---   |
+    | f64   | f64   |
+    +=======+=======+
+    | 100.0 | 0.0   |
+    | 102.0 | 1.0   |
+    | 104.0 | 1.0   |
+    | 106.0 | 1.0   |
+    +-------+-------+
 
     """
     out = kagi(

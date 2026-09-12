@@ -71,11 +71,11 @@ def swma_numba(
     close: np.ndarray,
     length: int = 10,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
     """SWMA using Numba (raw numpy version)."""
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -91,7 +91,7 @@ def swma_ind(
     close: np.ndarray | pl.Series,
     length: int = 10,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
     """Universal SWMA (always uses Numba)."""
     if isinstance(close, pl.Series):
@@ -104,11 +104,11 @@ def swma_ind(
 # ----------------------------------------------------------------------
 def swma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str | None = None
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add SWMA column to Polars DataFrame.
 
@@ -135,5 +135,5 @@ def swma_polars(
     """
     close = df[close_col].to_numpy()
     result = swma_ind(close, length, offset, fillna)
-    out_name = output_col or f'SWMA_{length}'
+    out_name = output_col or f"SWMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

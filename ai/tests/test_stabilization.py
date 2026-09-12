@@ -1,4 +1,4 @@
-"""Tests for TZ-06 п.2.2 (chronological split) and п.2.3 (self-training
+"""Tests for TZ-06 item 2.2 (chronological split) and item 2.3 (self-training
 label isolation via is_pseudo / per-round backup / rollback).
 """
 
@@ -40,7 +40,7 @@ def _make_dataset(num_bars: int, seq_len: int) -> TradingDataset:
 
 
 def test_split_train_val_no_window_overlap():
-    """п.2.2: no training window shares bars with the validation period."""
+    """item 2.2: no training window shares bars with the validation period."""
     # The validation set is the most recent windows; training windows are
     # truncated before the boundary.
     seq_len = 8
@@ -55,7 +55,7 @@ def test_split_train_val_no_window_overlap():
 
 
 def test_split_train_val_uses_recent_windows():
-    """п.2.2: validation windows come from the later half of the bars."""
+    """item 2.2: validation windows come from the later half of the bars."""
     dataset = _make_dataset(num_bars=300, seq_len=4)
     loader = DataLoader(dataset, batch_size=8, collate_fn=collate_ob)
     train, val = _split_train_val(loader, val_split=0.5, batch_size=8)
@@ -67,8 +67,8 @@ def test_split_train_val_uses_recent_windows():
 
 
 def test_update_labels_adds_is_pseudo_and_backup(tmp_path):
-    """п.2.3: first pseudo write adds is_pseudo column and a backup."""
-    # п.2.3: first pseudo-label write must add an is_pseudo column and
+    """item 2.3: first pseudo write adds is_pseudo column and a backup."""
+    # item 2.3: first pseudo-label write must add an is_pseudo column and
     # create a per-round backup.
     labels = pl.DataFrame(
         {
@@ -95,7 +95,7 @@ def test_update_labels_adds_is_pseudo_and_backup(tmp_path):
 
 
 def test_update_labels_never_overwrites_pseudo(tmp_path):
-    """п.2.3: a later round must not overwrite an already-pseudo bar."""
+    """item 2.3: a later round must not overwrite an already-pseudo bar."""
     # only trusting the model's own iterative corrections would let errors
     # accumulate; an is_pseudo bar is frozen.
     labels = pl.DataFrame(
@@ -122,7 +122,7 @@ def test_update_labels_never_overwrites_pseudo(tmp_path):
 
 
 def test_rollback_labels_restores_backup(tmp_path):
-    """п.2.3: backup restores the pre-round labels file exactly."""
+    """item 2.3: backup restores the pre-round labels file exactly."""
     labels = pl.DataFrame(
         {
             "action": [-100] * 5,
@@ -142,7 +142,7 @@ def test_rollback_labels_restores_backup(tmp_path):
 
 
 def test_rollback_labels_missing_backup_raises(tmp_path):
-    """п.2.3: rollback without a backup raises FileNotFoundError."""
+    """item 2.3: rollback without a backup raises FileNotFoundError."""
     path = tmp_path / "labels.parquet"
     save_labels_parquet(
         pl.DataFrame(

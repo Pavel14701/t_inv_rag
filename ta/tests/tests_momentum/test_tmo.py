@@ -178,9 +178,9 @@ def test_tmo_ind_numpy_and_series(oc) -> None:
     expected = tmo_numpy(open_, close)
     from_arrays = tmo_ind(open_, close)
     from_series = tmo_ind(pl.Series(open_), pl.Series(close))
-    for res, exp in zip(from_arrays, expected):
+    for res, exp in zip(from_arrays, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
-    for res, exp in zip(from_series, expected):
+    for res, exp in zip(from_series, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 

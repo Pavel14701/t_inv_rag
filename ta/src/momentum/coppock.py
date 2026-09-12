@@ -16,7 +16,7 @@ def coppock_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based Coppock Curve calculation.
+    """Numpy-based Coppock Curve calculation.
 
     Parameters
     ----------
@@ -38,18 +38,21 @@ def coppock_numpy(
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if fast < 1:
-        raise ValueError('fast must be >= 1')
+        raise ValueError("fast must be >= 1")
     if slow < 1:
-        raise ValueError('slow must be >= 1')
+        raise ValueError("slow must be >= 1")
     if wma_length < 1:
-        raise ValueError('wma_length must be >= 1')
+        raise ValueError("wma_length must be >= 1")
     roc_fast = roc_ind(close, length=fast, use_talib=use_talib)
     roc_slow = roc_ind(close, length=slow, use_talib=use_talib)
     total_roc = roc_fast + roc_slow
     # The ROC warm-up prefix is inherently NaN: smooth with nan_policy
     # set to 'ignore' so NaN only affects its own windows.
     coppock = wma_ind(
-        total_roc, length=wma_length, use_talib=use_talib, nan_policy='ignore',
+        total_roc,
+        length=wma_length,
+        use_talib=use_talib,
+        nan_policy="ignore",
     )
     return _apply_offset_fillna(coppock, offset, fillna)
 
@@ -66,13 +69,15 @@ def coppock_ind(
     """Universal Coppock Curve (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
-    return coppock_numpy(close, fast, slow, wma_length, offset, fillna, use_talib)
+    return coppock_numpy(
+        close, fast, slow, wma_length, offset, fillna, use_talib
+    )
 
 
 def coppock_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
-    date_col: str = 'date',
+    close_col: str = "close",
+    date_col: str = "date",
     fast: int = 11,
     slow: int = 14,
     wma_length: int = 10,
@@ -97,9 +102,8 @@ def coppock_polars(
 
     """
     close = df[close_col].to_numpy()
-    result = coppock_numpy(close, fast, slow, wma_length, offset, fillna, use_talib)
-    out_name = output_col or f'COPC_{fast}_{slow}_{wma_length}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        out_name: result
-    })
+    result = coppock_numpy(
+        close, fast, slow, wma_length, offset, fillna, use_talib
+    )
+    out_name = output_col or f"COPC_{fast}_{slow}_{wma_length}"
+    return pl.DataFrame({date_col: df[date_col], out_name: result})

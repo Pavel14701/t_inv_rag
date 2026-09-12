@@ -107,43 +107,29 @@ def cdl_z_numpy(
         z_high = _safe_z(high, mean_h, std_h)
         z_low = _safe_z(low, mean_l, std_l)
         z_close = _safe_z(close, mean_c, std_c)
-        suffix = 'a'
+        suffix = "a"
     else:
         z_open = zscore_ind(
-            open_,
-            length=length,
-            ddof=ddof,
-            use_talib=use_talib
+            open_, length=length, ddof=ddof, use_talib=use_talib
         )
         z_high = zscore_ind(
-            high,
-            length=length,
-            ddof=ddof,
-            use_talib=use_talib
+            high, length=length, ddof=ddof, use_talib=use_talib
         )
-        z_low = zscore_ind(
-            low,
-            length=length,
-            ddof=ddof,
-            use_talib=use_talib
-        )
+        z_low = zscore_ind(low, length=length, ddof=ddof, use_talib=use_talib)
         z_close = zscore_ind(
-            close,
-            length=length,
-            ddof=ddof,
-            use_talib=use_talib
+            close, length=length, ddof=ddof, use_talib=use_talib
         )
-        suffix = f'_{length}_{ddof}'
+        suffix = f"_{length}_{ddof}"
     # Apply offset and fillna
     result = {
-        'open_Z': _apply_offset_fillna(z_open, offset, fillna),
-        'high_Z': _apply_offset_fillna(z_high, offset, fillna),
-        'low_Z': _apply_offset_fillna(z_low, offset, fillna),
-        'close_Z': _apply_offset_fillna(z_close, offset, fillna),
+        "open_Z": _apply_offset_fillna(z_open, offset, fillna),
+        "high_Z": _apply_offset_fillna(z_high, offset, fillna),
+        "low_Z": _apply_offset_fillna(z_low, offset, fillna),
+        "close_Z": _apply_offset_fillna(z_close, offset, fillna),
     }
     # Rename keys with suffix
     if suffix:
-        return {f'{key}{suffix}': arr for key, arr in result.items()}
+        return {f"{key}{suffix}": arr for key, arr in result.items()}
     return result
 
 
@@ -204,26 +190,33 @@ def cdl_z(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return cdl_z_numpy(
-        open_, high, low, close,
-        length=length, full=full, ddof=ddof,
-        offset=offset, fillna=fillna, use_talib=use_talib,
+        open_,
+        high,
+        low,
+        close,
+        length=length,
+        full=full,
+        ddof=ddof,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
 
 
 def cdl_z_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    date_col: str = 'date',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    date_col: str = "date",
     length: int = 30,
     full: bool = False,
     ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add Z-candle columns to a Polars DataFrame.
 
@@ -269,16 +262,23 @@ def cdl_z_polars(
     low_arr = df[low_col].to_numpy()
     close_arr = df[close_col].to_numpy()
     result = cdl_z_numpy(
-        open_arr, high_arr, low_arr, close_arr,
-        length=length, full=full, ddof=ddof,
-        offset=offset, fillna=fillna, use_talib=use_talib,
+        open_arr,
+        high_arr,
+        low_arr,
+        close_arr,
+        length=length,
+        full=full,
+        ddof=ddof,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
     # Apply custom suffix if provided
     if suffix:
         new_dict = {}
         for key, arr in result.items():
-            base = key.split('_Z')[0]  # "open", "high", etc.
-            new_dict[f'{base}_Z{suffix}'] = arr
+            base = key.split("_Z")[0]  # "open", "high", etc.
+            new_dict[f"{base}_Z{suffix}"] = arr
         result = new_dict
     # Build output DataFrame
     out_df = pl.DataFrame({date_col: df[date_col]})

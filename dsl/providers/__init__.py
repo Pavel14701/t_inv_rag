@@ -47,13 +47,13 @@ from .manifest import (
 
 
 __all__ = (
-    'AsyncHTTPProvider',
-    'AsyncIndicatorProvider',
-    'HTTPProvider',
-    'InProcessProvider',
-    'IndicatorProvider',
-    'IndicatorSchema',
-    'Manifest',
-    'ManifestValidator',
-    'ParameterSchema',
+    "AsyncHTTPProvider",
+    "AsyncIndicatorProvider",
+    "HTTPProvider",
+    "InProcessProvider",
+    "IndicatorProvider",
+    "IndicatorSchema",
+    "Manifest",
+    "ManifestValidator",
+    "ParameterSchema",
 )

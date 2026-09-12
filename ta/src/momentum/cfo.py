@@ -15,7 +15,7 @@ def cfo_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based Chande Forecast Oscillator.
+    """Numpy-based Chande Forecast Oscillator.
 
     Parameters
     ----------
@@ -39,13 +39,18 @@ def cfo_numpy(
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     # Time Series Forecast (tsf mode)
     tsf = linreg_ind(
-        close, length=length, mode='tsf', offset=0, fillna=None, use_talib=use_talib
+        close,
+        length=length,
+        mode="tsf",
+        offset=0,
+        fillna=None,
+        use_talib=use_talib,
     )
     # CFO formula: scalar * (close - tsf) / close
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         cfo = scalar * (close - tsf) / close
     return _apply_offset_fillna(cfo, offset, fillna)
 
@@ -67,8 +72,8 @@ def cfo_ind(
 
 def cfo_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
-    date_col: str = 'date',
+    close_col: str = "close",
+    date_col: str = "date",
     length: int = 9,
     scalar: float = 100.0,
     drift: int = 1,
@@ -94,8 +99,5 @@ def cfo_polars(
     """
     close = df[close_col].to_numpy()
     result = cfo_numpy(close, length, scalar, drift, offset, fillna, use_talib)
-    out_name = output_col or f'CFO_{length}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        out_name: result
-    })
+    out_name = output_col or f"CFO_{length}"
+    return pl.DataFrame({date_col: df[date_col], out_name: result})

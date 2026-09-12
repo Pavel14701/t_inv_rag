@@ -69,7 +69,7 @@ class Context:
 
         Raises:
             DslValidationError: If validation fails (also a ValueError
-                for backward compatibility; TZ-01 п.2.2).
+                for backward compatibility; TZ-01 item 2.2).
 
         """
         if errors := self._validator.validate(indicator, params, attributes):
@@ -78,11 +78,11 @@ class Context:
             )
 
     def _candidates(self, indicator: str) -> list:
-        """Провайдеры, чей манифест содержит этот индикатор (TZ-01 п.2.1).
+        """Providers whose manifest contains this indicator (TZ-01 item 2.1).
 
-        Отбор по манифесту вместо ``getattr``-проверок: детерминировано,
-        O(1), и позволяет отличить «провайдер не знает индикатор»
-        (пропустить) от «ошибка данных на этом баре» (пробросить).
+        Manifest-based selection instead of ``getattr`` checks: deterministic,
+        O(1), and it distinguishes "provider does not know the indicator"
+        (skip) from "data error on this bar" (re-raise).
 
         """
         return [
@@ -163,7 +163,7 @@ class Context:
         self._validate(indicator, params, attributes)
         first_error: ProviderError | None = None
         for provider in self._candidates(indicator):
-            if getattr(provider, 'resolve_history', None) is not None:
+            if getattr(provider, "resolve_history", None) is not None:
                 try:
                     return provider.resolve_history(
                         indicator,
@@ -212,7 +212,7 @@ class Context:
         self._validate(indicator, params, attributes)
         first_error: ProviderError | None = None
         for provider in self._candidates(indicator):
-            if getattr(provider, 'resolve_async', None) is not None:
+            if getattr(provider, "resolve_async", None) is not None:
                 try:
                     got = await provider.resolve_async(  # type: ignore[union-attr]
                         indicator,
@@ -225,7 +225,7 @@ class Context:
                     if first_error is None:
                         first_error = exc
                     continue
-            elif getattr(provider, 'resolve', None) is not None:
+            elif getattr(provider, "resolve", None) is not None:
                 loop = asyncio.get_running_loop()
                 try:
                     return await loop.run_in_executor(
@@ -270,7 +270,7 @@ class Context:
         self._validate(indicator, params, attributes)
         first_error: ProviderError | None = None
         for provider in self._candidates(indicator):
-            if getattr(provider, 'resolve_history_async', None) is not None:
+            if getattr(provider, "resolve_history_async", None) is not None:
                 try:
                     return await provider.resolve_history_async(
                         indicator,

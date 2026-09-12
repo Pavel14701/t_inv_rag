@@ -18,6 +18,7 @@ IEEE 754 notes
 - a fully flat window (``HH == LL``) is 0/0-like: the result is NaN
   (undefined), never a fabricated value.
 """
+
 import numpy as np
 import polars as pl
 
@@ -65,7 +66,7 @@ def willr_numpy(
 
     """
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
@@ -86,10 +87,10 @@ def willr_numpy(
         highest_high = _rolling_max_numba(high, length)
         lowest_low = _rolling_min_numba(low, length)
         denom = highest_high - lowest_low
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             result = -100.0 * (highest_high - close) / denom
         # Flat window: range is zero, the ratio is undefined.
-        result = np.where(denom == 0.0, np.nan, result)
+        result = np.where(denom == 0.0, np.nan, result)  # noqa: RUF069 - exact IEEE zero/sign check
     return _apply_offset_fillna(result, offset, fillna)
 
 
@@ -110,16 +111,21 @@ def willr_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return willr_numpy(
-        high, low, close,
-        length=length, offset=offset, fillna=fillna, use_talib=use_talib,
+        high,
+        low,
+        close,
+        length=length,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
 
 
 def willr_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 14,
     offset: int = 0,
     fillna: float | None = None,
@@ -134,8 +140,13 @@ def willr_polars(
     low = df[low_col].cast(pl.Float64).to_numpy()
     close = df[close_col].cast(pl.Float64).to_numpy()
     result = willr_numpy(
-        high, low, close,
-        length=length, offset=offset, fillna=fillna, use_talib=use_talib,
+        high,
+        low,
+        close,
+        length=length,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
-    out_name = output_col or f'WILLR_{length}'
+    out_name = output_col or f"WILLR_{length}"
     return df.with_columns(pl.Series(out_name, result))

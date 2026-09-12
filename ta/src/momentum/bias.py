@@ -11,12 +11,12 @@ from ..ma import ma_mode
 def bias_numpy(
     close: np.ndarray,
     length: int = 26,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based Bias calculation.
+    """Numpy-based Bias calculation.
 
     Parameters
     ----------
@@ -40,16 +40,21 @@ def bias_numpy(
 
     """
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     ma = ma_mode(
-        mamode, close, length=length, offset=0, fillna=None, use_talib=use_talib
+        mamode,
+        close,
+        length=length,
+        offset=0,
+        fillna=None,
+        use_talib=use_talib,
     )
     ma = cast(np.ndarray, ma)
     # IEEE 754: ma == 0 keeps inf/NaN per IEEE rules, but silently.
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         bias = (close / ma) - 1.0
     return _apply_offset_fillna(bias, offset, fillna)
 
@@ -57,7 +62,7 @@ def bias_numpy(
 def bias_ind(
     close: np.ndarray | pl.Series,
     length: int = 26,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -70,10 +75,10 @@ def bias_ind(
 
 def bias_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
-    date_col: str = 'date',
+    close_col: str = "close",
+    date_col: str = "date",
     length: int = 26,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -98,8 +103,5 @@ def bias_polars(
     """
     close = df[close_col].to_numpy()
     result = bias_ind(close, length, mamode, offset, fillna, use_talib)
-    out_name = output_col or f'BIAS_{mamode}_{length}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        out_name: result
-    })
+    out_name = output_col or f"BIAS_{mamode}_{length}"
+    return pl.DataFrame({date_col: df[date_col], out_name: result})

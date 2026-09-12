@@ -15,8 +15,8 @@ def bop_numpy(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """Numpy‑based Balance of Power
-    (used when TA‑Lib is not available or disabled).
+    """Numpy-based Balance of Power
+    (used when TA-Lib is not available or disabled).
 
     Parameters
     ----------
@@ -52,9 +52,9 @@ def bop_numpy(
     co_range = close - open_
     # IEEE 754: 0/0 and x/0 must not emit RuntimeWarnings. Zero-range
     # bars are defined as 0.0 so the numpy backend matches TA-Lib.
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         raw = scalar * co_range / hl_range
-    bop = np.where(hl_range == 0.0, 0.0, raw)
+    bop = np.where(hl_range == 0.0, 0.0, raw)  # noqa: RUF069 - exact IEEE zero/sign check
     return _apply_offset_fillna(bop, offset, fillna)
 
 
@@ -66,9 +66,9 @@ def bop_talib(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """TA‑Lib based Balance of Power (scalar is ignored)."""
+    """TA-Lib based Balance of Power (scalar is ignored)."""
     if not talib_available:
-        raise ImportError('TA‑Lib not available')
+        raise ImportError("TA-Lib not available")
     open_ = np.asarray(open_, dtype=np.float64, copy=False)
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -105,7 +105,7 @@ def bop_ind(
         Multiplier (ignored if use_talib=True).
     offset, fillna : as usual.
     use_talib : bool
-        If True and TA‑Lib is available, use it; else use Numpy version.
+        If True and TA-Lib is available, use it; else use Numpy version.
 
     Returns
     -------
@@ -129,16 +129,16 @@ def bop_ind(
 
 def bop_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    date_col: str = 'date',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    date_col: str = "date",
     scalar: float = 1.0,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    output_col: str = 'BOP',
+    output_col: str = "BOP",
 ) -> pl.DataFrame:
     """Parameters
     ----------
@@ -160,9 +160,13 @@ def bop_polars(
     low_arr = df[low_col].to_numpy()
     close_arr = df[close_col].to_numpy()
     result = bop_ind(
-        open_arr, high_arr, low_arr, close_arr, scalar, offset, fillna, use_talib
+        open_arr,
+        high_arr,
+        low_arr,
+        close_arr,
+        scalar,
+        offset,
+        fillna,
+        use_talib,
     )
-    return pl.DataFrame({
-        date_col: df[date_col],
-        output_col: result
-    })
+    return pl.DataFrame({date_col: df[date_col], output_col: result})

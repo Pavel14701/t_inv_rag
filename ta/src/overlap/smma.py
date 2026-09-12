@@ -10,6 +10,7 @@ This module provides:
 All floating-point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
 """
+
 import numpy as np
 import polars as pl
 
@@ -73,7 +74,7 @@ def smma_numba(
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Smoothed Moving Average using Numba.
 
@@ -110,12 +111,12 @@ def smma_numba(
 
     """
     if length < 1:
-        raise ValueError('SMMA length must be >= 1')
+        raise ValueError("SMMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     # Replace infinities with NaN (IEEE 754 compliance)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     result = _smma_numba_core(close, length)
@@ -130,7 +131,7 @@ def smma_ind(
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal Smoothed Moving Average (Numba only).
 
@@ -168,11 +169,11 @@ def smma_ind(
 # ----------------------------------------------------------------------
 def smma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """SMMA for Polars DataFrame (Numba only).
@@ -213,5 +214,5 @@ def smma_polars(
         fillna=fillna,
         nan_policy=nan_policy,
     )
-    out_name = output_col or f'SMMA_{length}'
+    out_name = output_col or f"SMMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

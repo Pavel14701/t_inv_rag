@@ -36,46 +36,46 @@ class Tokenizer:
         self.spec = [
             # Keywords (must come before IDENT)
             # Added \b at the start to ensure whole-word matching only
-            ('LET', r'\blet\b'),
-            ('IN', r'\bin\b'),
-            ('AND', r'\band\b'),
-            ('OR', r'\bor\b'),
-            ('NOT', r'\bnot\b'),
-            ('RISING', r'\brising\b'),
-            ('FALLING', r'\bfalling\b'),
+            ("LET", r"\blet\b"),
+            ("IN", r"\bin\b"),
+            ("AND", r"\band\b"),
+            ("OR", r"\bor\b"),
+            ("NOT", r"\bnot\b"),
+            ("RISING", r"\brising\b"),
+            ("FALLING", r"\bfalling\b"),
             # Identifier (must come after keywords)
-            ('IDENT', r'[a-zA-Z_][a-zA-Z0-9_]*'),
+            ("IDENT", r"[a-zA-Z_][a-zA-Z0-9_]*"),
             # Number
-            ('NUMBER', r'\d+(\.\d+)?'),
+            ("NUMBER", r"\d+(\.\d+)?"),
             # Comparison operators (longer first)
-            ('GE', r'>='),
-            ('LE', r'<='),
-            ('EQ', r'=='),
-            ('NE', r'!='),
-            ('LT', r'<'),
-            ('GT', r'>'),
+            ("GE", r">="),
+            ("LE", r"<="),
+            ("EQ", r"=="),
+            ("NE", r"!="),
+            ("LT", r"<"),
+            ("GT", r">"),
             # Arithmetic operators
-            ('PLUS', r'\+'),
-            ('MINUS', r'-'),
-            ('MUL', r'\*'),
-            ('DIV', r'/'),
-            ('MOD', r'%'),
-            ('POW', r'\^'),
+            ("PLUS", r"\+"),
+            ("MINUS", r"-"),
+            ("MUL", r"\*"),
+            ("DIV", r"/"),
+            ("MOD", r"%"),
+            ("POW", r"\^"),
             # Punctuation
-            ('LPAREN', r'\('),
-            ('RPAREN', r'\)'),
-            ('LBRACKET', r'\['),
-            ('RBRACKET', r'\]'),
-            ('COMMA', r','),
-            ('ASSIGN', r'='),
-            ('DOT', r'\.'),
+            ("LPAREN", r"\("),
+            ("RPAREN", r"\)"),
+            ("LBRACKET", r"\["),
+            ("RBRACKET", r"\]"),
+            ("COMMA", r","),
+            ("ASSIGN", r"="),
+            ("DOT", r"\."),
             # Whitespace and unknown
-            ('WHITESPACE', r'\s+'),
-            ('UNKNOWN', r'.'),
+            ("WHITESPACE", r"\s+"),
+            ("UNKNOWN", r"."),
         ]
         self.regex = re.compile(
-            '|'.join(
-                f'(?P<{name}>{pattern})' for name,
+            "|".join(
+                f"(?P<{name}>{pattern})" for name,
                 pattern in self.spec
             )
         )
@@ -99,16 +99,16 @@ class Tokenizer:
         for mo in self.regex.finditer(code):
             kind = mo.lastgroup
             value = mo.group()
-            if kind == 'WHITESPACE':
-                line += value.count('\n')
+            if kind == "WHITESPACE":
+                line += value.count("\n")
                 pos = mo.end()
                 continue
-            if kind == 'UNKNOWN' or kind is None:
+            if kind == "UNKNOWN" or kind is None:
                 raise ParseError(
                     f"Unexpected character '{value}' at line {line}"
                 )
             # Normalize comparison operators to a single type
-            if kind in ('LT', 'GT', 'LE', 'GE', 'EQ', 'NE'):
-                kind = 'COMP_OP'
+            if kind in ("LT", "GT", "LE", "GE", "EQ", "NE"):
+                kind = "COMP_OP"
             tokens.append(Token(kind, value, line, mo.start() - pos))
         return tokens

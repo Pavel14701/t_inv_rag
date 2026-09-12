@@ -9,25 +9,36 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_belthold_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
     """Numba-accelerated Belt Hold pattern with optional strict filtering
     and optional symmetric mode.
 
     Returns:
-        1.0 → bullish belt hold
-       -1.0 → bearish belt hold
-        0.0 → none
+        1.0 -> bullish belt hold
+       -1.0 -> bearish belt hold
+        0.0 -> none
 
     """
     n = len(open_)
@@ -42,18 +53,14 @@ def _cdl_belthold_nb(
         # ---------------- Bullish Belt Hold ----------------
         # Long bullish candle with no lower shadow (open == low)
         bull = (
-            (c0 > o0) and
-            (o0 == l0) and
-            ((c0 - o0) > (h0 - l0) * 0.5)  # long body
+            (c0 > o0)
+            and (o0 == l0)
+            and ((c0 - o0) > (h0 - l0) * 0.5)  # long body
         )
 
         # ---------------- Bearish Belt Hold ----------------
         # Long bearish candle with no upper shadow (open == high)
-        bear = (
-            (c0 < o0) and
-            (o0 == h0) and
-            ((o0 - c0) > (h0 - l0) * 0.5)
-        )
+        bear = (c0 < o0) and (o0 == h0) and ((o0 - c0) > (h0 - l0) * 0.5)
 
         if bull:
             direction = 1.0
@@ -85,7 +92,10 @@ def _cdl_belthold_nb(
 
 
 def cdl_belthold(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -96,14 +106,18 @@ def cdl_belthold(
 ):
     """Universal Belt Hold pattern with strict mode and optional symmetric mode.
 
-    If symmetric=False and TA-Lib is available → TA-Lib is used.
-    If symmetric=True → TA-Lib is skipped and Numba is always used.
+    If symmetric=False and TA-Lib is available -> TA-Lib is used.
+    If symmetric=True -> TA-Lib is skipped and Numba is always used.
     """
-    # Polars → NumPy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Polars -> NumPy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     # float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -111,14 +125,22 @@ def cdl_belthold(
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
 
-    if not open_.flags.c_contiguous: open_ = np.ascontiguousarray(open_)
-    if not open_.flags.writeable: open_ = open_.copy()
-    if not high.flags.c_contiguous: high = np.ascontiguousarray(high)
-    if not high.flags.writeable: high = high.copy()
-    if not low.flags.c_contiguous: low = np.ascontiguousarray(low)
-    if not low.flags.writeable: low = low.copy()
-    if not close.flags.c_contiguous: close = np.ascontiguousarray(close)
-    if not close.flags.writeable: close = close.copy()
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
 
     # TA-Lib branch (only if symmetric=False)
     if use_talib and talib_available and not symmetric:
@@ -128,26 +150,31 @@ def cdl_belthold(
 
     # Numba branch
     out = _cdl_belthold_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_belthold_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col='CDL_BELTHOLD',
+    output_col="CDL_BELTHOLD",
 ):
     out = cdl_belthold(
         df[open_col].to_numpy(),

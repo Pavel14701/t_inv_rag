@@ -21,7 +21,7 @@ def cdl_doji_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based Doji detection with optional TA‑Lib CDLDOJI."""
+    """Numpy-based Doji detection with optional TA-Lib CDLDOJI."""
     # Ensure contiguous float64 arrays
     open_ = np.asarray(open_, dtype=np.float64, copy=False)
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -30,11 +30,11 @@ def cdl_doji_numpy(
     # --- TA-Lib CDLDOJI branch ---
     if use_talib and talib_available and not naive:
         talib_result = talib.CDLDOJI(open_, high, low, close)
-        # TA-Lib returns -100, 0, 100 → normalize to your format
+        # TA-Lib returns -100, 0, 100 -> normalize to your format
         if asint:
             talib_result = (talib_result != 0).astype(np.int32) * scalar
         else:
-            talib_result = (talib_result != 0)
+            talib_result = talib_result != 0
         return _apply_offset_fillna(talib_result, offset, fillna)
     # --------------------------------
     # Ensure contiguous arrays (after TA-Lib branch)
@@ -56,7 +56,7 @@ def cdl_doji_numpy(
         close = close.copy()
     # Body absolute value
     body = np.abs(close - open_)
-    # High‑low range
+    # High-low range
     hl_range = high - low
     # Determine reference range
     if naive:
@@ -104,7 +104,10 @@ def cdl_doji_pat(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return cdl_doji_numpy(
-        open_, high, low, close,
+        open_,
+        high,
+        low,
+        close,
         length=length,
         factor=factor,
         scalar=scalar,
@@ -118,10 +121,10 @@ def cdl_doji_pat(
 
 def cdl_doji_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 10,
     factor: float = 10.0,
     scalar: float = 100.0,
@@ -138,7 +141,10 @@ def cdl_doji_polars(
     low_arr = df[low_col].to_numpy()
     close_arr = df[close_col].to_numpy()
     result = cdl_doji_numpy(
-        open_arr, high_arr, low_arr, close_arr,
+        open_arr,
+        high_arr,
+        low_arr,
+        close_arr,
         length=length,
         factor=factor,
         scalar=scalar,
@@ -148,5 +154,5 @@ def cdl_doji_polars(
         fillna=fillna,
         use_talib=use_talib,
     )
-    out_name = output_col or f'CDL_DOJI_{length}_{factor / 100:.2f}'
+    out_name = output_col or f"CDL_DOJI_{length}_{factor / 100:.2f}"
     return df.with_columns([pl.Series(out_name, result)])

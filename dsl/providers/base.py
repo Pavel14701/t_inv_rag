@@ -82,7 +82,7 @@ class IndicatorProvider(ABC):
 
         """
         if n <= 1:
-            raise ValueError('n must be at least 1')
+            raise ValueError("n must be at least 1")
         return [
             self.resolve(indicator, params, attributes, offset)
             for offset in range(n - 1, -1, -1)
@@ -211,7 +211,7 @@ class AsyncIndicatorProvider(ABC):
 
         """  # noqa: E501
         if n <= 1:
-            raise ValueError('n must be at least 1')
+            raise ValueError("n must be at least 1")
         # Fetch values from oldest (n-1) to newest (0)
         return [
             await self.resolve_async(indicator, params, attributes, offset)

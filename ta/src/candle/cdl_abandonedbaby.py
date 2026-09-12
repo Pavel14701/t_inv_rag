@@ -9,25 +9,36 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_abandonedbaby_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
     """Numba-accelerated Abandoned Baby pattern with optional strict filtering
     and optional symmetric mode.
 
     Returns:
-        1.0 → bullish abandoned baby
-       -1.0 → bearish abandoned baby
-        0.0 → none
+        1.0 -> bullish abandoned baby
+       -1.0 -> bearish abandoned baby
+        0.0 -> none
 
     """
     n = len(open_)
@@ -50,18 +61,20 @@ def _cdl_abandonedbaby_nb(
 
         # ---------------- Bullish Abandoned Baby ----------------
         bull = (
-            (c2 < o2) and                         # first candle bearish
-            (abs(c1 - o1) <= (h1 - l1) * 0.1) and  # doji
-            (l1 > h2) and                         # gap down before doji
-            (o0 > h1) and (c0 > o0)               # gap up + bullish candle
+            (c2 < o2)  # first candle bearish
+            and (abs(c1 - o1) <= (h1 - l1) * 0.1)  # doji
+            and (l1 > h2)  # gap down before doji
+            and (o0 > h1)
+            and (c0 > o0)  # gap up + bullish candle
         )
 
         # ---------------- Bearish Abandoned Baby ----------------
         bear = (
-            (c2 > o2) and                         # first candle bullish
-            (abs(c1 - o1) <= (h1 - l1) * 0.1) and  # doji
-            (h1 < l2) and                         # gap up before doji
-            (o0 < l1) and (c0 < o0)               # gap down + bearish candle
+            (c2 > o2)  # first candle bullish
+            and (abs(c1 - o1) <= (h1 - l1) * 0.1)  # doji
+            and (h1 < l2)  # gap up before doji
+            and (o0 < l1)
+            and (c0 < o0)  # gap down + bearish candle
         )
 
         if bull:
@@ -84,9 +97,11 @@ def _cdl_abandonedbaby_nb(
             b0 = abs(c0 - o0)
 
             # minimum body size
-            if (b2 < min_body_factor * r2 or
-                b1 < min_body_factor * r1 or
-                b0 < min_body_factor * r0):
+            if (
+                b2 < min_body_factor * r2
+                or b1 < min_body_factor * r1
+                or b0 < min_body_factor * r0
+            ):
                 continue
 
             # shadows (fast version)
@@ -103,9 +118,11 @@ def _cdl_abandonedbaby_nb(
             sh0 = (h0 - up0) + (lo0 - l0)
 
             # maximum shadow filter
-            if (sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = direction
@@ -114,7 +131,10 @@ def _cdl_abandonedbaby_nb(
 
 
 def cdl_abandonedbaby(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -125,14 +145,18 @@ def cdl_abandonedbaby(
 ):
     """Universal Abandoned Baby pattern with strict mode and symmetric control.
 
-    If symmetric=False and TA-Lib is available → TA-Lib is used.
-    If symmetric=True → TA-Lib is skipped and Numba is always used.
+    If symmetric=False and TA-Lib is available -> TA-Lib is used.
+    If symmetric=True -> TA-Lib is skipped and Numba is always used.
     """
-    # Polars → NumPy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Polars -> NumPy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     # float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -140,14 +164,22 @@ def cdl_abandonedbaby(
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
 
-    if not open_.flags.c_contiguous: open_ = np.ascontiguousarray(open_)
-    if not open_.flags.writeable: open_ = open_.copy()
-    if not high.flags.c_contiguous: high = np.ascontiguousarray(high)
-    if not high.flags.writeable: high = high.copy()
-    if not low.flags.c_contiguous: low = np.ascontiguousarray(low)
-    if not low.flags.writeable: low = low.copy()
-    if not close.flags.c_contiguous: close = np.ascontiguousarray(close)
-    if not close.flags.writeable: close = close.copy()
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
 
     # TA-Lib branch (only if symmetric=False)
     if use_talib and talib_available and not symmetric:
@@ -157,26 +189,31 @@ def cdl_abandonedbaby(
 
     # Numba branch
     out = _cdl_abandonedbaby_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_abandonedbaby_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col='CDL_ABANDONEDBABY',
+    output_col="CDL_ABANDONEDBABY",
 ):
     out = cdl_abandonedbaby(
         df[open_col].to_numpy(),

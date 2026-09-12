@@ -12,7 +12,9 @@ from ..external import talib, talib_available
 # WCP using Numba (vectorised)
 # ----------------------------------------------------------------------
 @jit(nopython=True, cache=True)
-def _wcp_numba_core(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+def _wcp_numba_core(
+    high: np.ndarray, low: np.ndarray, close: np.ndarray
+) -> np.ndarray:
     """Weighted Closing Price core: (high + low + 2*close) / 4."""
     return (high + low + 2.0 * close) * 0.25
 
@@ -22,7 +24,7 @@ def wcp_numba(
     low: np.ndarray,
     close: np.ndarray,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
     """WCP using Numba (raw numpy version)."""
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -39,18 +41,18 @@ def wcp_numba(
 
 
 # ----------------------------------------------------------------------
-# WCP using TA‑Lib (if available)
+# WCP using TA-Lib (if available)
 # ----------------------------------------------------------------------
 def wcp_talib(
     high: np.ndarray,
     low: np.ndarray,
     close: np.ndarray,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
-    """WCP using TA‑Lib (C implementation). Returns (high + low + 2*close)/4."""
+    """WCP using TA-Lib (C implementation). Returns (high + low + 2*close)/4."""
     if not talib_available:
-        raise ImportError('TA‑Lib not available')
+        raise ImportError("TA-Lib not available")
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
@@ -73,7 +75,7 @@ def wcp_ind(
     close: np.ndarray | pl.Series,
     offset: int = 0,
     fillna: float | None = None,
-    use_talib: bool = True
+    use_talib: bool = True,
 ) -> np.ndarray:
     """Universal Weighted Closing Price with backend selection.
 
@@ -86,7 +88,7 @@ def wcp_ind(
     fillna : float, optional
         Value to fill NaNs.
     use_talib : bool
-        If True and TA‑Lib is available, use it; else use Numba.
+        If True and TA-Lib is available, use it; else use Numba.
 
     Returns
     -------
@@ -111,13 +113,13 @@ def wcp_ind(
 # ----------------------------------------------------------------------
 def wcp_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    output_col: str = 'WCP'
+    output_col: str = "WCP",
 ) -> pl.DataFrame:
     """Add WCP column to Polars DataFrame.
 

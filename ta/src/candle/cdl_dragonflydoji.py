@@ -10,8 +10,14 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.float64, types.float64, types.boolean, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
@@ -29,9 +35,9 @@ def _cdl_dragonflydoji_nb(
     """Optimized Dragonfly Doji pattern.
 
     Returns:
-        1.0 → bullish dragonfly doji
-       -1.0 → bearish dragonfly doji (rare, symmetric mode)
-        0.0 → none
+        1.0 -> bullish dragonfly doji
+       -1.0 -> bearish dragonfly doji (rare, symmetric mode)
+        0.0 -> none
 
     """
     n = len(open_)
@@ -52,7 +58,7 @@ def _cdl_dragonflydoji_nb(
         if body > min_body_factor * rng:
             continue
 
-        # Dragonfly: open ≈ close ≈ high
+        # Dragonfly: open ~= close ~= high
         if not (o0 == h0 and c0 == h0):
             continue
 
@@ -95,10 +101,14 @@ def cdl_dragonflydoji(
     max_shadow_factor: float = 0.5,
 ) -> np.ndarray:
     """Dragonfly Doji pattern with strict support."""
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -127,26 +137,31 @@ def cdl_dragonflydoji(
         return _apply_offset_fillna(talib_out, offset, fillna)
 
     out = _cdl_dragonflydoji_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric,
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_dragonflydoji_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.1,
     max_shadow_factor: float = 0.5,
-    output_col: str = 'CDL_DRAGONFLYDOJI',
+    output_col: str = "CDL_DRAGONFLYDOJI",
 ) -> pl.DataFrame:
     out = cdl_dragonflydoji(
         df[open_col].to_numpy(),

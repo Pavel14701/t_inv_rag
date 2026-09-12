@@ -16,6 +16,7 @@ The module provides:
 All floating-point operations follow IEEE 754 rules.  Infinite values
 are replaced with NaN before calculation.
 """
+
 import numpy as np
 import polars as pl
 
@@ -59,21 +60,21 @@ def _validate_atr_inputs(
 
     """
     if length < 1:
-        raise ValueError(f'ATR length must be >= 1, got {length}')
+        raise ValueError(f"ATR length must be >= 1, got {length}")
     if drift < 1:
         raise ValueError(
-            f'ATR drift must be >= 1 (got {drift}); drift < 1 would '
-            'either compare a bar with itself or look into the future.'
+            f"ATR drift must be >= 1 (got {drift}); drift < 1 would "
+            "either compare a bar with itself or look into the future."
         )
     if not (len(high) == len(low) == len(close)):
         raise ValueError(
-            f'high, low and close must have the same length: '
-            f'got {len(high)}, {len(low)} and {len(close)}.'
+            f"high, low and close must have the same length: "
+            f"got {len(high)}, {len(low)} and {len(close)}."
         )
     if len(high) < drift + length:
         raise ValueError(
-            f'Input series too short: need at least {drift + length} '
-            f'elements, got {len(high)}.'
+            f"Input series too short: need at least {drift + length} "
+            f"elements, got {len(high)}."
         )
 
 
@@ -93,26 +94,26 @@ def _prepare_prices(
     replace_inf_with_nan(high)
     replace_inf_with_nan(low)
     replace_inf_with_nan(close)
-    high = _handle_nan_policy(high, nan_policy, 'high')
-    low = _handle_nan_policy(low, nan_policy, 'low')
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    high = _handle_nan_policy(high, nan_policy, "high")
+    low = _handle_nan_policy(low, nan_policy, "low")
+    close = _handle_nan_policy(close, nan_policy, "close")
     return high, low, close
 
 
 # ----------------------------------------------------------------------
-# ATR – Numba implementation (TR + RMA/SMA/EMA) with NaN handling and trim
+# ATR - Numba implementation (TR + RMA/SMA/EMA) with NaN handling and trim
 # ----------------------------------------------------------------------
 def atr_numba(
     high: np.ndarray,
     low: np.ndarray,
     close: np.ndarray,
     length: int = 14,
-    mamode: str = 'rma',
+    mamode: str = "rma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     percent: bool = False,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Average True Range using Numba for TR and smoothing.
@@ -150,24 +151,22 @@ def atr_numba(
 
     """
     mamode_lower = mamode.lower()
-    if mamode_lower not in ('rma', 'sma', 'ema'):
-        raise ValueError(f'Unsupported mamode: {mamode}')
+    if mamode_lower not in ("rma", "sma", "ema"):
+        raise ValueError(f"Unsupported mamode: {mamode}")
     _validate_atr_inputs(high, low, close, length, drift)
     high, low, close = _prepare_prices(high, low, close, nan_policy)
 
     # True Range; prices are already policy-clean, so only the TR
     # warm-up produces NaN here - it is cut below before smoothing.
-    tr = true_range_numba(
-        high, low, close, drift=drift, nan_policy='ignore'
-    )
+    tr = true_range_numba(high, low, close, drift=drift, nan_policy="ignore")
     tr_valid = tr[drift:]
 
-    if mamode_lower == 'rma':
-        ma_part = rma_ind(tr_valid, length, nan_policy='ignore')
-    elif mamode_lower == 'sma':
-        ma_part = sma_ind(tr_valid, length, nan_policy='ignore')
+    if mamode_lower == "rma":
+        ma_part = rma_ind(tr_valid, length, nan_policy="ignore")
+    elif mamode_lower == "sma":
+        ma_part = sma_ind(tr_valid, length, nan_policy="ignore")
     else:  # 'ema'
-        ma_part = ema_ind(tr_valid, length, nan_policy='ignore')
+        ma_part = ema_ind(tr_valid, length, nan_policy="ignore")
 
     n = len(high)
     atr = np.full(n, np.nan, dtype=np.float64)
@@ -175,7 +174,7 @@ def atr_numba(
 
     # Convert to percent if requested
     if percent:
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             atr = atr * 100.0 / close
     # Trim the full warm-up (drift + length - 1 bars)
     if trim:
@@ -186,7 +185,7 @@ def atr_numba(
 
 
 # ----------------------------------------------------------------------
-# ATR – TA-Lib wrapper with NaN handling and trim
+# ATR - TA-Lib wrapper with NaN handling and trim
 # ----------------------------------------------------------------------
 def atr_talib(
     high: np.ndarray,
@@ -196,10 +195,10 @@ def atr_talib(
     offset: int = 0,
     fillna: float | None = None,
     percent: bool = False,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
-    """ATR using TA-Lib (Wilder RMA, drift=1) with pre‑processing.
+    """ATR using TA-Lib (Wilder RMA, drift=1) with pre-processing.
 
     Parameters
     ----------
@@ -225,12 +224,12 @@ def atr_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     _validate_atr_inputs(high, low, close, length, drift=1)
     high, low, close = _prepare_prices(high, low, close, nan_policy)
     atr = talib.ATR(high, low, close, timeperiod=length)
     if percent:
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             atr = atr * 100.0 / close
     if trim:
         # TA-Lib ATR has `length` leading NaNs (its own warm-up)
@@ -246,13 +245,13 @@ def atr_ind(
     low: np.ndarray | pl.Series,
     close: np.ndarray | pl.Series,
     length: int = 14,
-    mamode: str = 'rma',
+    mamode: str = "rma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     percent: bool = False,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Universal Average True Range with automatic backend selection.
@@ -300,10 +299,12 @@ def atr_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
 
-    talib_can_honour = mamode.lower() == 'rma' and drift == 1
+    talib_can_honour = mamode.lower() == "rma" and drift == 1
     if use_talib and talib_available and talib_can_honour:
         return atr_talib(
-            high, low, close,
+            high,
+            low,
+            close,
             length=length,
             offset=offset,
             fillna=fillna,
@@ -312,7 +313,9 @@ def atr_ind(
             trim=trim,
         )
     return atr_numba(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
         mamode=mamode,
         drift=drift,
@@ -329,18 +332,18 @@ def atr_ind(
 # ----------------------------------------------------------------------
 def atr_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 14,
-    mamode: str = 'rma',
+    mamode: str = "rma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     percent: bool = False,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
-    output_col: str | None = None
+    nan_policy: str = "raise",
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """ATR for Polars DataFrame (returns same length, no trim).
 
@@ -385,7 +388,9 @@ def atr_polars(
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     result = atr_ind(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
         mamode=mamode,
         drift=drift,
@@ -396,5 +401,5 @@ def atr_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars always returns full length
     )
-    out_name = output_col or f'ATR_{length}'
+    out_name = output_col or f"ATR_{length}"
     return df.with_columns([pl.Series(out_name, result)])

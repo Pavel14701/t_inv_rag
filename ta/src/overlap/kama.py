@@ -21,11 +21,7 @@ from ..external import talib, talib_available
 # ----------------------------------------------------------------------
 @jit(nopython=True, cache=True)
 def _kama_numba_core(
-    close: np.ndarray,
-    length: int,
-    fast: int,
-    slow: int,
-    drift: int
+    close: np.ndarray, length: int, fast: int, slow: int, drift: int
 ) -> np.ndarray:
     """KAMA core loop (Numba implementation).
 
@@ -55,7 +51,7 @@ def _kama_numba_core(
     fr = 2.0 / (fast + 1)
     sr = 2.0 / (slow + 1)
 
-    # Pre‑compute absolute differences over drift (for peer_diff_sum)
+    # Pre-compute absolute differences over drift (for peer_diff_sum)
     abs_drift = np.empty(n, dtype=np.float64)
     for i in range(1, n):
         abs_drift[i] = abs(close[i] - close[i - drift])
@@ -76,7 +72,7 @@ def _kama_numba_core(
     for i in range(length, n):
         abs_diff = abs(close[i] - close[i - length])
         peer_sum = cum[i + 1] - cum[i + 1 - length]
-        er = 0.0 if peer_sum == 0.0 else abs_diff / peer_sum
+        er = 0.0 if peer_sum == 0.0 else abs_diff / peer_sum  # noqa: RUF069 - exact IEEE zero/sign check
         sc = (er * (fr - sr) + sr) ** 2
         kama[i] = sc * close[i] + (1.0 - sc) * kama[i - 1]
 
@@ -93,7 +89,7 @@ def kama_talib(
     slow: int = 30,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """KAMA using TA-Lib (C implementation).
 
@@ -134,14 +130,14 @@ def kama_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     if length < 1:
-        raise ValueError('KAMA length must be >= 1')
+        raise ValueError("KAMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     # Replace infinities with NaN (IEEE 754 compliance)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     kama = talib.KAMA(close, timeperiod=length)
@@ -159,7 +155,7 @@ def kama_numba(
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """KAMA using Numba (raw numpy version).
 
@@ -202,14 +198,14 @@ def kama_numba(
 
     """
     if length < 1:
-        raise ValueError('KAMA length must be >= 1')
+        raise ValueError("KAMA length must be >= 1")
     if drift < 1:
-        raise ValueError('KAMA drift must be >= 1')
+        raise ValueError("KAMA drift must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     # Replace infinities with NaN (IEEE 754 compliance)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     kama = _kama_numba_core(close, length, fast, slow, drift)
@@ -224,7 +220,7 @@ def kama_ind(
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     use_talib: bool = True,
 ) -> np.ndarray:
     """Universal KAMA with automatic backend selection.
@@ -275,7 +271,7 @@ def kama_ind(
 
 def kama_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     fast: int = 2,
     slow: int = 30,
@@ -283,8 +279,8 @@ def kama_polars(
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
-    output_col: Optional[str] = None
+    nan_policy: str = "raise",
+    output_col: Optional[str] = None,
 ) -> pl.DataFrame:
     """KAMA for Polars DataFrame.
 
@@ -336,5 +332,5 @@ def kama_polars(
         nan_policy=nan_policy,
         use_talib=use_talib,
     )
-    out_name = output_col or f'KAMA_{length}_{fast}_{slow}'
+    out_name = output_col or f"KAMA_{length}_{fast}_{slow}"
     return df.with_columns([pl.Series(out_name, result)])

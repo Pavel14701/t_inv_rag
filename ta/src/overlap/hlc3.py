@@ -125,9 +125,9 @@ def hlc3_ind(
 # ----------------------------------------------------------------------
 def hlc3_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
@@ -166,5 +166,5 @@ def hlc3_polars(
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     result = hlc3_ind(high, low, close, offset, fillna)
-    out_name = output_col or 'HLC3'
+    out_name = output_col or "HLC3"
     return df.with_columns([pl.Series(out_name, result)])

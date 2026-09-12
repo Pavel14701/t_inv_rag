@@ -1,4 +1,4 @@
-"""Unit tests for Numba‑accelerated array operations (_array_ops)."""
+"""Unit tests for Numba-accelerated array operations (_array_ops)."""
 
 import numpy as np
 import pytest

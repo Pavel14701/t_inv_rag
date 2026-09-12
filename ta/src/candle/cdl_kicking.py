@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_kicking_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Kicking pattern.
+    """Numba-accelerated Kicking pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -117,13 +111,13 @@ def cdl_kicking(
 
 def cdl_kicking_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_KICKING',
+    output_col: str = "CDL_KICKING",
 ) -> pl.DataFrame:
     """Add Kicking column to Polars DataFrame."""
     out = cdl_kicking(
@@ -135,4 +129,3 @@ def cdl_kicking_polars(
         fillna=fillna,
     )
     return df.with_columns(pl.Series(output_col, out))
-

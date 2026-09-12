@@ -377,7 +377,7 @@ def test_adx_ind_accepts_polars_series(ohlc) -> None:
         length=LENGTH,
         use_talib=False,
     )
-    for a, b in zip(res_np, res_pl):
+    for a, b in zip(res_np, res_pl, strict=False):
         np.testing.assert_array_equal(a, b)
 
 

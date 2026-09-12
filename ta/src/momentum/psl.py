@@ -14,6 +14,7 @@ IEEE 754 notes
 - a window touching a NaN close is undefined and yields NaN;
 - zero-change bars count as neither up nor down (neutral).
 """
+
 import numpy as np
 import polars as pl
 
@@ -81,9 +82,9 @@ def psl_numpy(
 
     """
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if drift < 1:
-        raise ValueError('drift must be >= 1')
+        raise ValueError("drift must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.writeable:
         close = close.copy()
@@ -104,13 +105,17 @@ def psl_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return psl_numpy(
-        close, length=length, drift=drift, offset=offset, fillna=fillna,
+        close,
+        length=length,
+        drift=drift,
+        offset=offset,
+        fillna=fillna,
     )
 
 
 def psl_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 12,
     drift: int = 1,
     offset: int = 0,
@@ -123,7 +128,11 @@ def psl_polars(
     """
     close = df[close_col].cast(pl.Float64).to_numpy()
     result = psl_numpy(
-        close, length=length, drift=drift, offset=offset, fillna=fillna,
+        close,
+        length=length,
+        drift=drift,
+        offset=offset,
+        fillna=fillna,
     )
-    out_name = output_col or f'PSL_{length}'
+    out_name = output_col or f"PSL_{length}"
     return df.with_columns(pl.Series(out_name, result))

@@ -20,7 +20,7 @@ def _kst_reference(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Pure numpy KST reference."""
     kst = np.zeros_like(close)
-    for i, (roc_len, sma_len) in enumerate(zip(rocs, smas)):
+    for i, (roc_len, sma_len) in enumerate(zip(rocs, smas, strict=False)):
         roc = roc_ind(close, length=roc_len, use_talib=False)
         smoothed = sma_ind(
             roc, length=sma_len, use_talib=False, nan_policy="ignore"
@@ -141,9 +141,9 @@ def test_kst_ind_numpy_and_series(prices_random_walk) -> None:
     expected = kst_numpy(close)
     from_arrays = kst_ind(close)
     from_series = kst_ind(pl.Series(close))
-    for res, exp in zip(from_arrays, expected):
+    for res, exp in zip(from_arrays, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
-    for res, exp in zip(from_series, expected):
+    for res, exp in zip(from_series, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 
@@ -173,5 +173,5 @@ def test_kst_readonly_input(prices_random_walk) -> None:
     arr = prices_random_walk.copy()
     arr.setflags(write=False)
     expected = kst_numpy(prices_random_walk)
-    for res, exp in zip(kst_numpy(arr), expected):
+    for res, exp in zip(kst_numpy(arr), expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""T3 Moving Average (Tim Tillson) – Numba-accelerated with TA-Lib fallback.
+"""T3 Moving Average (Tim Tillson) - Numba-accelerated with TA-Lib fallback.
 
 T3 is a six-fold EMA combination: T3 = c1*e6 + c2*e5 + c3*e4 + c4*e3.
 
@@ -29,7 +29,7 @@ def _first_valid_index(arr: np.ndarray) -> int:
 
 
 # ----------------------------------------------------------------------
-# Core T3 calculation using Numba (six‑fold EMA)
+# Core T3 calculation using Numba (six-fold EMA)
 # ----------------------------------------------------------------------
 def t3_numba(
     close: np.ndarray,
@@ -37,7 +37,7 @@ def t3_numba(
     a: float = 0.7,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """T3 moving average using Numba (six-fold EMA).
 
@@ -77,7 +77,7 @@ def t3_numba(
 
     """
     if length < 1:
-        raise ValueError('T3 length must be >= 1')
+        raise ValueError("T3 length must be >= 1")
     close = np.asarray(close, dtype=np.float64)
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
@@ -86,7 +86,7 @@ def t3_numba(
 
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     # Lookback of the six-fold EMA is 6 * (length - 1); a shorter series
     # cannot produce a single value (TA-Lib returns all-NaN as well).
@@ -112,7 +112,7 @@ def t3_numba(
     tails: list[tuple[int, np.ndarray]] = []
     work = close[k:]
     for _ in range(6):
-        em = ema_ind(work, length=length, use_talib=False, nan_policy='ignore')
+        em = ema_ind(work, length=length, use_talib=False, nan_policy="ignore")
         m = _first_valid_index(em)
         if m < 0:
             return _apply_offset_fillna(out, offset, fillna)
@@ -126,25 +126,25 @@ def t3_numba(
     _, e6 = tails[5]
 
     # All tails end at the last bar; align them by their common suffix.
-    L = len(e6)
+    L = len(e6)  # noqa: N806 - formula symbol
     if L <= 0:
         return _apply_offset_fillna(out, offset, fillna)
     t3 = c1 * e6 + c2 * e5[-L:] + c3 * e4[-L:] + c4 * e3[-L:]
-    out[n - L:] = t3
+    out[n - L :] = t3
     return _apply_offset_fillna(out, offset, fillna)
 
 
 # ----------------------------------------------------------------------
-# TA‑Lib wrapper
+# TA-Lib wrapper
 # ----------------------------------------------------------------------
 def t3_talib(
     close: np.ndarray,
     length: int = 10,
     a: float = 0.7,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
-    """T3 using TA‑Lib (C implementation).
+    """T3 using TA-Lib (C implementation).
 
     Notes
     -----
@@ -153,9 +153,9 @@ def t3_talib(
 
     """
     if length < 1:
-        raise ValueError('T3 length must be >= 1')
+        raise ValueError("T3 length must be >= 1")
     if not talib_available:
-        raise ImportError('TA‑Lib not available')
+        raise ImportError("TA-Lib not available")
     close = np.asarray(close, dtype=np.float64).copy()
     replace_inf_with_nan(close)
     if not close.flags.c_contiguous:
@@ -174,7 +174,7 @@ def t3_ind(
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal T3 moving average.
 
@@ -188,7 +188,7 @@ def t3_ind(
         Volume factor (0 < a < 1).
     offset, fillna : as usual.
     use_talib : bool
-        Use TA‑Lib if available.
+        Use TA-Lib if available.
     nan_policy : str, default 'raise'
         How to handle NaN values (Numba backend only).
 
@@ -215,14 +215,14 @@ def t3_ind(
 # ----------------------------------------------------------------------
 def t3_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     a: float = 0.7,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
-    output_col: Optional[str] = None
+    nan_policy: str = "raise",
+    output_col: Optional[str] = None,
 ) -> pl.DataFrame:
     """Add T3 column to Polars DataFrame.
 
@@ -243,8 +243,6 @@ def t3_polars(
 
     """
     close = df[close_col].to_numpy()
-    result = t3_ind(
-        close, length, a, offset, fillna, use_talib, nan_policy
-    )
-    out_name = output_col or f'T3_{length}_{a}'
+    result = t3_ind(close, length, a, offset, fillna, use_talib, nan_policy)
+    out_name = output_col or f"T3_{length}_{a}"
     return df.with_columns([pl.Series(out_name, result)])

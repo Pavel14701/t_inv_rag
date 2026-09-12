@@ -9,7 +9,7 @@ from .rsi import rsi_ind
 
 
 # ----------------------------------------------------------------------
-# Streak calculation (Numba) – corrected version
+# Streak calculation (Numba) - corrected version
 # ----------------------------------------------------------------------
 @jit((float64[:],), nopython=True, fastmath=False, cache=True)
 def _streak_numba(close: np.ndarray) -> np.ndarray:
@@ -34,7 +34,7 @@ def _streak_numba(close: np.ndarray) -> np.ndarray:
 
 
 # ----------------------------------------------------------------------
-# Percent Rank (rolling) – Numba, strict comparison, direct indexing
+# Percent Rank (rolling) - Numba, strict comparison, direct indexing
 # ----------------------------------------------------------------------
 @jit((float64[:], int64), nopython=True, fastmath=False, cache=True)
 def _percent_rank_numba(close: np.ndarray, length: int) -> np.ndarray:
@@ -72,10 +72,10 @@ def crsi_numpy(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',          # 'raise', 'ffill', 'bfill', 'both'
-    normalize: bool = False,             # if True, replace NaN in result with 50.0
+    nan_policy: str = "raise",  # 'raise', 'ffill', 'bfill', 'both'
+    normalize: bool = False,  # if True, replace NaN in result with 50.0
 ) -> np.ndarray:
-    """Numpy‑based Connors RSI calculation with NaN handling.
+    """Numpy-based Connors RSI calculation with NaN handling.
 
     Parameters
     ----------
@@ -114,29 +114,31 @@ def crsi_numpy(
         close = np.ascontiguousarray(close)
     # ---- Input validation ----
     if rsi_length < 1:
-        raise ValueError('rsi_length must be >= 1')
+        raise ValueError("rsi_length must be >= 1")
     if streak_length < 1:
-        raise ValueError('streak_length must be >= 1')
+        raise ValueError("streak_length must be >= 1")
     if rank_length < 2:
-        raise ValueError('rank_length must be >= 2 for percent rank')
+        raise ValueError("rank_length must be >= 2 for percent rank")
     # ---- NaN handling on input ----
     if np.isnan(close).any():
-        if nan_policy == 'raise':
-            raise ValueError("Input contains NaN values. \
-                Use nan_policy='ffill', 'bfill' or 'both' to fill them.")
-        elif nan_policy == 'ffill':
+        if nan_policy == "raise":
+            raise ValueError(
+                "Input contains NaN values. \
+                Use nan_policy='ffill', 'bfill' or 'both' to fill them."
+            )
+        elif nan_policy == "ffill":
             # Forward fill
             close = close.copy()
             for i in range(1, len(close)):
                 if np.isnan(close[i]):
                     close[i] = close[i - 1]
-        elif nan_policy == 'bfill':
+        elif nan_policy == "bfill":
             # Backward fill
             close = close.copy()
             for i in range(len(close) - 2, -1, -1):
                 if np.isnan(close[i]):
                     close[i] = close[i + 1]
-        elif nan_policy == 'both':
+        elif nan_policy == "both":
             # First forward fill, then backward fill (fills all gaps)
             close = close.copy()
             # forward fill
@@ -148,13 +150,17 @@ def crsi_numpy(
                 if np.isnan(close[i]):
                     close[i] = close[i + 1]
         else:
-            raise ValueError(f"Unknown nan_policy: {nan_policy}. \
-                Use 'raise', 'ffill', 'bfill', or 'both'.")
+            raise ValueError(
+                f"Unknown nan_policy: {nan_policy}. \
+                Use 'raise', 'ffill', 'bfill', or 'both'."
+            )
     # Ensure C-contiguous for Numba performance
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     # 1. RSI of price
-    rsi_price = rsi_ind(close, length=rsi_length, scalar=scalar, use_talib=use_talib)
+    rsi_price = rsi_ind(
+        close, length=rsi_length, scalar=scalar, use_talib=use_talib
+    )
     # 2. Streak and its RSI
     streak = _streak_numba(close)
     rsi_streak = rsi_ind(
@@ -180,19 +186,29 @@ def crsi_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     normalize: bool = False,
 ) -> np.ndarray:
     """Universal Connors RSI (accepts numpy array or Polars Series)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
-    return crsi_numpy(close, rsi_length, streak_length, rank_length,
-                      scalar, offset, fillna, use_talib, nan_policy, normalize)
+    return crsi_numpy(
+        close,
+        rsi_length,
+        streak_length,
+        rank_length,
+        scalar,
+        offset,
+        fillna,
+        use_talib,
+        nan_policy,
+        normalize,
+    )
 
 
 def crsi_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     rsi_length: int = 3,
     streak_length: int = 2,
     rank_length: int = 100,
@@ -200,7 +216,7 @@ def crsi_polars(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     normalize: bool = False,
     output_col: str | None = None,
 ) -> pl.DataFrame:
@@ -224,7 +240,17 @@ def crsi_polars(
 
     """
     close = df[close_col].to_numpy()
-    result = crsi_numpy(close, rsi_length, streak_length, rank_length,
-                        scalar, offset, fillna, use_talib, nan_policy, normalize)
-    out_name = output_col or f'CRSI_{rsi_length}_{streak_length}_{rank_length}'
+    result = crsi_numpy(
+        close,
+        rsi_length,
+        streak_length,
+        rank_length,
+        scalar,
+        offset,
+        fillna,
+        use_talib,
+        nan_policy,
+        normalize,
+    )
+    out_name = output_col or f"CRSI_{rsi_length}_{streak_length}_{rank_length}"
     return df.with_columns([pl.Series(out_name, result)])

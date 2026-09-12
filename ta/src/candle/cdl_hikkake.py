@@ -10,23 +10,30 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.int64, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.int64,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
 )
 def _cdl_hikkake_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     lookahead,
     strict,
 ):
     """Optimized Hikkake pattern (approximation of TA-Lib logic).
 
     Returns:
-        1.0 → bullish hikkake (bear trap)
-       -1.0 → bearish hikkake (bull trap)
-        0.0 → none
+        1.0 -> bullish hikkake (bear trap)
+       -1.0 -> bearish hikkake (bull trap)
+        0.0 -> none
 
     """
     n = len(open_)
@@ -50,34 +57,37 @@ def _cdl_hikkake_nb(
         direction = 0.0
         # Look for failure (reversal) in next `lookahead` bars
         if bullish_break:
-            # Initial breakout up → watch for move below inside bar low
+            # Initial breakout up -> watch for move below inside bar low
             for k in range(1, lookahead + 1):
                 if low[i + k] < l1:
                     direction = -1.0  # bearish hikkake (bull trap)
                     break
         elif bearish_break:
-            # Initial breakout down → watch for move above inside bar high
+            # Initial breakout down -> watch for move above inside bar high
             for k in range(1, lookahead + 1):
                 if high[i + k] > h1:
                     direction = 1.0  # bullish hikkake (bear trap)
                     break
-        if direction == 0.0:
+        if direction == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             continue
         if strict:
-            # Простое доп. условие: диапазон inside bar не слишком мал
+            # Simple extra condition: the inside-bar range is not too small
             rng2 = h2 - l2
             rng1 = h1 - l1
             if rng2 <= 0.0 or rng1 <= 0.0:
                 continue
             if rng1 < 0.2 * rng2:
                 continue
-        # Сигнал ставим на баре подтверждения (i + k), но для простоты — на баре 0
+        # Signal goes on the confirmation bar (i + k); simplified here to bar 0
         out[i] = direction
     return out
 
 
 def cdl_hikkake(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -87,19 +97,19 @@ def cdl_hikkake(
     """Hikkake pattern with strict support and optional TA-Lib fallback.
 
     Returns:
-        1.0 → bullish hikkake
-       -1.0 → bearish hikkake
-        0.0 → none
+        1.0 -> bullish hikkake
+       -1.0 -> bearish hikkake
+        0.0 -> none
 
     """
-    # Polars → numpy
-    if isinstance(open_, pl.Series): 
+    # Polars -> numpy
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     open_ = np.asarray(open_, np.float64)
     high = np.asarray(high, np.float64)
@@ -121,9 +131,12 @@ def cdl_hikkake(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA-Lib fallback (если есть)
+    # TA-Lib fallback (if available)
     if use_talib and talib_available:
-        out = talib.CDLHIKKAKE(open_, high, low, close).astype(np.float64) / 100.0
+        out = (
+            talib.CDLHIKKAKE(open_, high, low, close).astype(np.float64)
+            / 100.0
+        )
         return _apply_offset_fillna(out, offset, fillna)
     out = _cdl_hikkake_nb(open_, high, low, close, lookahead, strict)
     return _apply_offset_fillna(out, offset, fillna)
@@ -131,15 +144,15 @@ def cdl_hikkake(
 
 def cdl_hikkake_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     lookahead: int = 3,
-    output_col: str = 'CDL_HIKKAKE',
+    output_col: str = "CDL_HIKKAKE",
 ) -> pl.DataFrame:
     out = cdl_hikkake(
         df[open_col].to_numpy(),

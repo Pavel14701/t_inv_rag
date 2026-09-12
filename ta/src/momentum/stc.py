@@ -19,6 +19,7 @@ IEEE 754 notes
   undefined), which then propagates through the EMA recursion;
 - no fastmath, no fabricated values.
 """
+
 import numpy as np
 import polars as pl
 
@@ -37,9 +38,9 @@ def _stoch_of_series(x: np.ndarray, window: int) -> np.ndarray:
     highest = _rolling_max_numba(x, window)
     lowest = _rolling_min_numba(x, window)
     denom = highest - lowest
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         out = 100.0 * (x - lowest) / denom
-    return np.where(denom == 0.0, np.nan, out)
+    return np.where(denom == 0.0, np.nan, out)  # noqa: RUF069 - exact IEEE zero/sign check
 
 
 def _ema_of_warmup(x: np.ndarray, length: int) -> np.ndarray:
@@ -54,10 +55,8 @@ def _ema_of_warmup(x: np.ndarray, length: int) -> np.ndarray:
         return out  # all-NaN input stays all-NaN
     filled = x.copy()
     filled[:first_valid] = x[first_valid]
-    out = ema_ind(
-        filled, length=length, use_talib=False, nan_policy='ignore'
-    )
-    out[:first_valid + length - 1] = np.nan
+    out = ema_ind(filled, length=length, use_talib=False, nan_policy="ignore")
+    out[: first_valid + length - 1] = np.nan
     return out
 
 
@@ -100,23 +99,23 @@ def stc_numpy(
 
     """
     if tclen < 1:
-        raise ValueError('tclen must be >= 1')
+        raise ValueError("tclen must be >= 1")
     if fast < 1:
-        raise ValueError('fast must be >= 1')
+        raise ValueError("fast must be >= 1")
     if slow < 1:
-        raise ValueError('slow must be >= 1')
+        raise ValueError("slow must be >= 1")
     if factor < 1:
-        raise ValueError('factor must be >= 1')
+        raise ValueError("factor must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if close.size == 0:
         return np.array([]), np.array([]), np.array([])
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     fast_ema = ema_ind(
-        close, length=fast, use_talib=use_talib, nan_policy='ignore'
+        close, length=fast, use_talib=use_talib, nan_policy="ignore"
     )
     slow_ema = ema_ind(
-        close, length=slow, use_talib=use_talib, nan_policy='ignore'
+        close, length=slow, use_talib=use_talib, nan_policy="ignore"
     )
     macd = fast_ema - slow_ema
     # Stage 1: stochastic of the MACD line + EMA smoothing.
@@ -143,14 +142,20 @@ def stc_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return stc_numpy(
-        close, tclen=tclen, fast=fast, slow=slow, factor=factor,
-        offset=offset, fillna=fillna, use_talib=use_talib,
+        close,
+        tclen=tclen,
+        fast=fast,
+        slow=slow,
+        factor=factor,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
 
 
 def stc_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     tclen: int = 10,
     fast: int = 12,
     slow: int = 26,
@@ -158,7 +163,7 @@ def stc_polars(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add STC columns to a Polars DataFrame.
 
@@ -168,13 +173,21 @@ def stc_polars(
     """
     close = df[close_col].cast(pl.Float64).to_numpy()
     stc, macd, stoch = stc_numpy(
-        close, tclen=tclen, fast=fast, slow=slow, factor=factor,
-        offset=offset, fillna=fillna, use_talib=use_talib,
+        close,
+        tclen=tclen,
+        fast=fast,
+        slow=slow,
+        factor=factor,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
     if not suffix:
-        suffix = f'_{tclen}_{fast}_{slow}_{factor}'
-    return df.with_columns([
-        pl.Series(f'STC{suffix}', stc),
-        pl.Series(f'STCmacd{suffix}', macd),
-        pl.Series(f'STCstoch{suffix}', stoch),
-    ])
+        suffix = f"_{tclen}_{fast}_{slow}_{factor}"
+    return df.with_columns(
+        [
+            pl.Series(f"STC{suffix}", stc),
+            pl.Series(f"STCmacd{suffix}", macd),
+            pl.Series(f"STCstoch{suffix}", stoch),
+        ]
+    )

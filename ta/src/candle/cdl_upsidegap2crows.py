@@ -25,7 +25,7 @@ from ..external import talib, talib_available
 
 
 @njit(
-    'int8[:](float64[:], float64[:], float64[:], float64[:])',
+    "int8[:](float64[:], float64[:], float64[:], float64[:])",
     cache=True,
     fastmath=False,
 )
@@ -199,13 +199,13 @@ def cdl_upsidegap2crows(
 
 def cdl_upsidegap2crows_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_UPSIDEGAP2CROWS',
+    output_col: str = "CDL_UPSIDEGAP2CROWS",
 ) -> pl.DataFrame:
     """Add Upside Gap Two Crows pattern column to a Polars DataFrame.
 
@@ -236,23 +236,25 @@ def cdl_upsidegap2crows_polars(
     Examples
     --------
     >>> import polars as pl
-    >>> df = pl.DataFrame({
-    ...     "open": [100, 115, 118],
-    ...     "high": [102, 116, 119],
-    ...     "low": [98, 114, 110],
-    ...     "close": [110, 112, 111],
-    ... })
+    >>> df = pl.DataFrame(
+    ...     {
+    ...         "open": [100, 115, 118],
+    ...         "high": [102, 116, 119],
+    ...         "low": [98, 114, 110],
+    ...         "close": [110, 112, 111],
+    ...     }
+    ... )
     >>> cdl_upsidegap2crows_polars(df, output_col="PATTERN")
     shape: (3, 5)
-    ┌──────┬──────┬──────┬───────┬─────────┐
-    │ open ┆ high ┆ low  ┆ close ┆ PATTERN │
-    │ ---  ┆ ---  ┆ ---  ┆ ---   ┆ ---     │
-    │ f64  ┆ f64  ┆ f64  ┆ f64   ┆ f64     │
-    ╞══════╪══════╪══════╪═══════╪═════════╡
-    │ 100  ┆ 102  ┆ 98   ┆ 110   ┆ 0.0     │
-    │ 115  ┆ 116  ┆ 114  ┆ 112   ┆ 0.0     │
-    │ 118  ┆ 119  ┆ 110  ┆ 111   ┆ 1.0     │
-    └──────┴──────┴──────┴───────┴─────────┘
+    +------+------+------+-------+---------+
+    | open | high | low  | close | PATTERN |
+    | ---  | ---  | ---  | ---   | ---     |
+    | f64  | f64  | f64  | f64   | f64     |
+    +======+======+======+=======+=========+
+    | 100  | 102  | 98   | 110   | 0.0     |
+    | 115  | 116  | 114  | 112   | 0.0     |
+    | 118  | 119  | 110  | 111   | 1.0     |
+    +------+------+------+-------+---------+
 
     """
     out = cdl_upsidegap2crows(

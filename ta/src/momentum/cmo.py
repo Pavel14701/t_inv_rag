@@ -9,7 +9,7 @@ from ..external import talib, talib_available
 
 
 # ----------------------------------------------------------------------
-# Numba‑accelerated rolling sums of positive and negative changes
+# Numba-accelerated rolling sums of positive and negative changes
 # ----------------------------------------------------------------------
 @jit(nopython=True, fastmath=False, cache=True)
 def _cmo_numba_core(
@@ -65,7 +65,7 @@ def _cmo_numba_core(
         sum_pos = cum_pos[i + 1] - cum_pos[i + 1 - length]
         sum_neg = cum_neg[i + 1] - cum_neg[i + 1 - length]
         denom = sum_pos + sum_neg
-        if denom != 0.0:
+        if denom != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             out[i] = scalar * (sum_pos - sum_neg) / denom
         else:
             out[i] = np.nan
@@ -81,7 +81,7 @@ def cmo_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based CMO calculation.
+    """Numpy-based CMO calculation.
 
     Parameters
     ----------
@@ -95,7 +95,7 @@ def cmo_numpy(
         Shift for price differences.
     offset, fillna : as usual.
     use_talib : bool
-        If True and TA‑Lib is available, use talib.CMO; else use Numba core.
+        If True and TA-Lib is available, use talib.CMO; else use Numba core.
 
     Returns
     -------
@@ -120,11 +120,11 @@ def cmo_numpy(
     if not close.flags.writeable:
         close = close.copy()
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if drift < 1:
-        raise ValueError('drift must be >= 1')
+        raise ValueError("drift must be >= 1")
     if use_talib and talib_available:
-        # TA‑Lib CMO uses RMA internally; scalar is fixed at 100.
+        # TA-Lib CMO uses RMA internally; scalar is fixed at 100.
         result = talib.CMO(close, timeperiod=length)
     else:
         result = _cmo_numba_core(close, length, drift, scalar)
@@ -148,7 +148,7 @@ def cmo_ind(
 
 def cmo_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 14,
     scalar: float = 100.0,
     drift: int = 1,
@@ -177,5 +177,5 @@ def cmo_polars(
     """
     close = df[close_col].to_numpy()
     result = cmo_numpy(close, length, scalar, drift, offset, fillna, use_talib)
-    out_name = output_col or f'CMO_{length}'
+    out_name = output_col or f"CMO_{length}"
     return df.with_columns([pl.Series(out_name, result)])

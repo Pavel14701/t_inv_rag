@@ -9,22 +9,33 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_3starsinsouth_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
     """Three Stars In The South (bullish) + optional mirrored bearish variant.
-    1.0 → bullish
-    -1.0 → bearish (only if symmetric=True)
-    0.0 → none.
+    1.0 -> bullish
+    -1.0 -> bearish (only if symmetric=True)
+    0.0 -> none.
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -42,18 +53,24 @@ def _cdl_3starsinsouth_nb(
 
         # ---------------- Bullish (TA-Lib canonical) ----------------
         bull = (
-            (c2 < o2) and (c1 < o1) and (c0 < o0) and   # три чёрные
-            (l1 < l2) and (l0 < l1) and                 # минимумы вниз
-            (c0 > c1)                                   # третья закрывается выше второй
+            (c2 < o2)
+            and (c1 < o1)
+            and (c0 < o0)  # three black
+            and (l1 < l2)
+            and (l0 < l1)  # lower lows
+            and (c0 > c1)  # third closes above the second
         )
 
         # ---------------- Mirrored bearish (only if symmetric=True) ----------------
         bear = False
         if symmetric:
             bear = (
-                (c2 > o2) and (c1 > o1) and (c0 > o0) and   # три белые
-                (h1 > h2) and (h0 > h1) and                 # максимумы вверх
-                (c0 < c1)   # третья закрывается ниже второй
+                (c2 > o2)
+                and (c1 > o1)
+                and (c0 > o0)  # three white
+                and (h1 > h2)
+                and (h0 > h1)  # higher highs
+                and (c0 < c1)  # third closes below the second
             )
 
         if bull:
@@ -73,9 +90,11 @@ def _cdl_3starsinsouth_nb(
             b1 = abs(c1 - o1)
             b0 = abs(c0 - o0)
 
-            if (b2 < min_body_factor * r2 or
-                b1 < min_body_factor * r1 or
-                b0 < min_body_factor * r0):
+            if (
+                b2 < min_body_factor * r2
+                or b1 < min_body_factor * r1
+                or b0 < min_body_factor * r0
+            ):
                 continue
 
             up2 = o2 if o2 > c2 else c2
@@ -90,9 +109,11 @@ def _cdl_3starsinsouth_nb(
             lo0 = c0 if o0 > c0 else o0
             sh0 = (h0 - up0) + (lo0 - l0)
 
-            if (sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = direction
@@ -101,7 +122,10 @@ def _cdl_3starsinsouth_nb(
 
 
 def cdl_3starsinsouth(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -111,14 +135,14 @@ def cdl_3starsinsouth(
     max_shadow_factor=1.0,
 ):
     """Three Stars In The South with optional symmetric bearish mode."""
-    # Polars → NumPy
-    if isinstance(open_, pl.Series): 
+    # Polars -> NumPy
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
 
     # float64 + contiguous
@@ -152,26 +176,31 @@ def cdl_3starsinsouth(
 
     # Numba branch
     out = _cdl_3starsinsouth_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_3starsinsouth_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col='CDL_3STARSINSOUTH',
+    output_col="CDL_3STARSINSOUTH",
 ):
     out = cdl_3starsinsouth(
         df[open_col].to_numpy(),

@@ -19,9 +19,9 @@ from ..volatility import atr_ind
     (float64[:], float64[:], int64, int64, float64, float64[:]),
     cache=True,
     fastmath=False,  # strict IEEE: this kernel branches on np.isfinite()
-                     # to skip the ATR warm-up; fastmath's nnan flag folds
-                     # those checks to "always True" and the NaN seed then
-                     # poisons the recursive smoothing (all-NaN output)
+    # to skip the ATR warm-up; fastmath's nnan flag folds
+    # those checks to "always True" and the NaN seed then
+    # poisons the recursive smoothing (all-NaN output)
 )
 def _tv_dmp_dmn_adx(
     pos: np.ndarray,
@@ -76,7 +76,7 @@ def _tv_dmp_dmn_adx(
         dmn[i] = alpha * k[i] * neg[i] + (1.0 - alpha) * dmn[i - 1]
     for i in range(first, n):
         denom = dmp[i] + dmn[i]
-        if denom != 0.0:
+        if denom != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             dx[i] = scalar * abs(dmp[i] - dmn[i]) / denom
         else:
             dx[i] = np.nan
@@ -107,7 +107,9 @@ def _tv_dmp_dmn_adx(
 # Helper: signal MA starting at the first finite value
 # ----------------------------------------------------------------------
 def _rma_from_first_valid(
-    x: np.ndarray, length: int, mamode: str,
+    x: np.ndarray,
+    length: int,
+    mamode: str,
 ) -> np.ndarray:
     """Apply ``mamode`` MA to ``x`` starting at its first finite value.
 
@@ -130,7 +132,12 @@ def _rma_from_first_valid(
         np.maximum.accumulate(idx, out=idx)
         tail = tail[idx]
     smoothed = ma_mode(
-        mamode, tail, length=length, offset=0, fillna=None, use_talib=False,
+        mamode,
+        tail,
+        length=length,
+        offset=0,
+        fillna=None,
+        use_talib=False,
     )
     out[start:] = smoothed
     return out
@@ -148,15 +155,15 @@ def adx_numpy(
     adxr_length: int = 2,
     scalar: float = 100.0,
     tvmode: bool = False,
-    mamode: str = 'rma',
+    mamode: str = "rma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Numpy‑based ADX calculation with NaN handling and trim option.
+    """Numpy-based ADX calculation with NaN handling and trim option.
 
     Parameters
     ----------
@@ -198,23 +205,23 @@ def adx_numpy(
         signal_length = length
     # ---- Input validation ----
     if length < 1 or signal_length < 1:
-        raise ValueError('length and signal_length must be >= 1')
+        raise ValueError("length and signal_length must be >= 1")
     if adxr_length < 1:
-        raise ValueError('adxr_length must be >= 1')
+        raise ValueError("adxr_length must be >= 1")
     # Convert to float64 and check contiguity
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
     # Check for infinite values
-    for name, arr in [('high', high), ('low', low), ('close', close)]:
+    for name, arr in [("high", high), ("low", low), ("close", close)]:
         if np.isinf(arr).any():
             raise ValueError(
-                f'Input {name} contains non-finite values (inf or -inf).'
+                f"Input {name} contains non-finite values (inf or -inf)."
             )
     # Apply NaN policy to each array
-    high = _handle_nan_policy(high, nan_policy, 'high')
-    low = _handle_nan_policy(low, nan_policy, 'low')
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    high = _handle_nan_policy(high, nan_policy, "high")
+    low = _handle_nan_policy(low, nan_policy, "low")
+    close = _handle_nan_policy(close, nan_policy, "close")
     # Ensure C-contiguous for performance (fixing the previous bug)
     if not high.flags.c_contiguous:
         high = np.ascontiguousarray(high)
@@ -224,17 +231,19 @@ def adx_numpy(
         close = np.ascontiguousarray(close)
     # 1. ATR
     atr = atr_ind(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
-        mamode='rma',
+        mamode="rma",
         drift=drift,
         offset=0,
         fillna=None,
         use_talib=use_talib,
-        nan_policy=nan_policy,   # assume atr_ind also supports nan_policy
+        nan_policy=nan_policy,  # assume atr_ind also supports nan_policy
     )
     if np.all(np.isnan(atr)):
-        raise ValueError('ATR calculation failed')
+        raise ValueError("ATR calculation failed")
     # 2. Up and Down movements
     up = high - np.roll(high, drift)
     up[:drift] = np.nan
@@ -247,7 +256,7 @@ def adx_numpy(
     neg = np.where(dn_gt_up & (dn > 0), dn, 0.0).astype(np.float64)
     # 4. Compute DMP, DMN, ADX
     if use_talib and talib_available and not tvmode:
-        # TA‑Lib does not support tvmode
+        # TA-Lib does not support tvmode
         dmp = talib.PLUS_DM(high, low, timeperiod=length)
         dmn = talib.MINUS_DM(high, low, timeperiod=length)
         adx = talib.ADX(high, low, close, timeperiod=length)
@@ -259,24 +268,40 @@ def adx_numpy(
         else:
             # Standard calculation using MA of pos/neg
             k = scalar / atr
-            dmp = k * cast(np.ndarray, ma_mode(
-                mamode, pos, length=length, offset=0,
-                fillna=None, use_talib=False
-            ))
-            dmn = k * cast(np.ndarray, ma_mode(
-                mamode, neg, length=length, offset=0,
-                fillna=None, use_talib=False
-            ))
+            dmp = k * cast(
+                np.ndarray,
+                ma_mode(
+                    mamode,
+                    pos,
+                    length=length,
+                    offset=0,
+                    fillna=None,
+                    use_talib=False,
+                ),
+            )
+            dmn = k * cast(
+                np.ndarray,
+                ma_mode(
+                    mamode,
+                    neg,
+                    length=length,
+                    offset=0,
+                    fillna=None,
+                    use_talib=False,
+                ),
+            )
             denom = dmp + dmn
-            with np.errstate(divide='ignore', invalid='ignore'):
+            with np.errstate(divide="ignore", invalid="ignore"):
                 dx = scalar * np.abs(dmp - dmn) / denom
-                dx = np.where(denom == 0.0, np.nan, dx)
+                dx = np.where(denom == 0.0, np.nan, dx)  # noqa: RUF069 - exact IEEE zero/sign check
             # dx has NaNs during the warm-up (ATR/DMP/DMN not defined yet).
             # Smoothing a series with leading NaNs would raise under
             # nan_policy='raise', so - like the tvmode kernel - start the
             # signal MA at the first finite dx value.
             adx = _rma_from_first_valid(
-                cast(np.ndarray, dx), signal_length, mamode,
+                cast(np.ndarray, dx),
+                signal_length,
+                mamode,
             )
     # 5. ADXR
     adx_shifted = np.roll(adx, adxr_length)
@@ -287,7 +312,7 @@ def adx_numpy(
         start = length + signal_length - 1
         if start >= len(adx):
             raise ValueError(
-                'Trim start index exceeds array length. Series too short.'
+                "Trim start index exceeds array length. Series too short."
             )
         adx = adx[start:]
         adxr = adxr[start:]
@@ -310,12 +335,12 @@ def adx_ind(
     adxr_length: int = 2,
     scalar: float = 100.0,
     tvmode: bool = False,
-    mamode: str = 'rma',
+    mamode: str = "rma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Universal ADX (numpy arrays or Polars Series) with NaN handling.
@@ -328,7 +353,9 @@ def adx_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return adx_numpy(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
         signal_length=signal_length,
         adxr_length=adxr_length,
@@ -346,22 +373,22 @@ def adx_ind(
 
 def adx_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    date_col: str = 'date',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    date_col: str = "date",
     length: int = 14,
     signal_length: int | None = None,
     adxr_length: int = 2,
     scalar: float = 100.0,
     tvmode: bool = False,
-    mamode: str = 'rma',
+    mamode: str = "rma",
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
-    suffix: str = '',
+    nan_policy: str = "raise",
+    suffix: str = "",
 ) -> pl.DataFrame:
     """ADX for Polars DataFrame (no trim: output keeps input length).
 
@@ -377,7 +404,9 @@ def adx_polars(
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     adx_arr, adxr_arr, dmp_arr, dmn_arr = adx_numpy(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
         signal_length=signal_length,
         adxr_length=adxr_length,
@@ -391,11 +420,13 @@ def adx_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars always returns full length
     )
-    suffix = suffix or f'_{signal_length}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        f'ADX{suffix}': adx_arr,
-        f'ADXR_{signal_length}_{adxr_length}': adxr_arr,
-        f'DMP_{length}': dmp_arr,
-        f'DMN_{length}': dmn_arr,
-    })
+    suffix = suffix or f"_{signal_length}"
+    return pl.DataFrame(
+        {
+            date_col: df[date_col],
+            f"ADX{suffix}": adx_arr,
+            f"ADXR_{signal_length}_{adxr_length}": adxr_arr,
+            f"DMP_{length}": dmp_arr,
+            f"DMN_{length}": dmn_arr,
+        }
+    )

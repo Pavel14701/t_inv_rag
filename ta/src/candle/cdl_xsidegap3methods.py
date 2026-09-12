@@ -24,7 +24,7 @@ from ..external import talib, talib_available
 
 
 @njit(
-    'int8[:](float64[:], float64[:], float64[:], float64[:])',
+    "int8[:](float64[:], float64[:], float64[:], float64[:])",
     cache=True,
     fastmath=False,
 )
@@ -171,13 +171,13 @@ def cdl_xsidegap3methods(
 
 def cdl_xsidegap3methods_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_XSIDEGAP3METHODS',
+    output_col: str = "CDL_XSIDEGAP3METHODS",
 ) -> pl.DataFrame:
     """Add Upside/Downside Gap 3 Methods pattern column to a Polars DataFrame.
 
@@ -208,23 +208,25 @@ def cdl_xsidegap3methods_polars(
     Examples
     --------
     >>> import polars as pl
-    >>> df = pl.DataFrame({
-    ...     "open": [100, 115, 118],
-    ...     "high": [102, 120, 120],
-    ...     "low": [98, 114, 113],
-    ...     "close": [102, 118, 114],
-    ... })
+    >>> df = pl.DataFrame(
+    ...     {
+    ...         "open": [100, 115, 118],
+    ...         "high": [102, 120, 120],
+    ...         "low": [98, 114, 113],
+    ...         "close": [102, 118, 114],
+    ...     }
+    ... )
     >>> cdl_xsidegap3methods_polars(df, output_col="PATTERN")
     shape: (3, 5)
-    ┌──────┬──────┬──────┬───────┬─────────┐
-    │ open ┆ high ┆ low  ┆ close ┆ PATTERN │
-    │ ---  ┆ ---  ┆ ---  ┆ ---   ┆ ---     │
-    │ f64  ┆ f64  ┆ f64  ┆ f64   ┆ f64     │
-    ╞══════╪══════╪══════╪═══════╪═════════╡
-    │ 100  ┆ 102  ┆ 98   ┆ 102   ┆ 0.0     │
-    │ 115  ┆ 120  ┆ 114  ┆ 118   ┆ 0.0     │
-    │ 118  ┆ 120  ┆ 113  ┆ 114   ┆ 1.0     │
-    └──────┴──────┴──────┴───────┴─────────┘
+    +------+------+------+-------+---------+
+    | open | high | low  | close | PATTERN |
+    | ---  | ---  | ---  | ---   | ---     |
+    | f64  | f64  | f64  | f64   | f64     |
+    +======+======+======+=======+=========+
+    | 100  | 102  | 98   | 102   | 0.0     |
+    | 115  | 120  | 114  | 118   | 0.0     |
+    | 118  | 120  | 113  | 114   | 1.0     |
+    +------+------+------+-------+---------+
 
     """
     out = cdl_xsidegap3methods(

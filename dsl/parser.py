@@ -83,7 +83,7 @@ class Parser:
         """
         tok = self._peek()
         if tok is None:
-            raise ParseError('Unexpected end of input')
+            raise ParseError("Unexpected end of input")
         self.pos += 1
         return tok
 
@@ -121,7 +121,7 @@ class Parser:
         """
         tok = self._peek()
         return (
-            self._let_expr() if tok and tok.type == 'LET'
+            self._let_expr() if tok and tok.type == "LET"
             else self._or_expr()
         )
 
@@ -135,17 +135,17 @@ class Parser:
             A Let node with the bound variable and body.
 
         """
-        self._match('LET')
-        ident = self._match('IDENT')
+        self._match("LET")
+        ident = self._match("IDENT")
         var_name = ident.value
-        self._match('ASSIGN')
+        self._match("ASSIGN")
 
         # Create a new scope with this variable
         new_scope = {var_name}
         self._let_stack.append(new_scope)
 
         value = self._or_expr()
-        self._match('IN')
+        self._match("IN")
         body = self._expression()
 
         # Remove the scope after parsing the body
@@ -165,10 +165,10 @@ class Parser:
         """
         node = self._and_expr()
         tok = self._peek()
-        while tok and tok.type == 'OR':
+        while tok and tok.type == "OR":
             self._next()
             right = self._and_expr()
-            node = LogicalBinOp(operator='or', left=node, right=right)
+            node = LogicalBinOp(operator="or", left=node, right=right)
             tok = self._peek()
         return node
 
@@ -184,10 +184,10 @@ class Parser:
         """
         node = self._not_expr()
         tok = self._peek()
-        while tok and tok.type == 'AND':
+        while tok and tok.type == "AND":
             self._next()
             right = self._not_expr()
-            node = LogicalBinOp(operator='and', left=node, right=right)
+            node = LogicalBinOp(operator="and", left=node, right=right)
             tok = self._peek()
         return node
 
@@ -202,7 +202,7 @@ class Parser:
 
         """
         tok = self._peek()
-        if tok and tok.type == 'NOT':
+        if tok and tok.type == "NOT":
             self._next()
             node = self._not_expr()
             return LogicalNot(operand=node)
@@ -221,10 +221,10 @@ class Parser:
         """
         left = self._arith_expr()
         tok = self._peek()
-        if tok and tok.type == 'COMP_OP':
+        if tok and tok.type == "COMP_OP":
             ops = []
             operands = [left]
-            while tok and tok.type == 'COMP_OP':
+            while tok and tok.type == "COMP_OP":
                 op_tok = self._next()
                 ops.append(op_tok.value)
                 right = self._arith_expr()
@@ -251,10 +251,10 @@ class Parser:
         """
         node = self._term()
         tok = self._peek()
-        while tok and tok.type in ('PLUS', 'MINUS'):
+        while tok and tok.type in ("PLUS", "MINUS"):
             op_tok = self._next()
             right = self._term()
-            if op_tok.type == 'PLUS':
+            if op_tok.type == "PLUS":
                 node = Add(left=node, right=right)
             else:
                 node = Sub(left=node, right=right)
@@ -273,12 +273,12 @@ class Parser:
         """
         node = self._factor()
         tok = self._peek()
-        while tok and tok.type in ('MUL', 'DIV', 'MOD'):
+        while tok and tok.type in ("MUL", "DIV", "MOD"):
             op_tok = self._next()
             right = self._factor()
-            if op_tok.type == 'MUL':
+            if op_tok.type == "MUL":
                 node = Mul(left=node, right=right)
-            elif op_tok.type == 'DIV':
+            elif op_tok.type == "DIV":
                 node = Div(left=node, right=right)
             else:
                 node = Mod(left=node, right=right)
@@ -297,7 +297,7 @@ class Parser:
         """
         node = self._unary()
         tok = self._peek()
-        if tok and tok.type == 'POW':
+        if tok and tok.type == "POW":
             self._next()
             right = self._factor()
             return Pow(left=node, right=right)
@@ -314,7 +314,7 @@ class Parser:
 
         """
         tok = self._peek()
-        if tok and tok.type == 'MINUS':
+        if tok and tok.type == "MINUS":
             self._next()
             operand = self._unary()
             return UnaryMinus(operand=operand)
@@ -325,7 +325,7 @@ class Parser:
 
         Grammar:
             atom = NUMBER
-                | IDENT (→ Var if let-bound, else indicator access)
+                | IDENT (-> Var if let-bound, else indicator access)
                 | '(' expression ')'
                 | RISING '(' expression ',' NUMBER ')'
                 | FALLING '(' expression ',' NUMBER ')'
@@ -336,11 +336,11 @@ class Parser:
         """
         tok = self._peek()
         if tok is None:
-            raise ParseError('Unexpected EOF')
-        if tok.type == 'NUMBER':
+            raise ParseError("Unexpected EOF")
+        if tok.type == "NUMBER":
             self._next()
             return Number(value=float(tok.value))
-        if tok.type == 'IDENT':
+        if tok.type == "IDENT":
             # If the identifier is a let-bound variable, emit a Var node.
             if self._is_let_var(tok.value):
                 self._next()
@@ -348,16 +348,16 @@ class Parser:
             # Otherwise treat it as an indicator access
             # (with optional params/attrs).
             return self._parse_indicator()
-        if tok.type == 'RISING':
+        if tok.type == "RISING":
             return self._parse_rising()
-        if tok.type == 'FALLING':
+        if tok.type == "FALLING":
             return self._parse_falling()
-        if tok.type == 'LPAREN':
+        if tok.type == "LPAREN":
             self._next()
             node = self._expression()
-            self._match('RPAREN')
+            self._match("RPAREN")
             return node
-        raise ParseError(f'Unexpected token: {tok.value}')
+        raise ParseError(f"Unexpected token: {tok.value}")
 
     def _is_let_var(self, name: str) -> bool:
         """Check whether the given name refers to an active let-bound variable.
@@ -379,11 +379,11 @@ class Parser:
 
         """
         self._next()  # consume RISING token
-        self._match('LPAREN')
+        self._match("LPAREN")
         expr = self._expression()
-        self._match('COMMA')
-        num_tok = self._match('NUMBER')
-        self._match('RPAREN')
+        self._match("COMMA")
+        num_tok = self._match("NUMBER")
+        self._match("RPAREN")
         return Rising(expr=expr, n=int(num_tok.value))
 
     def _parse_falling(self) -> Falling:
@@ -397,11 +397,11 @@ class Parser:
 
         """
         self._next()  # consume FALLING token
-        self._match('LPAREN')
+        self._match("LPAREN")
         expr = self._expression()
-        self._match('COMMA')
-        num_tok = self._match('NUMBER')
-        self._match('RPAREN')
+        self._match("COMMA")
+        num_tok = self._match("NUMBER")
+        self._match("RPAREN")
         return Falling(expr=expr, n=int(num_tok.value))
 
     def _parse_indicator(self) -> ASTNode:
@@ -416,22 +416,22 @@ class Parser:
             IndicatorAccess, IndicatorWithParams, or HistoricalAccess node.
 
         """  # noqa: E501
-        ident_token = self._match('IDENT')
+        ident_token = self._match("IDENT")
         base_name = ident_token.value
         # Check for parameters enclosed in parentheses
         tok = self._peek()
-        if tok and tok.type == 'LPAREN':
+        if tok and tok.type == "LPAREN":
             return self._parse_indicator_params_and_attrs(base_name)
         # No parameters: collect dotted attributes and optional
         # historical offset
         attrs = []
         tok = self._peek()
-        while tok and tok.type == 'DOT':
+        while tok and tok.type == "DOT":
             self._next()
-            attr = self._match('IDENT').value
+            attr = self._match("IDENT").value
             attrs.append(attr)
             tok = self._peek()
-        if tok and tok.type == 'LBRACKET':
+        if tok and tok.type == "LBRACKET":
             offset = self._parse_history_offset()
             expr = IndicatorAccess(indicator=base_name, attributes=attrs)
             return HistoricalAccess(expr=expr, offset=offset)
@@ -446,28 +446,28 @@ class Parser:
         self._next()  # consume '('
         params = {}
         tok = self._peek()
-        if tok and tok.type != 'RPAREN':
+        if tok and tok.type != "RPAREN":
             while True:
-                param_name = self._match('IDENT').value
-                self._match('ASSIGN')
+                param_name = self._match("IDENT").value
+                self._match("ASSIGN")
                 param_expr = self._expression()
                 params[param_name] = param_expr
                 tok = self._peek()
-                if tok and tok.type == 'COMMA':
+                if tok and tok.type == "COMMA":
                     self._next()
                     continue
                 break
-        self._match('RPAREN')
+        self._match("RPAREN")
         # Collect optional dotted attributes after the closing paren
         attrs = []
         tok = self._peek()
-        while tok and tok.type == 'DOT':
+        while tok and tok.type == "DOT":
             self._next()
-            attr = self._match('IDENT').value
+            attr = self._match("IDENT").value
             attrs.append(attr)
             tok = self._peek()
         # Optional historical offset
-        if tok and tok.type == 'LBRACKET':
+        if tok and tok.type == "LBRACKET":
             offset = self._parse_history_offset()
             expr = IndicatorWithParams(
                 indicator=base_name,
@@ -489,9 +489,9 @@ class Parser:
 
         """
         self._next()  # consume '['
-        num_tok = self._match('NUMBER')
+        num_tok = self._match("NUMBER")
         result = int(num_tok.value)
-        self._match('RBRACKET')
+        self._match("RBRACKET")
         return result
 
 

@@ -54,7 +54,7 @@ class EntryExitTransformer(nn.Module):
         max_seq_len: int = 1024,
         max_ob_seq_len: int = 256,
         n_action_classes: int = 3,
-        outcome_mode: str = 'binary',
+        outcome_mode: str = "binary",
         n_outcome_classes: int = 2,
         n_patterns: int = 10,
         ob_embedding_dim: int = 32,
@@ -80,7 +80,7 @@ class EntryExitTransformer(nn.Module):
             nhead=num_heads,
             dim_feedforward=hidden_size * 4,
             dropout=dropout,
-            activation='gelu',
+            activation="gelu",
             batch_first=True,
         )
         self.time_encoder = nn.TransformerEncoder(time_layer, num_layers)
@@ -102,7 +102,7 @@ class EntryExitTransformer(nn.Module):
             nhead=num_heads,
             dim_feedforward=hidden_size * 4,
             dropout=dropout,
-            activation='gelu',
+            activation="gelu",
             batch_first=True,
         )
         self.ob_encoder = nn.TransformerEncoder(ob_layer, num_layers)
@@ -116,14 +116,14 @@ class EntryExitTransformer(nn.Module):
             nn.Linear(hidden_size, n_action_classes),
         )
 
-        if outcome_mode in {'binary', 'regression'}:
+        if outcome_mode in {"binary", "regression"}:
             self.outcome_head = nn.Sequential(
                 nn.Linear(hidden_size * 2, hidden_size),
                 nn.GELU(),
                 nn.Dropout(dropout),
                 nn.Linear(hidden_size, 1),
             )
-        elif outcome_mode == 'multiclass':
+        elif outcome_mode == "multiclass":
             self.outcome_head = nn.Sequential(
                 nn.Linear(hidden_size * 2, hidden_size),
                 nn.GELU(),
@@ -131,7 +131,7 @@ class EntryExitTransformer(nn.Module):
                 nn.Linear(hidden_size, n_outcome_classes),
             )
         else:
-            raise ValueError('Unknown outcome_mode')
+            raise ValueError("Unknown outcome_mode")
 
         self.pattern_head = nn.Sequential(
             nn.Linear(hidden_size * 2, hidden_size),
@@ -191,10 +191,10 @@ class EntryExitTransformer(nn.Module):
             dtype=torch.float32,
         )
 
-        type_id = 0 if ob.block_type.lower() == 'supply' else 1
-        structure_map = {'valid': 0, 'broken': 1, 'weak': 2, None: 3}
+        type_id = 0 if ob.block_type.lower() == "supply" else 1
+        structure_map = {"valid": 0, "broken": 1, "weak": 2, None: 3}
         structure_id = structure_map.get(ob.structure_label, 3)
-        trend_map = {'up': 0, 'down': 1, None: 2}
+        trend_map = {"up": 0, "down": 1, None: 2}
         trend_id = trend_map.get(ob.trend_direction, 2)
 
         return numeric, type_id, structure_id, trend_id

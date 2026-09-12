@@ -12,12 +12,12 @@ def apo_numpy(
     close: np.ndarray,
     fast: int = 12,
     slow: int = 26,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based APO calculation.
+    """Numpy-based APO calculation.
 
     Parameters
     ----------
@@ -43,19 +43,37 @@ def apo_numpy(
 
     """
     if fast < 1:
-        raise ValueError('fast must be >= 1')
+        raise ValueError("fast must be >= 1")
     if slow < 1:
-        raise ValueError('slow must be >= 1')
+        raise ValueError("slow must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     # Ensure slow is the larger period (original behaviour)
     if slow < fast:
         fast, slow = slow, fast
-    fast_ma = cast(np.ndarray, ma_mode(
-        mamode, close, length=fast, offset=0, fillna=None, use_talib=use_talib))
-    slow_ma = cast(np.ndarray, ma_mode(
-        mamode, close, length=slow, offset=0, fillna=None, use_talib=use_talib))
+    fast_ma = cast(
+        np.ndarray,
+        ma_mode(
+            mamode,
+            close,
+            length=fast,
+            offset=0,
+            fillna=None,
+            use_talib=use_talib,
+        ),
+    )
+    slow_ma = cast(
+        np.ndarray,
+        ma_mode(
+            mamode,
+            close,
+            length=slow,
+            offset=0,
+            fillna=None,
+            use_talib=use_talib,
+        ),
+    )
     apo = fast_ma - slow_ma
     return _apply_offset_fillna(apo, offset, fillna)
 
@@ -64,7 +82,7 @@ def apo_ind(
     close: np.ndarray | pl.Series,
     fast: int = 12,
     slow: int = 26,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -77,11 +95,11 @@ def apo_ind(
 
 def apo_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
-    date_col: str = 'date',
+    close_col: str = "close",
+    date_col: str = "date",
     fast: int = 12,
     slow: int = 26,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -104,8 +122,5 @@ def apo_polars(
     """
     close = df[close_col].to_numpy()
     result = apo_ind(close, fast, slow, mamode, offset, fillna, use_talib)
-    out_name = output_col or f'APO_{fast}_{slow}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        out_name: result
-    })
+    out_name = output_col or f"APO_{fast}_{slow}"
+    return pl.DataFrame({date_col: df[date_col], out_name: result})

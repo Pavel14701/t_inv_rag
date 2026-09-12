@@ -223,14 +223,14 @@ def ichimoku_core_numba(
 
     """
     if tenkan < 1 or kijun < 1 or senkou < 1:
-        raise ValueError('tenkan, kijun and senkou must all be >= 1')
+        raise ValueError("tenkan, kijun and senkou must all be >= 1")
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
     if not (len(high) == len(low) == len(close)):
         raise ValueError(
-            'high, low and close must have the same length: '
-            f'got {len(high)}, {len(low)}, {len(close)}.'
+            "high, low and close must have the same length: "
+            f"got {len(high)}, {len(low)}, {len(close)}."
         )
 
     tenkan_sen, kijun_sen, span_b = _midprice_multi_numba(
@@ -251,10 +251,10 @@ def ichimoku_core_numba(
 
 def ichimoku_ind(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    date_col: str | None = 'date',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    date_col: str | None = "date",
     tenkan: int = 9,
     kijun: int = 26,
     senkou: int = 52,
@@ -262,7 +262,7 @@ def ichimoku_ind(
     lookahead: bool = True,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
     """Compute Ichimoku Cloud indicator and return two Polars DataFrames.
 
@@ -336,19 +336,21 @@ def ichimoku_ind(
     >>> rng = np.random.default_rng(42)
     >>> n = 120
     >>> close = 100 + np.cumsum(rng.standard_normal(n))
-    >>> df = pl.DataFrame({
-    ...     "date": pl.date_range(date(2020, 1, 1), date(2020, 4, 29), "1d", eager=True),
-    ...     "high": close + np.abs(rng.standard_normal(n)),
-    ...     "low": close - np.abs(rng.standard_normal(n)),
-    ...     "close": close,
-    ... })
+    >>> df = pl.DataFrame(
+    ...     {
+    ...         "date": pl.date_range(date(2020, 1, 1), date(2020, 4, 29), "1d", eager=True),
+    ...         "high": close + np.abs(rng.standard_normal(n)),
+    ...         "low": close - np.abs(rng.standard_normal(n)),
+    ...         "close": close,
+    ...     }
+    ... )
     >>> hist, fwd = ichimoku_ind(df, tenkan=9, kijun=26, senkou=52)
     >>> print(hist)
     >>> print(fwd)
 
     """  # noqa: E501
     if tenkan < 1 or kijun < 1 or senkou < 1:
-        raise ValueError('tenkan, kijun and senkou must all be >= 1')
+        raise ValueError("tenkan, kijun and senkou must all be >= 1")
 
     # 1. Extract numpy arrays with minimal copying
     high = df[high_col].to_numpy().astype(np.float64, copy=True)
@@ -356,15 +358,15 @@ def ichimoku_ind(
     close = df[close_col].to_numpy().astype(np.float64, copy=True)
     if not (len(high) == len(low) == len(close)):
         raise ValueError(
-            'high, low and close columns must have the same length: '
-            f'got {len(high)}, {len(low)}, {len(close)}.'
+            "high, low and close columns must have the same length: "
+            f"got {len(high)}, {len(low)}, {len(close)}."
         )
     n = len(close)
     min_len = max(tenkan, kijun, senkou)
     if n < min_len:
         raise ValueError(
-            f'Input series too short: need at least {min_len} elements, '
-            f'got {n}.'
+            f"Input series too short: need at least {min_len} elements, "
+            f"got {n}."
         )
 
     # Replace infinities with NaN, then apply the NaN policy
@@ -385,7 +387,9 @@ def ichimoku_ind(
 
     # 2. Compute core arrays (no shifts yet)
     tenkan_sen, kijun_sen, span_a, span_b, chikou = ichimoku_core_numba(
-        high, low, close,
+        high,
+        low,
+        close,
         tenkan=tenkan,
         kijun=kijun,
         senkou=senkou,
@@ -407,13 +411,13 @@ def ichimoku_ind(
 
     # 5. Build the historical DataFrame
     hist_columns = {
-        f'ITS_{tenkan}': tenkan_final,
-        f'IKS_{kijun}': kijun_final,
-        f'ISA_{tenkan}': span_a_final,
-        f'ISB_{senkou}': span_b_final,
+        f"ITS_{tenkan}": tenkan_final,
+        f"IKS_{kijun}": kijun_final,
+        f"ISA_{tenkan}": span_a_final,
+        f"ISB_{senkou}": span_b_final,
     }
     if chikou_final is not None:
-        hist_columns[f'ICS_{kijun}'] = chikou_final
+        hist_columns[f"ICS_{kijun}"] = chikou_final
     hist_df = pl.DataFrame(hist_columns)
 
     # 6. Build the forward-looking DataFrame (future Senkou Spans)
@@ -439,19 +443,23 @@ def ichimoku_ind(
         future_dates = pl.date_range(
             start=last_date + timedelta(days=1),
             end=last_date + timedelta(days=kijun),
-            interval='1d',
+            interval="1d",
             eager=True,
         )
-        forward_df = pl.DataFrame({
-            'date': future_dates,
-            f'ISA_{tenkan}': last_span_a,
-            f'ISB_{senkou}': last_span_b,
-        })
+        forward_df = pl.DataFrame(
+            {
+                "date": future_dates,
+                f"ISA_{tenkan}": last_span_a,
+                f"ISB_{senkou}": last_span_b,
+            }
+        )
     else:
         # Use integer index starting from the current length
         start_idx = len(df)
-        forward_df = pl.DataFrame({
-            f'ISA_{tenkan}': last_span_a,
-            f'ISB_{senkou}': last_span_b,
-        }).with_row_index('index', offset=start_idx)
+        forward_df = pl.DataFrame(
+            {
+                f"ISA_{tenkan}": last_span_a,
+                f"ISB_{senkou}": last_span_b,
+            }
+        ).with_row_index("index", offset=start_idx)
     return hist_df, forward_df

@@ -159,7 +159,7 @@ def test_brar_non_contiguous_and_readonly(
         mk_nc(close),
         length=10,
     )
-    for res, exp in zip(result_nc, expected):
+    for res, exp in zip(result_nc, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
     # read-only polars series
     result_pl = brar_ind(
@@ -169,7 +169,7 @@ def test_brar_non_contiguous_and_readonly(
         pl.Series(close),
         length=10,
     )
-    for res, exp in zip(result_pl, expected):
+    for res, exp in zip(result_pl, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 

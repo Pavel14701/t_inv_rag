@@ -1,10 +1,10 @@
-"""YAML-конфигурация ai-модуля.
+"""YAML configuration for the ai package.
 
-Единый источник параметров (TZ-06 п.10): риск-менеджмент/лейблы, архитектура
-модели, обучение и вычислительный бэкенд. Значения по умолчанию = прежние
-захардкоженные константы, поэтому существующий код ведёт себя идентично.
+Single source of parameters (TZ-06 item 10): risk management/labels, architecture
+model, training and compute backend. Defaults equal the former
+hardcoded constants, so the existing code behaves identically.
 
-Конфиг протаскивается аргументами функций; глобального состояния нет.
+The config is passed through function arguments; there is no global state.
 """
 
 from __future__ import annotations
@@ -20,22 +20,22 @@ import yaml
 
 
 __all__ = (
-    'AIConfig',
-    'ComputeConfig',
-    'ModelConfig',
-    'RiskConfig',
-    'TrainingConfig',
-    'load_config',
-    'risk_kwargs',
-    'set_seed',
+    "AIConfig",
+    "ComputeConfig",
+    "ModelConfig",
+    "RiskConfig",
+    "TrainingConfig",
+    "load_config",
+    "risk_kwargs",
+    "set_seed",
 )
 
-DEFAULT_CONFIG_PATH = Path('configs/ai.yaml')
+DEFAULT_CONFIG_PATH = Path("configs/ai.yaml")
 
 
 @dataclass(frozen=True, slots=True)
 class RiskConfig:
-    """Риск-параметры генерации лейблов (бывший хардкод features.py)."""
+    """Label-generation risk parameters (formerly hardcoded in features.py)."""
 
     atr_period: int = 14
     atr_floor: float = 1.0e-6
@@ -52,7 +52,7 @@ class RiskConfig:
 
 @dataclass(frozen=True, slots=True)
 class ModelConfig:
-    """Архитектура EntryExitTransformer."""
+    """EntryExitTransformer architecture."""
 
     seq_len: int = 128
     hidden_size: int = 128
@@ -62,7 +62,7 @@ class ModelConfig:
     max_seq_len: int = 1024
     max_ob_seq_len: int = 256
     n_action_classes: int = 3
-    outcome_mode: str = 'binary'
+    outcome_mode: str = "binary"
     n_outcome_classes: int = 2
     n_patterns: int = 10
     ob_embedding_dim: int = 32
@@ -72,7 +72,7 @@ class ModelConfig:
 
 @dataclass(frozen=True, slots=True)
 class TrainingConfig:
-    """Параметры обучения и self-training."""
+    """Training and self-training parameters."""
 
     epochs: int = 10
     batch_size: int = 16
@@ -89,24 +89,24 @@ class TrainingConfig:
 
 @dataclass(frozen=True, slots=True)
 class ComputeConfig:
-    """Вычислительный бэкенд (TZ-06 п.11).
+    """Compute backend (TZ-06 item 11).
 
-    train_backend: только cuda | cpu (не-CUDA обучение отброшено).
-    infer_backend: cuda | cpu | onnx_directml; 'vulkan' — алиас
-    onnx_directml (DX12: те же AMD/Intel/NVIDIA карты; чистый Vulkan
-    и GGUF отвергнуты — кастомная архитектура не поддерживается
-    llama.cpp, backward на Vulkan не существует).
+    train_backend: cuda | cpu only (non-CUDA training was dropped).
+    infer_backend: cuda | cpu | onnx_directml; 'vulkan' is an alias
+    onnx_directml (DX12: the same AMD/Intel/NVIDIA cards; the pure Vulkan
+    and GGUF rejected - the custom architecture is not supported
+    llama.cpp, no Vulkan backward pass exists).
     """
 
-    train_backend: str = 'auto'
-    infer_backend: str = 'auto'
+    train_backend: str = "auto"
+    infer_backend: str = "auto"
     device_id: int = 0
-    onnx_export_dir: str = 'runs/onnx'
+    onnx_export_dir: str = "runs/onnx"
 
 
 @dataclass(frozen=True, slots=True)
 class AIConfig:
-    """Корневой конфиг ai-модуля."""
+    """Root config of the ai package."""
 
     seed: int = 42
     risk: RiskConfig = field(default_factory=RiskConfig)
@@ -140,18 +140,18 @@ def load_config(path: str | Path | None = None) -> AIConfig:
     file = Path(path) if path is not None else DEFAULT_CONFIG_PATH
     data: dict[str, Any] = {}
     if file.exists():
-        with open(file, encoding='utf-8') as fh:
+        with open(file, encoding="utf-8") as fh:
             loaded = yaml.safe_load(fh)
         if loaded is not None:
             if not isinstance(loaded, dict):
-                raise ValueError(f'{file}: root must be a mapping')
+                raise ValueError(f"{file}: root must be a mapping")
             data = loaded
     return AIConfig(
-        seed=data.get('seed', 42),
-        risk=_build(RiskConfig, data.get('risk')),
-        model=_build(ModelConfig, data.get('model')),
-        training=_build(TrainingConfig, data.get('training')),
-        compute=_build(ComputeConfig, data.get('compute')),
+        seed=data.get("seed", 42),
+        risk=_build(RiskConfig, data.get("risk")),
+        model=_build(ModelConfig, data.get("model")),
+        training=_build(TrainingConfig, data.get("training")),
+        compute=_build(ComputeConfig, data.get("compute")),
     )
 
 
@@ -179,13 +179,13 @@ def risk_kwargs(risk: RiskConfig) -> dict[str, Any]:
 
     """
     return {
-        'min_rr': risk.min_rr,
-        'use_r_multiple': risk.use_r_multiple,
-        'use_structure_filter': risk.use_structure_filter,
-        'trend_filter': risk.trend_filter,
-        'commission_pct': risk.commission_pct,
-        'slippage_pct': risk.slippage_pct,
-        'max_bars_hold': risk.max_bars_hold,
+        "min_rr": risk.min_rr,
+        "use_r_multiple": risk.use_r_multiple,
+        "use_structure_filter": risk.use_structure_filter,
+        "trend_filter": risk.trend_filter,
+        "commission_pct": risk.commission_pct,
+        "slippage_pct": risk.slippage_pct,
+        "max_bars_hold": risk.max_bars_hold,
     }
 
 

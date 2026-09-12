@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_homingpigeon_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Homing Pigeon pattern.
+    """Numba-accelerated Homing Pigeon pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -50,14 +44,14 @@ def cdl_homingpigeon(
     """Universal Homing Pigeon pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    # Convert Polars Series → numpy
-    if isinstance(open_, pl.Series): 
+    # Convert Polars Series -> numpy
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     # Ensure float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -80,10 +74,10 @@ def cdl_homingpigeon(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLHOMINGPIGEON(open_, high, low, close)
-        # TA‑Lib returns +100 → convert to binary mask
+        # TA-Lib returns +100 -> convert to binary mask
         result = (talib_out != 0).astype(np.float64)
         return _apply_offset_fillna(result, offset, fillna)
     # Numba branch
@@ -94,13 +88,13 @@ def cdl_homingpigeon(
 
 def cdl_homingpigeon_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_HOMINGPIGEON',
+    output_col: str = "CDL_HOMINGPIGEON",
 ) -> pl.DataFrame:
     """Add Homing Pigeon column to Polars DataFrame."""
     out = cdl_homingpigeon(

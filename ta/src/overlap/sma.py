@@ -13,7 +13,7 @@ from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
 from ..external import talib, talib_available
 
 
-@njit('float64[:](float64[:], int64)', cache=True)
+@njit("float64[:](float64[:], int64)", cache=True)
 def _sma_numba_opt(arr: np.ndarray, length: int) -> np.ndarray:
     """Numba-accelerated core for SMA.
 
@@ -34,8 +34,8 @@ def _sma_numba_opt(arr: np.ndarray, length: int) -> np.ndarray:
             break
     if not has_nan:
         cum = np.cumsum(arr)
-        head = np.concatenate((np.array([0.0]), cum[:n - length]))
-        out[length - 1:] = (cum[length - 1:] - head) / length
+        head = np.concatenate((np.array([0.0]), cum[: n - length]))
+        out[length - 1 :] = (cum[length - 1 :] - head) / length
         return out
     for i in range(length - 1, n):
         acc = 0.0
@@ -56,7 +56,7 @@ def _sma_numba(
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """SMA using Numba with NaN handling, offset, fillna, and trim.
@@ -96,12 +96,12 @@ def _sma_numba(
 
     """
     if length < 1:
-        raise ValueError('SMA length must be >= 1')
+        raise ValueError("SMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64)
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least {length} elements, '
-            f'got {len(close)}.'
+            f"Input series too short: need at least {length} elements, "
+            f"got {len(close)}."
         )
 
     # Replace infinities with NaN
@@ -110,23 +110,23 @@ def _sma_numba(
 
     # NaN handling
     if np.isnan(close).any():
-        if nan_policy == 'raise':
+        if nan_policy == "raise":
             raise ValueError(
-                'Input contains NaN values.',
-                "Use nan_policy='ffill', 'bfill' or 'both'."
+                "Input contains NaN values.",
+                "Use nan_policy='ffill', 'bfill' or 'both'.",
             )
         close = close.copy()
-        if nan_policy == 'ignore':
+        if nan_policy == "ignore":
             pass
-        elif nan_policy == 'ffill':
+        elif nan_policy == "ffill":
             for i in range(1, len(close)):
                 if np.isnan(close[i]):
                     close[i] = close[i - 1]
-        elif nan_policy == 'bfill':
+        elif nan_policy == "bfill":
             for i in range(len(close) - 2, -1, -1):
                 if np.isnan(close[i]):
                     close[i] = close[i + 1]
-        elif nan_policy == 'both':
+        elif nan_policy == "both":
             for i in range(1, len(close)):
                 if np.isnan(close[i]):
                     close[i] = close[i - 1]
@@ -135,7 +135,7 @@ def _sma_numba(
                     close[i] = close[i + 1]
         else:
             raise ValueError(
-                f'Unknown nan_policy: {nan_policy}. '
+                f"Unknown nan_policy: {nan_policy}. "
                 "Use 'raise', 'ignore', 'ffill', 'bfill', or 'both'."
             )
     if not close.flags.c_contiguous:
@@ -145,8 +145,8 @@ def _sma_numba(
     sma = _sma_numba_opt(close, length)
     if trim:
         if offset != 0:
-            raise ValueError('offset and trim cannot be used simultaneously.')
-        sma = sma[length - 1:]
+            raise ValueError("offset and trim cannot be used simultaneously.")
+        sma = sma[length - 1 :]
     return _apply_offset_fillna(sma, offset, fillna)
 
 
@@ -186,7 +186,7 @@ def sma_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     close = np.asarray(close, dtype=np.float64)
     close = close.copy()
     replace_inf_with_nan(close)
@@ -200,7 +200,7 @@ def sma_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Universal SMA with automatic backend selection.
@@ -251,7 +251,7 @@ def sma_ind(
 
     if use_talib and talib_available:
         if trim:
-            raise ValueError('trim=True is not supported with TA-Lib backend.')
+            raise ValueError("trim=True is not supported with TA-Lib backend.")
         return sma_talib(close, length, offset, fillna)
     else:
         return _sma_numba(close, length, offset, fillna, nan_policy, trim)
@@ -259,12 +259,12 @@ def sma_ind(
 
 def sma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.Series:
     """Return SMA as a Polars Series.
@@ -296,8 +296,8 @@ def sma_polars(
     Examples
     --------
     >>> import polars as pl
-    >>> df = pl.DataFrame({'close': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]})
-    >>> sma_polars(df, length=3, output_col='SMA3')
+    >>> df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]})
+    >>> sma_polars(df, length=3, output_col="SMA3")
     shape: (10,)
     Series: 'SMA3' [f64]
     [
@@ -324,5 +324,5 @@ def sma_polars(
         nan_policy=nan_policy,
         trim=False,
     )
-    out_name = output_col or f'SMA_{length}'
+    out_name = output_col or f"SMA_{length}"
     return pl.Series(out_name, result)

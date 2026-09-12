@@ -3,7 +3,7 @@
 Each sample includes price, indicator, signal, TP/SL tensors,
 a list of relevant order blocks, action/outcome targets,
 optionally pattern targets, the global positional start index,
-and a stable bar identifier for safe pseudo‑label alignment.
+and a stable bar identifier for safe pseudo-label alignment.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from .datatypes import OrderBlock
 
 
 class TradingDataset(Dataset):
-    """Sliding-window dataset for order‑block based trading.
+    """Sliding-window dataset for order-block based trading.
 
     The underlying data array is assumed to have the following layout
     (last dimension):
@@ -78,7 +78,7 @@ class TradingDataset(Dataset):
         if bar_index is not None:
             self.bar_index = torch.tensor(bar_index, dtype=torch.long)
 
-        # TZ-06 п.2.6: order blocks sorted by end_idx so that each window
+        # TZ-06 item 2.6: order blocks sorted by end_idx so that each window
         # only scans the prefix of blocks that could fall inside it
         # (bisect instead of a full scan over all blocks).
         self._ob_sorted = sorted(
@@ -124,7 +124,7 @@ class TradingDataset(Dataset):
         # blocks with end_idx <= end_bar form a prefix (sorted); among
         # them keep those whose end is not before the window start
         prefix = int(
-            np.searchsorted(self._ob_end_idx, end_bar, side='right')
+            np.searchsorted(self._ob_end_idx, end_bar, side="right")
         )
         ob_window = [
             ob

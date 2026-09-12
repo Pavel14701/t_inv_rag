@@ -20,14 +20,12 @@ from .._array_ops import _apply_offset_fillna
 
 
 @njit(
-    'int8[:](float64[:], float64, int64)',
+    "int8[:](float64[:], float64, int64)",
     cache=True,
     fastmath=False,
 )  # type: ignore[call-overload]
 def _pf_trend_nb(
-    prices: np.ndarray,
-    box_size: float,
-    reversal: int
+    prices: np.ndarray, box_size: float, reversal: int
 ) -> np.ndarray:
     """Numba-accelerated Point & Figure trend state (X/O columns).
 
@@ -188,12 +186,12 @@ def pf_trend(
 
 def pf_trend_polars(
     df: pl.DataFrame,
-    price_col: str = 'close',
+    price_col: str = "close",
     box_size: float = 1.0,
     reversal: int = 3,
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'PF_TREND',
+    output_col: str = "PF_TREND",
 ) -> pl.DataFrame:
     """Add a Point & Figure trend column to a Polars DataFrame.
 
@@ -230,16 +228,16 @@ def pf_trend_polars(
     >>> df = pl.DataFrame({"close": [100.0, 102.0, 104.0, 106.0]})
     >>> pf_trend_polars(df, box_size=2.0, reversal=3, output_col="PF_TREND")
     shape: (4, 2)
-    ┌───────┬───────────┐
-    │ close ┆ PF_TREND  │
-    │ ---   ┆ ---       │
-    │ f64   ┆ f64       │
-    ╞═══════╪═══════════╡
-    │ 100.0 ┆ 0.0       │
-    │ 102.0 ┆ 1.0       │
-    │ 104.0 ┆ 1.0       │
-    │ 106.0 ┆ 1.0       │
-    └───────┴───────────┘
+    +-------+-----------+
+    | close | PF_TREND  |
+    | ---   | ---       |
+    | f64   | f64       |
+    +=======+===========+
+    | 100.0 | 0.0       |
+    | 102.0 | 1.0       |
+    | 104.0 | 1.0       |
+    | 106.0 | 1.0       |
+    +-------+-----------+
 
     """
     out = pf_trend(

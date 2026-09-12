@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Midprice indicator – Numba‑accelerated with TA‑Lib fallback.
+"""Midprice indicator - Numba-accelerated with TA-Lib fallback.
 
 All floating-point operations follow IEEE 754 rules (no fastmath
 optimisations). NaN and infinite values propagate naturally through
-min/max and arithmetic — the Numba core and TA-Lib MIDPRICE agree on
+min/max and arithmetic -- the Numba core and TA-Lib MIDPRICE agree on
 this behaviour (verified by tests).
 """
+
 import numpy as np
 import polars as pl
 
@@ -20,9 +21,7 @@ from ..external import talib, talib_available
 # ----------------------------------------------------------------------
 @jit(nopython=True, cache=True)
 def _midprice_numba_core(
-    high: np.ndarray,
-    low: np.ndarray,
-    length: int
+    high: np.ndarray, low: np.ndarray, length: int
 ) -> np.ndarray:
     """Compute midprice = (rolling_min(low) + rolling_max(high)) / 2 in one pass.
 
@@ -67,11 +66,11 @@ def midprice_numba(
     low: np.ndarray,
     length: int = 2,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
     """Midprice using Numba (raw numpy version)."""
     if length < 1:
-        raise ValueError('MIDPRICE length must be >= 1')
+        raise ValueError("MIDPRICE length must be >= 1")
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     if not high.flags.c_contiguous:
@@ -84,20 +83,20 @@ def midprice_numba(
 
 
 # ----------------------------------------------------------------------
-# TA‑Lib wrapper
+# TA-Lib wrapper
 # ----------------------------------------------------------------------
 def midprice_talib(
     high: np.ndarray,
     low: np.ndarray,
     length: int = 2,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
-    """Midprice using TA‑Lib."""
+    """Midprice using TA-Lib."""
     if not talib_available:
-        raise ImportError('TA‑Lib not available')
+        raise ImportError("TA-Lib not available")
     if length < 1:
-        raise ValueError('MIDPRICE length must be >= 1')
+        raise ValueError("MIDPRICE length must be >= 1")
 
     high = np.asarray(high, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -120,7 +119,7 @@ def midprice_ind(
     length: int = 2,
     offset: int = 0,
     fillna: float | None = None,
-    use_talib: bool = True
+    use_talib: bool = True,
 ) -> np.ndarray:
     """Universal Midprice with backend selection.
 
@@ -135,7 +134,7 @@ def midprice_ind(
     fillna : float, optional
         Value to fill NaNs.
     use_talib : bool
-        Use TA‑Lib if available.
+        Use TA-Lib if available.
 
     Returns
     -------
@@ -159,13 +158,13 @@ def midprice_ind(
 # ----------------------------------------------------------------------
 def midprice_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
+    high_col: str = "high",
+    low_col: str = "low",
     length: int = 2,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    output_col: str | None = None
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add Midprice column to Polars DataFrame.
 
@@ -182,7 +181,7 @@ def midprice_polars(
     fillna : float, optional
         Value to fill NaNs.
     use_talib : bool
-        Use TA‑Lib if available.
+        Use TA-Lib if available.
     output_col : str, optional
         Output column name (default f"MIDPRICE_{length}").
 
@@ -195,5 +194,5 @@ def midprice_polars(
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     result = midprice_ind(high, low, length, offset, fillna, use_talib)
-    out_name = output_col or f'MIDPRICE_{length}'
+    out_name = output_col or f"MIDPRICE_{length}"
     return df.with_columns([pl.Series(out_name, result)])

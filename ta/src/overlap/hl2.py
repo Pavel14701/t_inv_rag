@@ -113,8 +113,8 @@ def hl2_ind(
 # ----------------------------------------------------------------------
 def hl2_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
+    high_col: str = "high",
+    low_col: str = "low",
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
@@ -150,5 +150,5 @@ def hl2_polars(
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     result = hl2_ind(high, low, offset, fillna)
-    out_name = output_col or 'HL2'
+    out_name = output_col or "HL2"
     return df.with_columns([pl.Series(out_name, result)])

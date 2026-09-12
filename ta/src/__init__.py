@@ -15,16 +15,16 @@ from .volatility import __all__ as volatility__all__
 
 
 __all__ = [
-    '_TALIB_MA_MAP',
-    'custom__all__',
-    'ma_mode',
-    'momementum__all__',
-    'overlap__all__',
-    'statistics__all__',
-    'talib',
-    'talib_available',
-    'trend__all__',
-    'volatility__all__',
-    'yfinance',
-    'yfinance_available',
+    "_TALIB_MA_MAP",
+    "custom__all__",
+    "ma_mode",
+    "momementum__all__",
+    "overlap__all__",
+    "statistics__all__",
+    "talib",
+    "talib_available",
+    "trend__all__",
+    "volatility__all__",
+    "yfinance",
+    "yfinance_available",
 ]

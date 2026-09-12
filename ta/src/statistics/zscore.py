@@ -32,7 +32,7 @@ def zscore_numpy(
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    algorithm: Literal['online', 'two_pass'] = 'online',
+    algorithm: Literal["online", "two_pass"] = "online",
 ) -> np.ndarray:
     """Compute rolling Z-score from a numpy array of prices.
 
@@ -97,7 +97,7 @@ def zscore_numpy(
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
 
@@ -117,7 +117,7 @@ def zscore_numpy(
         use_talib=use_talib,
         algorithm=algorithm,
     )
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         zscore = (close - mean) / (multiplier * std)
 
     return _apply_offset_fillna(zscore, offset, fillna)
@@ -131,7 +131,7 @@ def zscore_ind(
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    algorithm: Literal['online', 'two_pass'] = 'online',
+    algorithm: Literal["online", "two_pass"] = "online",
 ) -> np.ndarray:
     """Universal rolling Z-score that accepts numpy arrays or Polars Series.
 
@@ -189,14 +189,14 @@ def zscore_ind(
 
 def zscore_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 30,
     multiplier: float = 1.0,
     ddof: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    algorithm: Literal['online', 'two_pass'] = 'online',
+    algorithm: Literal["online", "two_pass"] = "online",
     output_col: Optional[str] = None,
 ) -> pl.DataFrame:
     """Add a Z-Score column to a Polars DataFrame.
@@ -237,20 +237,20 @@ def zscore_polars(
     Examples
     --------
     >>> import polars as pl
-    >>> df = pl.DataFrame({'close': [1.0, 2.0, 3.0, 4.0, 5.0]})
-    >>> zscore_polars(df, length=3, output_col='ZSCORE')
+    >>> df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0]})
+    >>> zscore_polars(df, length=3, output_col="ZSCORE")
     shape: (5, 2)
-    ┌───────┬────────┐
-    │ close ┆ ZSCORE │
-    │ ---   ┆ ---    │
-    │ f64   ┆ f64    │
-    ╞═══════╪════════╡
-    │ 1.0   ┆ NaN    │
-    │ 2.0   ┆ NaN    │
-    │ 3.0   ┆ -1.0   │
-    │ 4.0   ┆ -1.0   │
-    │ 5.0   ┆ -1.0   │
-    └───────┴────────┘
+    +-------+--------+
+    | close | ZSCORE |
+    | ---   | ---    |
+    | f64   | f64    |
+    +=======+========+
+    | 1.0   | NaN    |
+    | 2.0   | NaN    |
+    | 3.0   | -1.0   |
+    | 4.0   | -1.0   |
+    | 5.0   | -1.0   |
+    +-------+--------+
 
     """
     close = df[close_col].to_numpy()
@@ -264,5 +264,5 @@ def zscore_polars(
         use_talib,
         algorithm,
     )
-    out_name = output_col or f'ZS_{length}'
+    out_name = output_col or f"ZS_{length}"
     return df.with_columns(pl.Series(out_name, result))

@@ -1,4 +1,4 @@
-"""Bar-by-bar inference engine (TZ-05 п.3.2).
+"""Bar-by-bar inference engine (TZ-05 item 3.2).
 
 Signal contour: DSL entry/exit per bar via ``dsl.evaluate_dsl``
 (parse once, Interpreter per bar). P(win) filter goes through the
@@ -24,7 +24,7 @@ from .provider import BarSeriesProvider, WarmupNotReady
 
 @dataclass
 class InferenceResult:
-    """Run result: signal series + summary (TZ-05 п.3.3).
+    """Run result: signal series + summary (TZ-05 item 3.3).
 
     Attributes:
         signals: DataFrame ``{date, entry_signal, exit_signal, p_win}``.
@@ -49,10 +49,10 @@ class InferenceResult:
     def summary(self) -> str:
         """Human-readable run summary."""
         return (
-            f'bars={self.num_bars} entry={self.num_entry} '
-            f'exit={self.num_exit} warmup_skips={self.num_warmup_skips} '
-            f'ml_filtered={self.num_ml_filtered} '
-            f'time={self.elapsed_ms:.0f}ms'
+            f"bars={self.num_bars} entry={self.num_entry} "
+            f"exit={self.num_exit} warmup_skips={self.num_warmup_skips} "
+            f"ml_filtered={self.num_ml_filtered} "
+            f"time={self.elapsed_ms:.0f}ms"
         )
 
 
@@ -60,7 +60,7 @@ class _CachedContext(Context):
     """Context with a validation cache keyed by (indicator, params, attributes).
 
     ``Context._validate`` is deterministic for this key, but it runs on
-    every indicator access on every bar — with 5000 bars that means
+    every indicator access on every bar -- with 5000 bars that means
     thousands of repeated manifest-validator passes. The cache is safe:
     the provider manifest does not change during a run.
 
@@ -83,7 +83,7 @@ class _CachedContext(Context):
 
 def _contains_let(node) -> bool:
     """Whether the AST contains let-bindings (they affect interpreter
-    reuse: _locals lives on the instance — TZ-01 п.3).
+    reuse: _locals lives on the instance - TZ-01 item 3).
     """
     import dataclasses
 
@@ -132,7 +132,7 @@ def run_inference(
     provider = BarSeriesProvider(df)
     context = _CachedContext([provider])
 
-    dates = df['date']
+    dates = df["date"]
     n = len(df)
     entry_flags = [False] * n
     exit_flags = [False] * n
@@ -142,7 +142,7 @@ def run_inference(
     errors: list[str] = []
 
     # Interpreter reuse is safe only without let-bindings
-    # (_locals lives on the instance — TZ-01 п.3).
+    # (_locals lives on the instance - TZ-01 item 3).
     reuse_entry = not _contains_let(entry_ast)
     reuse_exit = exit_ast is not None and not _contains_let(exit_ast)
     entry_interp = Interpreter(context) if reuse_entry else None
@@ -160,7 +160,7 @@ def run_inference(
             warmup += 1
             continue
         except ProviderError as exc:
-            errors.append(f'bar {t}: provider: {exc}')
+            errors.append(f"bar {t}: provider: {exc}")
             continue
 
         if (
@@ -175,11 +175,11 @@ def run_inference(
                 ml_filtered += 1
 
     signals = pl.DataFrame({
-        'date': dates,
-        'entry_signal': entry_flags,
-        'exit_signal': exit_flags,
-        'p_win': [
-            float(v) if v is not None else float('nan') for v in p_wins
+        "date": dates,
+        "entry_signal": entry_flags,
+        "exit_signal": exit_flags,
+        "p_win": [
+            float(v) if v is not None else float("nan") for v in p_wins
         ],
     })
     elapsed = (_time.perf_counter() - started) * 1000.0
@@ -206,7 +206,7 @@ def predict_p_win_at(predictor, df: pl.DataFrame, t: int) -> float | None:
     """P(win) at bar t via the TZ-06 contract (EntryExitPredictor).
 
     The window is built from available columns: prices = OHLCV (5 columns),
-    indicators/signals/tp/sl — zeros (the full feature pipeline arrives in
+    indicators/signals/tp/sl -- zeros (the full feature pipeline arrives in
     TZ-02/TZ-04; dimensions are cross-checked against the bundle).
 
     Returns:
@@ -220,27 +220,27 @@ def predict_p_win_at(predictor, df: pl.DataFrame, t: int) -> float | None:
         return None
     window = df[t + 1 - seq_len: t + 1]
 
-    canon = ['open', 'high', 'low', 'close', 'volume']
+    canon = ["open", "high", "low", "close", "volume"]
     series = {}
     for c in canon:
         s = _canon_col(window, c)
         if s is None:
-            raise DSLError(f'column for {c!r} not found')
+            raise DSLError(f"column for {c!r} not found")
         series[c] = s.to_numpy()
     prices = torch.tensor(
         [[float(series[c][i]) for c in canon] for i in range(seq_len)],
         dtype=torch.float32,
     )
     cfg = predictor.bundle.model_config
-    n_price = int(cfg.get('n_price_feats', prices.shape[1]))
+    n_price = int(cfg.get("n_price_feats", prices.shape[1]))
     if n_price != prices.shape[1]:
         raise DSLError(
-            f'price feature count mismatch: bundle expects {n_price}, '
-            f'constructed {prices.shape[1]}'
+            f"price feature count mismatch: bundle expects {n_price}, "
+            f"constructed {prices.shape[1]}"
         )
-    n_ind = int(cfg.get('n_ind_feats', 0))
-    n_sig = int(cfg.get('n_sig_feats', 0))
-    n_tpsl = int(cfg.get('n_tp_sl_feats', 0))
+    n_ind = int(cfg.get("n_ind_feats", 0))
+    n_sig = int(cfg.get("n_sig_feats", 0))
+    n_tpsl = int(cfg.get("n_tp_sl_feats", 0))
     probs = predictor.predict_proba(
         prices,
         torch.zeros(seq_len, n_ind) if n_ind else prices[:, :0],
@@ -249,7 +249,7 @@ def predict_p_win_at(predictor, df: pl.DataFrame, t: int) -> float | None:
         torch.zeros(seq_len, n_tpsl) if n_tpsl else prices[:, :0],
         [],
     )
-    return probs['p_win']
+    return probs["p_win"]
 
 
 def _canon_col(df: pl.DataFrame, canon: str):

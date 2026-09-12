@@ -53,17 +53,17 @@ def tos_stdevall_numpy(
         close = close.copy()
     original_len = len(close)
     if original_len < 2:
-        raise ValueError('Need at least 2 data points')
+        raise ValueError("Need at least 2 data points")
     if length is not None:
         if length < 2:
-            raise ValueError('length must be >= 2')
+            raise ValueError("length must be >= 2")
         if length > original_len:
-            raise ValueError('length cannot exceed data length')
-        suffix = f'_{length}'
+            raise ValueError("length cannot exceed data length")
+        suffix = f"_{length}"
         calc_close = close[-length:]
         n = length
     else:
-        suffix = ''
+        suffix = ""
         calc_close = close
         n = original_len
     if stds is None:
@@ -71,9 +71,9 @@ def tos_stdevall_numpy(
     else:
         stds = sorted(stds)
         if any(m < 0 or not np.isfinite(m) for m in stds):
-            raise ValueError('stds multipliers must be finite and >= 0')
+            raise ValueError("stds multipliers must be finite and >= 0")
     if ddof < 0 or ddof >= n:
-        raise ValueError('ddof must satisfy 0 <= ddof < number of points')
+        raise ValueError("ddof must satisfy 0 <= ddof < number of points")
     x = np.arange(n, dtype=np.float64)
     if np.isfinite(calc_close).all():
         coeffs = np.polyfit(x, calc_close, 1)
@@ -84,13 +84,13 @@ def tos_stdevall_numpy(
         # NaN instead of letting polyfit emit warnings and partial junk.
         lr = np.full(n, np.nan)
         stdev = np.nan
-    base_name = f'TOS_STDEVALL{suffix}'
+    base_name = f"TOS_STDEVALL{suffix}"
     res = {
-        f'{base_name}_LR': lr,
+        f"{base_name}_LR": lr,
     }
     for m in stds:
-        res[f'{base_name}_L_{m}'] = lr - m * stdev
-        res[f'{base_name}_U_{m}'] = lr + m * stdev
+        res[f"{base_name}_L_{m}"] = lr - m * stdev
+        res[f"{base_name}_U_{m}"] = lr + m * stdev
     for key, arr in res.items():
         res[key] = _apply_offset_fillna(arr, offset, fillna)
     return res
@@ -112,13 +112,13 @@ def tos_stdevall_ind(
 
 def tos_stdevall_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int | None = None,
     stds: list[float] | None = None,
     ddof: int = 1,
     offset: int = 0,
     fillna: float | None = None,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add TOS_STDEVALL columns to a Polars DataFrame.
 
@@ -172,13 +172,13 @@ def tos_stdevall_polars(
     # Apply custom suffix if provided
     if suffix:
         if length is not None:
-            base = f'TOS_STDEVALL_{length}'
+            base = f"TOS_STDEVALL_{length}"
         else:
-            base = 'TOS_STDEVALL'
+            base = "TOS_STDEVALL"
         new_dict = {}
         for key, arr in res_dict.items():
             if key.startswith(base):
-                new_key = key.replace(base, f'TOS_STDEVALL{suffix}', 1)
+                new_key = key.replace(base, f"TOS_STDEVALL{suffix}", 1)
             else:
                 new_key = key
             new_dict[new_key] = arr
@@ -186,7 +186,6 @@ def tos_stdevall_polars(
     # Apply offset and fillna AFTER padding
     for key, arr in res_dict.items():
         res_dict[key] = _apply_offset_fillna(arr, offset, fillna)
-    return df.with_columns([
-        pl.Series(name, arr)
-        for name, arr in res_dict.items()
-    ])
+    return df.with_columns(
+        [pl.Series(name, arr) for name, arr in res_dict.items()]
+    )

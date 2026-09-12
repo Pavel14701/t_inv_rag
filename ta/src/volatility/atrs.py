@@ -90,14 +90,14 @@ def atrts_numpy(
     length: int = 14,
     ma_length: int = 20,
     k: float = 3.0,
-    mamode: str = 'ema',
+    mamode: str = "ema",
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
     percent: bool = False,
 ) -> np.ndarray:
-    """Numpy‑based ATR Trailing Stop.
+    """Numpy-based ATR Trailing Stop.
 
     Returns main ATRTS line as numpy array.
 
@@ -113,9 +113,9 @@ def atrts_numpy(
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if ma_length < 1:
-        raise ValueError('ma_length must be >= 1')
+        raise ValueError("ma_length must be >= 1")
     # Rebind the outer names: assigning to the loop variable is a no-op
     # and left the arrays non-contiguous for the numba backends.
     if not high.flags.c_contiguous:
@@ -127,7 +127,9 @@ def atrts_numpy(
 
     # Compute ATR (using existing atr_ind)
     atr = atr_ind(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
         mamode=mamode,
         drift=drift,
@@ -158,7 +160,7 @@ def atrts(
     length: int = 14,
     ma_length: int = 20,
     k: float = 3.0,
-    mamode: str = 'ema',
+    mamode: str = "ema",
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
@@ -177,7 +179,9 @@ def atrts(
         close = close.to_numpy()
 
     return atrts_numpy(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
         ma_length=ma_length,
         k=k,
@@ -192,13 +196,13 @@ def atrts(
 
 def atrts_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 14,
     ma_length: int = 20,
     k: float = 3.0,
-    mamode: str = 'ema',
+    mamode: str = "ema",
     drift: int = 1,
     offset: int = 0,
     fillna: Optional[float] = None,
@@ -228,7 +232,9 @@ def atrts_polars(
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     result = atrts_numpy(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
         ma_length=ma_length,
         k=k,
@@ -239,5 +245,5 @@ def atrts_polars(
         use_talib=use_talib,
         percent=percent,
     )
-    out_name = output_col or f'ATRTS_{length}_{ma_length}_{k}'
+    out_name = output_col or f"ATRTS_{length}_{ma_length}_{k}"
     return df.with_columns([pl.Series(out_name, result)])

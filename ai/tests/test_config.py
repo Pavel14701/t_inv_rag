@@ -1,4 +1,4 @@
-"""Tests for the YAML configuration layer (TZ-06 п.10)."""
+"""Tests for the YAML configuration layer (TZ-06 item 10)."""
 
 from pathlib import Path
 

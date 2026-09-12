@@ -19,7 +19,7 @@ def cci_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based CCI calculation.
+    """Numpy-based CCI calculation.
 
     Parameters
     ----------
@@ -31,7 +31,7 @@ def cci_numpy(
         Scaling constant (ignored if use_talib=True).
     offset, fillna : as usual.
     use_talib : bool
-        If True and TA‑Lib is available, use talib.CCI (c is ignored).
+        If True and TA-Lib is available, use talib.CCI (c is ignored).
 
     Returns
     -------
@@ -49,9 +49,9 @@ def cci_numpy(
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if use_talib and talib_available:
-        # TA‑Lib CCI uses fixed c=0.015, parameter not exposed
+        # TA-Lib CCI uses fixed c=0.015, parameter not exposed
         result = talib.CCI(high, low, close, timeperiod=length)
     else:
         # Typical price
@@ -59,11 +59,13 @@ def cci_numpy(
         # SMA/MAD inputs and change every value afterwards.
         tp = hlc3_ind(high, low, close, fillna=None)
         # SMA of typical price
-        mean_tp = sma_ind(tp, length=length, offset=0, fillna=None, use_talib=False)
+        mean_tp = sma_ind(
+            tp, length=length, offset=0, fillna=None, use_talib=False
+        )
         # Mean absolute deviation of typical price
         mad_tp = mad_ind(tp, length=length, offset=0, fillna=None)
         # CCI formula: (TP - SMA(TP)) / (c * MAD(TP))
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             result = (tp - mean_tp) / (c * mad_tp)
     return _apply_offset_fillna(result, offset, fillna)
 
@@ -90,10 +92,10 @@ def cci_ind(
 
 def cci_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    date_col: str = 'date',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    date_col: str = "date",
     length: int = 14,
     c: float = 0.015,
     offset: int = 0,
@@ -120,8 +122,5 @@ def cci_polars(
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     result = cci_numpy(high, low, close, length, c, offset, fillna, use_talib)
-    out_name = output_col or f'CCI_{length}_{c}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        out_name: result
-    })
+    out_name = output_col or f"CCI_{length}_{c}"
+    return pl.DataFrame({date_col: df[date_col], out_name: result})

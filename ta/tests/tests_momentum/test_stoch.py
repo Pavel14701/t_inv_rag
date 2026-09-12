@@ -206,9 +206,9 @@ def test_stoch_ind_numpy_and_series(ohlc) -> None:
         pl.Series(close),
         use_talib=False,
     )
-    for res, exp in zip(from_arrays, expected):
+    for res, exp in zip(from_arrays, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
-    for res, exp in zip(from_series, expected):
+    for res, exp in zip(from_series, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 

@@ -9,7 +9,7 @@ This module provides:
 - Universal wrapper (`hma_ind`)
 - Polars integration (`hma_polars`)
 
-All floating‑point operations follow IEEE 754 rules. Infinite values are
+All floating-point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
 """
 
@@ -23,12 +23,12 @@ from ..overlap.wma import wma_ind
 
 
 # ----------------------------------------------------------------------
-# HMA – Hull Moving Average
+# HMA - Hull Moving Average
 # ----------------------------------------------------------------------
 def hma_numba(
     close: np.ndarray,
     length: int = 10,
-    mamode: str = 'wma',
+    mamode: str = "wma",
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
@@ -46,7 +46,7 @@ def hma_numba(
     offset : int, default 0
         Shift the result. Positive = forward, negative = backward.
     fillna : float or None, default None
-        Value to replace NaN and shifted‑in positions. If None, NaN remains.
+        Value to replace NaN and shifted-in positions. If None, NaN remains.
 
     Returns
     -------
@@ -66,10 +66,10 @@ def hma_numba(
 
     """
     if length < 2:
-        raise ValueError('HMA length must be >= 2')
+        raise ValueError("HMA length must be >= 2")
 
-    if mamode not in ('sma', 'ema', 'wma'):
-        raise ValueError(f'Unsupported mamode: {mamode}')
+    if mamode not in ("sma", "ema", "wma"):
+        raise ValueError(f"Unsupported mamode: {mamode}")
 
     close = np.asarray(close, dtype=np.float64, copy=False)
     close = close.copy()
@@ -85,30 +85,62 @@ def hma_numba(
         return np.full(len(close), np.nan, dtype=np.float64)
 
     # Compute moving averages using wrapper functions
-    if mamode == 'sma':
-        maf = sma_ind(close, half_length, use_talib=False,
-                      nan_policy='ignore', trim=False)
-        mas = sma_ind(close, length, use_talib=False,
-                      nan_policy='ignore', trim=False)
+    if mamode == "sma":
+        maf = sma_ind(
+            close,
+            half_length,
+            use_talib=False,
+            nan_policy="ignore",
+            trim=False,
+        )
+        mas = sma_ind(
+            close, length, use_talib=False, nan_policy="ignore", trim=False
+        )
         diff = 2.0 * maf - mas
-        hma = sma_ind(diff, sqrt_length, use_talib=False,
-                      nan_policy='ignore', trim=False)
-    elif mamode == 'ema':
-        maf = ema_ind(close, half_length, use_talib=False,
-                      nan_policy='ignore', trim=False)
-        mas = ema_ind(close, length, use_talib=False,
-                      nan_policy='ignore', trim=False)
+        hma = sma_ind(
+            diff, sqrt_length, use_talib=False, nan_policy="ignore", trim=False
+        )
+    elif mamode == "ema":
+        maf = ema_ind(
+            close,
+            half_length,
+            use_talib=False,
+            nan_policy="ignore",
+            trim=False,
+        )
+        mas = ema_ind(
+            close, length, use_talib=False, nan_policy="ignore", trim=False
+        )
         diff = 2.0 * maf - mas
-        hma = ema_ind(diff, sqrt_length, use_talib=False,
-                      nan_policy='ignore', trim=False)
+        hma = ema_ind(
+            diff, sqrt_length, use_talib=False, nan_policy="ignore", trim=False
+        )
     else:  # mamode == 'wma'
-        maf = wma_ind(close, half_length, asc=True, use_talib=False,
-                      nan_policy='ignore', trim=False)
-        mas = wma_ind(close, length, asc=True, use_talib=False,
-                      nan_policy='ignore', trim=False)
+        maf = wma_ind(
+            close,
+            half_length,
+            asc=True,
+            use_talib=False,
+            nan_policy="ignore",
+            trim=False,
+        )
+        mas = wma_ind(
+            close,
+            length,
+            asc=True,
+            use_talib=False,
+            nan_policy="ignore",
+            trim=False,
+        )
         diff = 2.0 * maf - mas
-        hma = wma_ind(diff, sqrt_length, asc=True, use_talib=False,
-                      nan_policy='ignore', trim=False)
+        hma = wma_ind(
+            diff,
+            sqrt_length,
+            asc=True,
+            use_talib=False,
+            nan_policy="ignore",
+            trim=False,
+        )
 
     return _apply_offset_fillna(hma, offset, fillna)
 
@@ -119,7 +151,7 @@ def hma_numba(
 def hma_ind(
     close: np.ndarray | pl.Series,
     length: int = 10,
-    mamode: str = 'wma',
+    mamode: str = "wma",
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
@@ -159,9 +191,9 @@ def hma_ind(
 # ----------------------------------------------------------------------
 def hma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
-    mamode: str = 'wma',
+    mamode: str = "wma",
     offset: int = 0,
     fillna: float | None = None,
     output_col: str | None = None,
@@ -192,11 +224,11 @@ def hma_polars(
 
     Notes
     -----
-    - The function does not modify the original DataFrame in‑place.
+    - The function does not modify the original DataFrame in-place.
     - All operations are IEEE 754 compliant.
 
     """
     close = df[close_col].to_numpy()
     result = hma_ind(close, length, mamode, offset, fillna)
-    out_name = output_col or f'HMA_{length}'
+    out_name = output_col or f"HMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

@@ -13,7 +13,7 @@ def _window_sums(x: np.ndarray, length: int) -> np.ndarray:
 
     A window containing any NaN yields NaN (no value emitted). When the
     last NaN leaves the window, the sum is recomputed from scratch so
-    later windows recover (plain sliding sums would stay NaN forever —
+    later windows recover (plain sliding sums would stay NaN forever --
     the original bug that zeroed out the whole BR line).
     """
     n = x.shape[0]
@@ -72,9 +72,9 @@ def _brar_numba_core(
     sum_hcy = _window_sums(hcy, length)
     sum_cyl = _window_sums(cyl, length)
     for i in range(n):
-        if not np.isnan(sum_open_low[i]) and sum_open_low[i] != 0.0:
+        if not np.isnan(sum_open_low[i]) and sum_open_low[i] != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             ar[i] = scalar * sum_high_open[i] / sum_open_low[i]
-        if not np.isnan(sum_cyl[i]) and sum_cyl[i] != 0.0:
+        if not np.isnan(sum_cyl[i]) and sum_cyl[i] != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             br[i] = scalar * sum_hcy[i] / sum_cyl[i]
     return ar, br
 
@@ -115,9 +115,9 @@ def brar_ind(
 
     """
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if drift < 1:
-        raise ValueError('drift must be >= 1')
+        raise ValueError("drift must be >= 1")
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
     if isinstance(high, pl.Series):
@@ -159,29 +159,39 @@ def brar_ind(
 
 def brar_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    date_col: str = 'date',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
+    date_col: str = "date",
     length: int = 26,
     scalar: float = 100.0,
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Returns DataFrame with date  AR, BR columns."""
     open_arr = df[open_col].to_numpy()
     high_arr = df[high_col].to_numpy()
     low_arr = df[low_col].to_numpy()
     close_arr = df[close_col].to_numpy()
-    ar, br = brar_ind(open_arr, high_arr, low_arr, close_arr,
-                  length=length, scalar=scalar, drift=drift,
-                  offset=offset, fillna=fillna)
-    suffix = suffix or f'_{length}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        f'AR{suffix}': ar,
-        f'BR{suffix}': br,
-    })
+    ar, br = brar_ind(
+        open_arr,
+        high_arr,
+        low_arr,
+        close_arr,
+        length=length,
+        scalar=scalar,
+        drift=drift,
+        offset=offset,
+        fillna=fillna,
+    )
+    suffix = suffix or f"_{length}"
+    return pl.DataFrame(
+        {
+            date_col: df[date_col],
+            f"AR{suffix}": ar,
+            f"BR{suffix}": br,
+        }
+    )

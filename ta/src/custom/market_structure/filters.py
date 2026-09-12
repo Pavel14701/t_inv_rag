@@ -2,6 +2,7 @@
 """Validation sub-filters: FVG, breaker, zone entry, RSI/MACD,
 reaction, displacement, orderflow shift and strength.
 """
+
 from __future__ import annotations
 
 import bisect
@@ -45,15 +46,17 @@ def check_fvg(
     if fvg_volume_multiplier > 0:
         avg = avg_vol[break_idx]
         candles_vol = [
-            volume[break_idx - 1], volume[break_idx], volume[break_idx + 1],
+            volume[break_idx - 1],
+            volume[break_idx],
+            volume[break_idx + 1],
         ]
-        if fvg_volume_mode == 'any':
+        if fvg_volume_mode == "any":
             ok = any(v > fvg_volume_multiplier * avg for v in candles_vol)
-        elif fvg_volume_mode == 'center':
+        elif fvg_volume_mode == "center":
             ok = volume[break_idx] > fvg_volume_multiplier * avg
-        elif fvg_volume_mode == 'first':
+        elif fvg_volume_mode == "first":
             ok = volume[break_idx - 1] > fvg_volume_multiplier * avg
-        elif fvg_volume_mode == 'last':
+        elif fvg_volume_mode == "last":
             ok = volume[break_idx + 1] > fvg_volume_multiplier * avg
         else:
             ok = any(v > fvg_volume_multiplier * avg for v in candles_vol)
@@ -79,7 +82,7 @@ def check_breaker(
         return 1.0
     start = max(0, len(confirmed_blocks) - breaker_lookback)
     for prev in confirmed_blocks[start:]:
-        if prev.block_type == ('supply' if is_supply else 'demand'):
+        if prev.block_type == ("supply" if is_supply else "demand"):
             continue
         if not (
             current_zone_high > prev.zone_low
@@ -114,7 +117,7 @@ def check_zone_entry(
 ) -> bool:
     """True if bar j enters the zone per the entry mode."""
     zone_span = zone_high - zone_low
-    if zone_entry_mode == 'wick':
+    if zone_entry_mode == "wick":
         if is_supply:
             if not (zone_low <= low[j] <= zone_high):
                 return False
@@ -126,21 +129,17 @@ def check_zone_entry(
             if high[j] > zone_high + max_zone_penetration * zone_span:
                 return False
         return True
-    elif zone_entry_mode == 'close':
+    elif zone_entry_mode == "close":
         if not (zone_low <= close[j] <= zone_high):
             return False
         return True
     else:  # "any"
         if is_supply:
-            return (
-                zone_low <= low[j] <= zone_high
-            ) or (
+            return (zone_low <= low[j] <= zone_high) or (
                 zone_low <= close[j] <= zone_high
             )
         else:
-            return (
-                zone_low <= high[j] <= zone_high
-            ) or (
+            return (zone_low <= high[j] <= zone_high) or (
                 zone_low <= close[j] <= zone_high
             )
 
@@ -156,7 +155,7 @@ def check_rsi_macd(
 ) -> bool:
     """RSI/MACD confirmation gate for the retest bar."""
     if use_rsi:
-        rsi = indicators['rsi'][j]
+        rsi = indicators["rsi"][j]
         if not np.isfinite(rsi):
             return False
         if is_supply and rsi < rsi_overbought:
@@ -164,7 +163,7 @@ def check_rsi_macd(
         if not is_supply and rsi > rsi_oversold:
             return False
     if use_macd:
-        hist = indicators['macd_hist'][j]
+        hist = indicators["macd_hist"][j]
         if not np.isfinite(hist):
             return False
         if is_supply and hist > 0:
@@ -247,13 +246,11 @@ def check_orderflow_shift(
     else:
         if is_supply:
             return (
-                last_valley is not None
-                and low[first_idx] < low[last_valley]
+                last_valley is not None and low[first_idx] < low[last_valley]
             )
         else:
             return (
-                last_valley is not None
-                and low[first_idx] > low[last_valley]
+                last_valley is not None and low[first_idx] > low[last_valley]
             )
 
 
@@ -284,7 +281,9 @@ def compute_strength(
     if cfg.strength_age_penalty and cfg.strength_age_halflife > 0:
         age_factor = 0.5 ** (age_candles / cfg.strength_age_halflife)
     fvg_bonus = cfg.fvg_bonus_multiplier if fvg_present else 1.0
-    total_multiplier = vol_factor * reaction_factor * age_factor * fvg_bonus * breaker_bonus  # noqa: E501
+    total_multiplier = (
+        vol_factor * reaction_factor * age_factor * fvg_bonus * breaker_bonus
+    )
     total_multiplier = min(total_multiplier, cfg.strength_max_multiplier)
     strength = base_strength * total_multiplier
     return max(0.0, strength)

@@ -9,6 +9,7 @@ This module provides:
 All floating-point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
 """
+
 from typing import Optional
 
 import numpy as np
@@ -24,19 +25,17 @@ from .._array_ops import (
 
 
 # ----------------------------------------------------------------------
-# Numba‑compiled core of the Jurik Moving Average (most aggressive version)
+# Numba-compiled core of the Jurik Moving Average (most aggressive version)
 # ----------------------------------------------------------------------
 @jit(nopython=True, cache=True, fastmath=False)
 def _jma_numba_core(
-    close: np.ndarray,
-    length_param: int,
-    phase: float
+    close: np.ndarray, length_param: int, phase: float
 ) -> np.ndarray:
-    """Jurik Moving Average core loop – most aggressive Numba implementation.
+    """Jurik Moving Average core loop - most aggressive Numba implementation.
 
     This function performs the entire JMA calculation in a single pass,
     using a circular buffer for the rolling volatility sum to avoid an
-    inner loop. All constants are pre‑computed.
+    inner loop. All constants are pre-computed.
 
     Parameters
     ----------
@@ -47,7 +46,7 @@ def _jma_numba_core(
         Main period of the JMA (typically 7).
     phase : float
         Phase parameter in the range [-100, 100]; controls the
-        lag/smoothness trade‑off.
+        lag/smoothness trade-off.
 
     Returns
     -------
@@ -82,7 +81,7 @@ def _jma_numba_core(
     length2 = length1 * np.sqrt(l_half)
     bet = length2 / (length2 + 1.0)
     beta = 0.45 * (length_param - 1) / (0.45 * (length_param - 1) + 2.0)
-    limit = length1 ** (1.0 / pow1)  # pre‑computed upper bound for d_volty
+    limit = length1 ** (1.0 / pow1)  # pre-computed upper bound for d_volty
     jma[0] = close[0]
     volty[0] = 0.0
     v_sum[0] = 0.0
@@ -91,7 +90,7 @@ def _jma_numba_core(
     l_band = close[0]
     det0 = 0.0
     det1 = 0.0
-    # We need a 66‑period average of v_sum. Instead of recalculating
+    # We need a 66-period average of v_sum. Instead of recalculating
     # the sum from scratch each time, we maintain a running total.
     window_size = 66
     v_sum_window = np.zeros(window_size, dtype=np.float64)
@@ -129,7 +128,7 @@ def _jma_numba_core(
         else:
             avg_volty = v_sum_total / (i + 1) if i > 0 else 0.0
         #  Relative volatility factor
-        d_volty = 0.0 if avg_volty == 0.0 else volty[i] / avg_volty
+        d_volty = 0.0 if avg_volty == 0.0 else volty[i] / avg_volty  # noqa: RUF069 - exact IEEE zero/sign check
         if d_volty < 1.0:
             r_volty = 1.0
         elif d_volty > limit:
@@ -137,7 +136,7 @@ def _jma_numba_core(
         else:
             r_volty = d_volty
         # Jurik volatility bands
-        power = r_volty ** pow1
+        power = r_volty**pow1
         kv = bet ** np.sqrt(power)
         if del1 > 0.0:
             u_band = price
@@ -148,16 +147,16 @@ def _jma_numba_core(
         else:
             l_band = price - kv * del2
         # Jurik dynamic factor
-        alpha = beta ** power
-        # 1st stage – adaptive EMA
+        alpha = beta**power
+        # 1st stage - adaptive EMA
         ma1 = (1.0 - alpha) * price + alpha * ma1
-        # 2nd stage – Kalman‑like filter
+        # 2nd stage - Kalman-like filter
         det0 = (1.0 - beta) * (price - ma1) + beta * det0
         ma2 = ma1 + pr * det0
-        # 3rd stage – final smoothing
-        det1 = (
-            (ma2 - jma[i - 1]) * (1.0 - alpha) * (1.0 - alpha)
-        ) + (alpha * alpha * det1)
+        # 3rd stage - final smoothing
+        det1 = ((ma2 - jma[i - 1]) * (1.0 - alpha) * (1.0 - alpha)) + (
+            alpha * alpha * det1
+        )
         jma[i] = jma[i - 1] + det1
     # Set first `length_param - 1` values to NaN (original behaviour)
     for i in range(length_param - 1):
@@ -174,7 +173,7 @@ def jma_numba(
     phase: float = 0.0,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Jurik Moving Average using the
     aggressively optimized Numba core (raw numpy version).
@@ -214,12 +213,12 @@ def jma_numba(
 
     """
     if length < 1:
-        raise ValueError('JMA length must be >= 1')
+        raise ValueError("JMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     # Replace infinities with NaN (IEEE 754 compliance)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     jma = _jma_numba_core(close, length, phase)
@@ -232,7 +231,7 @@ def jma_ind(
     phase: float = 0.0,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal Jurik Moving Average (accepts numpy array or Polars Series).
 
@@ -269,13 +268,13 @@ def jma_ind(
 
 def jma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 7,
     phase: float = 0.0,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
-    output_col: Optional[str] = None
+    nan_policy: str = "raise",
+    output_col: Optional[str] = None,
 ) -> pl.DataFrame:
     """Jurik Moving Average for Polars DataFrames.
 
@@ -311,8 +310,6 @@ def jma_polars(
 
     """
     close = df[close_col].to_numpy()
-    result = jma_ind(
-        close, length, phase, offset, fillna, nan_policy
-    )
-    out_name = output_col or f'JMA_{length}_{phase}'
+    result = jma_ind(close, length, phase, offset, fillna, nan_policy)
+    out_name = output_col or f"JMA_{length}_{phase}"
     return df.with_columns([pl.Series(out_name, result)])

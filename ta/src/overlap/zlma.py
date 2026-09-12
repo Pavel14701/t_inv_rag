@@ -29,24 +29,24 @@ from ..overlap.wma import wma_ind
 
 
 _MA_FUNCS: dict[str, Callable] = {
-    'dema': dema_ind,
-    'ema': ema_ind,
-    'fwma': fwma_ind,
-    'hma': hma_ind,
-    'kama': kama_ind,
-    'linreg': linreg_ind,
-    'midpoint': midpoint_ind,
-    'pwma': pwma_ind,
-    'rma': rma_ind,
-    'sinwma': sinwma_ind,
-    'sma': sma_ind,
-    'ssf': ssf_ind,
-    'swma': swma_ind,
-    't3': t3_ind,
-    'tema': tema_ind,
-    'trima': trima_ind,
-    'vidya': vidya_ind,
-    'wma': wma_ind,
+    "dema": dema_ind,
+    "ema": ema_ind,
+    "fwma": fwma_ind,
+    "hma": hma_ind,
+    "kama": kama_ind,
+    "linreg": linreg_ind,
+    "midpoint": midpoint_ind,
+    "pwma": pwma_ind,
+    "rma": rma_ind,
+    "sinwma": sinwma_ind,
+    "sma": sma_ind,
+    "ssf": ssf_ind,
+    "swma": swma_ind,
+    "t3": t3_ind,
+    "tema": tema_ind,
+    "trima": trima_ind,
+    "vidya": vidya_ind,
+    "wma": wma_ind,
 }
 
 
@@ -84,17 +84,17 @@ def _call_ma(
     """
     params = inspect.signature(ma_func).parameters
     kwargs: dict[str, Any] = {}
-    if 'use_talib' in params:
-        kwargs['use_talib'] = use_talib
-    if 'nan_policy' in params:
-        kwargs['nan_policy'] = 'ignore'
+    if "use_talib" in params:
+        kwargs["use_talib"] = use_talib
+    if "nan_policy" in params:
+        kwargs["nan_policy"] = "ignore"
     return ma_func(arr, length=length, offset=0, fillna=None, **kwargs)
 
 
 def zlma_ind(
     close: np.ndarray | pl.Series,
     length: int = 10,
-    mamode: str = 'ema',
+    mamode: str = "ema",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -115,7 +115,7 @@ def zlma_ind(
     mamode : str
         Moving average type (e.g., 'ema', 'sma', 'wma', ...).
     offset : int
-        Shift the result (positive – forward).
+        Shift the result (positive - forward).
     fillna : float, optional
         Value to fill NaN after the shift.
     use_talib : bool
@@ -159,7 +159,7 @@ def zlma_ind(
         close_detrend = close
     ma_func = _MA_FUNCS.get(mamode.lower())
     if ma_func is None:
-        raise ValueError(f'Unsupported type of MA: {mamode}')
+        raise ValueError(f"Unsupported type of MA: {mamode}")
     # Call the MA with only the keyword arguments it supports:
     # `use_talib` is forwarded to backends that accept it, and
     # `nan_policy='ignore'` is passed to backends that support it because
@@ -171,9 +171,9 @@ def zlma_ind(
 
 def zlma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
-    mamode: str = 'ema',
+    mamode: str = "ema",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
@@ -199,5 +199,5 @@ def zlma_polars(
     """
     close = df[close_col].to_numpy()
     result = zlma_ind(close, length, mamode, offset, fillna, use_talib)
-    out_name = output_col or f'ZL_{mamode.upper()}_{length}'
+    out_name = output_col or f"ZL_{mamode.upper()}_{length}"
     return df.with_columns([pl.Series(out_name, result)])

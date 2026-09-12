@@ -233,7 +233,7 @@ def test_pivots_ind_support_resistance_ordering() -> None:
         win["PIVOTS_CLAS_D_R3"].to_numpy(),
         win["PIVOTS_CLAS_D_R4"].to_numpy(),
     ]
-    for lo, hi in zip(levels, levels[1:]):
+    for lo, hi in zip(levels, levels[1:], strict=False):
         assert np.all(lo <= hi + 1e-9)
 
 

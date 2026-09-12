@@ -73,7 +73,7 @@ def _entropy_numba_core(
         if not finite_window:
             continue
 
-        window = close[i - length + 1: i + 1].copy()
+        window = close[i - length + 1 : i + 1].copy()
         window.sort()
 
         entropy = 0.0
@@ -130,9 +130,9 @@ def entropy_numba(
     """
     close = np.asarray(close, dtype=np.float64)
     if length < 2:
-        raise ValueError('length must be >= 2')
-    if base <= 0.0 or base == 1.0:
-        raise ValueError('base must be positive and != 1')
+        raise ValueError("length must be >= 2")
+    if base <= 0.0 or base == 1.0:  # noqa: RUF069 - exact IEEE zero/sign check
+        raise ValueError("base must be positive and != 1")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
@@ -182,7 +182,7 @@ def entropy_ind(
 
 def entropy_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     base: float = 2.0,
     offset: int = 0,
@@ -216,5 +216,5 @@ def entropy_polars(
     """
     close = df[close_col].to_numpy()
     result = entropy_ind(close, length, base, offset, fillna)
-    out_name = output_col or f'ENTP_{length}'
+    out_name = output_col or f"ENTP_{length}"
     return pl.Series(out_name, result)

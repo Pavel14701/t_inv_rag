@@ -10,8 +10,14 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.float64, types.float64, types.boolean, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
@@ -29,9 +35,9 @@ def _cdl_engulfing_nb(
     """Optimized Engulfing pattern.
 
     Returns:
-        1.0 → bullish engulfing
-       -1.0 → bearish engulfing
-        0.0 → none
+        1.0 -> bullish engulfing
+       -1.0 -> bearish engulfing
+        0.0 -> none
 
     """
     n = len(open_)
@@ -77,7 +83,7 @@ def _cdl_engulfing_nb(
             if o0 >= c1 and c0 <= o1:
                 direction = -1.0
 
-        if direction == 0.0:
+        if direction == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             continue
 
         if strict:
@@ -116,10 +122,14 @@ def cdl_engulfing(
     max_shadow_factor: float = 0.5,
 ) -> np.ndarray:
     """Engulfing pattern with strict support."""
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -148,26 +158,31 @@ def cdl_engulfing(
         return _apply_offset_fillna(talib_out, offset, fillna)
 
     out = _cdl_engulfing_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric,
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_engulfing_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.3,
     max_shadow_factor: float = 0.5,
-    output_col: str = 'CDL_ENGULFING',
+    output_col: str = "CDL_ENGULFING",
 ) -> pl.DataFrame:
     out = cdl_engulfing(
         df[open_col].to_numpy(),

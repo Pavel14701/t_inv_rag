@@ -8,6 +8,7 @@ The Alligator consists of three smoothed moving averages (SMMA):
 
 The shift (offset) is applied globally to all lines.
 """
+
 import numpy as np
 import polars as pl
 
@@ -113,7 +114,7 @@ def alligator_ind(
     offset: int = 0,
     fillna: float | None = None,
     parallel: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Bill Williams Alligator indicator.
 
@@ -154,14 +155,14 @@ def alligator_ind(
 
     """
     if jaw < 1 or teeth < 1 or lips < 1:
-        raise ValueError('jaw, teeth and lips periods must all be >= 1')
+        raise ValueError("jaw, teeth and lips periods must all be >= 1")
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     close = np.asarray(close, dtype=np.float64, copy=False)
     # Replace infinities with NaN (IEEE 754 compliance)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if parallel:
@@ -184,14 +185,14 @@ def alligator_ind(
 # ----------------------------------------------------------------------
 def alligator_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     jaw: int = 13,
     teeth: int = 8,
     lips: int = 5,
     offset: int = 0,
     fillna: float | None = None,
     parallel: bool = True,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add Alligator columns (jaw, teeth, lips) to a Polars DataFrame.
 
@@ -224,15 +225,22 @@ def alligator_polars(
     """
     close = df[close_col].to_numpy()
     jaw_arr, teeth_arr, lips_arr = alligator_ind(
-        close, jaw=jaw, teeth=teeth, lips=lips,
-        offset=offset, fillna=fillna, parallel=parallel
+        close,
+        jaw=jaw,
+        teeth=teeth,
+        lips=lips,
+        offset=offset,
+        fillna=fillna,
+        parallel=parallel,
     )
 
     if not suffix:
-        suffix = f'_{jaw}_{teeth}_{lips}'
+        suffix = f"_{jaw}_{teeth}_{lips}"
 
-    return df.with_columns([
-        pl.Series(f'AGj{suffix}', jaw_arr),
-        pl.Series(f'AGt{suffix}', teeth_arr),
-        pl.Series(f'AGl{suffix}', lips_arr),
-    ])
+    return df.with_columns(
+        [
+            pl.Series(f"AGj{suffix}", jaw_arr),
+            pl.Series(f"AGt{suffix}", teeth_arr),
+            pl.Series(f"AGl{suffix}", lips_arr),
+        ]
+    )

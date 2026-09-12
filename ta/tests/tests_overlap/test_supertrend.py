@@ -246,7 +246,7 @@ def test_supertrend_non_contiguous_and_readonly(df_ohlc: pl.DataFrame) -> None:
         np.ascontiguousarray(c2),
         length=7,
     )
-    for s, b in zip(strided, contig):
+    for s, b in zip(strided, contig, strict=False):
         assert_allclose(s, b, rtol=0, atol=0)
 
     via_pl = supertrend_ind(
@@ -257,7 +257,7 @@ def test_supertrend_non_contiguous_and_readonly(df_ohlc: pl.DataFrame) -> None:
         use_talib=False,
     )
     base = supertrend_numba(high, low, close, length=7)
-    for b, p in zip(base, via_pl):
+    for b, p in zip(base, via_pl, strict=False):
         assert_allclose(p, b, rtol=0, atol=0)
 
 
@@ -275,7 +275,7 @@ def test_supertrend_offset(df_ohlc: pl.DataFrame) -> None:
 
     base = supertrend_numba(high, low, close, length=7)
     shifted = supertrend_numba(high, low, close, length=7, offset=2)
-    for b, s in zip(base, shifted):
+    for b, s in zip(base, shifted, strict=False):
         assert np.isnan(s[:2]).all()
         assert_allclose(s[2:], b[:-2], rtol=0, atol=0)
 

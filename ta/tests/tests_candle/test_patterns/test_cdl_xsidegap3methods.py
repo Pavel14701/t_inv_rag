@@ -22,8 +22,8 @@ def test_cdl_xsidegap3methods_upside():
 
 def test_cdl_xsidegap3methods_downside():
     """Test Downside Gap 3 Methods (bearish continuation)."""
-    # Candle1: black (100→98), Candle2: black with gap down (95→94),
-    # Candle3: white (96→97) closing into the gap (b2_high=95, b1_low=98)
+    # Candle1: black (100->98), Candle2: black with gap down (95->94),
+    # Candle3: white (96->97) closing into the gap (b2_high=95, b1_low=98)
     open_ = np.array([100, 95, 96], dtype=np.float64)
     high = np.array([101, 96, 98], dtype=np.float64)
     low = np.array([99, 94, 95], dtype=np.float64)

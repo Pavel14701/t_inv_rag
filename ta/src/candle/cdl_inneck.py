@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_inneck_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated In-Neck pattern.
+    """Numba-accelerated In-Neck pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -105,13 +99,13 @@ def cdl_inneck(
 
 def cdl_inneck_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_INNECK',
+    output_col: str = "CDL_INNECK",
 ) -> pl.DataFrame:
     """Add In-Neck column to Polars DataFrame."""
     out = cdl_inneck(

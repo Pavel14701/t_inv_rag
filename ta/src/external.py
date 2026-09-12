@@ -31,33 +31,32 @@ def _import_lib(name: str, warning_msg: str | None = None) -> tuple[Any, bool]:
 
 # --- TA-Lib ---
 talib, talib_available = _import_lib(
-    'talib',
-    'TA-Lib not installed. Using Numba fallback.'
+    "talib", "TA-Lib not installed. Using Numba fallback."
 )
 
 # --- yfinance ---
 yfinance, yfinance_available = _import_lib(
-    'yfinance',
-    "yfinance not installed. Please install via 'pip install yfinance'"
+    "yfinance",
+    "yfinance not installed. Please install via 'pip install yfinance'",
 )
 
 # --- TA-Lib MA type mapping (only if available) ---
 _TALIB_MA_MAP = {
-    'sma': talib.MA_Type.SMA if talib_available else None,
-    'ema': talib.MA_Type.EMA if talib_available else None,
-    'wma': talib.MA_Type.WMA if talib_available else None,
-    'dema': talib.MA_Type.DEMA if talib_available else None,
-    'tema': talib.MA_Type.TEMA if talib_available else None,
-    'trima': talib.MA_Type.TRIMA if talib_available else None,
-    'kama': talib.MA_Type.KAMA if talib_available else None,
-    'mama': talib.MA_Type.MAMA if talib_available else None,
-    't3': talib.MA_Type.T3 if talib_available else None,
+    "sma": talib.MA_Type.SMA if talib_available else None,
+    "ema": talib.MA_Type.EMA if talib_available else None,
+    "wma": talib.MA_Type.WMA if talib_available else None,
+    "dema": talib.MA_Type.DEMA if talib_available else None,
+    "tema": talib.MA_Type.TEMA if talib_available else None,
+    "trima": talib.MA_Type.TRIMA if talib_available else None,
+    "kama": talib.MA_Type.KAMA if talib_available else None,
+    "mama": talib.MA_Type.MAMA if talib_available else None,
+    "t3": talib.MA_Type.T3 if talib_available else None,
 }
 
 __all__ = [
-    '_TALIB_MA_MAP',
-    'talib',
-    'talib_available',
-    'yfinance',
-    'yfinance_available',
+    "_TALIB_MA_MAP",
+    "talib",
+    "talib_available",
+    "yfinance",
+    "yfinance_available",
 ]

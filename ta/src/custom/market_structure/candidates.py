@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Breakout candidate generation (Numba-optimized)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -11,18 +12,49 @@ from .config import OrderBlockConfig
 from .indicators import compute_lookback
 
 
-@njit((float64[:], float64[:], float64[:], float64[:],
-       float64[:], float64[:], float64[:], float64[:],
-       boolean[:], boolean[:],
-       float64[:], float64[:], float64[:],
-       int64, int64, float64, float64, float64, boolean, float64, boolean),
-      cache=True, fastmath=True)
+@njit(
+    (
+        float64[:],
+        float64[:],
+        float64[:],
+        float64[:],
+        float64[:],
+        float64[:],
+        float64[:],
+        float64[:],
+        boolean[:],
+        boolean[:],
+        float64[:],
+        float64[:],
+        float64[:],
+        int64,
+        int64,
+        float64,
+        float64,
+        float64,
+        boolean,
+        float64,
+        boolean,
+    ),
+    cache=True,
+    fastmath=True,
+)
 def _generate_block_candidates_nb(
-    high, low, close, volume,
-    avg_volume, atr, local_highs, local_lows,
-    peak_mask, valley_mask,
-    adx, di_plus, di_minus,
-    lookback, lookback_max,
+    high,
+    low,
+    close,
+    volume,
+    avg_volume,
+    atr,
+    local_highs,
+    local_lows,
+    peak_mask,
+    valley_mask,
+    adx,
+    di_plus,
+    di_minus,
+    lookback,
+    lookback_max,
     breakout_volume_threshold,
     breakout_impulse_multiplier,
     liquidity_tolerance,
@@ -55,9 +87,10 @@ def _generate_block_candidates_nb(
                             ok = False
                         if ok and breakout_impulse_multiplier > 0:
                             candle_range = high[brk] - low[brk]
-                            if not np.isfinite(
-                                atr[brk]
-                            ) or candle_range < imp_mult * atr[brk]:
+                            if (
+                                not np.isfinite(atr[brk])
+                                or candle_range < imp_mult * atr[brk]
+                            ):
                                 ok = False
                         if ok and use_adx_filter:
                             adx_v = adx[brk]
@@ -66,10 +99,9 @@ def _generate_block_candidates_nb(
                             elif di_minus[brk] <= di_plus[brk]:
                                 ok = False
                         if ok:
-                            move = (
-                            (close[idx] - close[brk])
-                            / max(close[idx], 1e-9)
-                        )
+                            move = (close[idx] - close[brk]) / max(
+                                close[idx], 1e-9
+                            )
                             strength = max(0.0, move)
                             block_types.append(0)  # supply
                             idx_list.append(idx)
@@ -83,9 +115,10 @@ def _generate_block_candidates_nb(
                         ok = False
                     if ok and breakout_impulse_multiplier > 0:
                         candle_range = high[i] - low[i]
-                        if not np.isfinite(
-                            atr[i]
-                        ) or candle_range < imp_mult * atr[i]:
+                        if (
+                            not np.isfinite(atr[i])
+                            or candle_range < imp_mult * atr[i]
+                        ):
                             ok = False
                     if ok and use_adx_filter:
                         if adx[i] != adx[i] or adx[i] < adx_threshold:
@@ -109,9 +142,10 @@ def _generate_block_candidates_nb(
                             ok = False
                         if ok and breakout_impulse_multiplier > 0:
                             candle_range = high[brk] - low[brk]
-                            if not np.isfinite(
-                                atr[brk]
-                            ) or candle_range < imp_mult * atr[brk]:
+                            if (
+                                not np.isfinite(atr[brk])
+                                or candle_range < imp_mult * atr[brk]
+                            ):
                                 ok = False
                         if ok and use_adx_filter:
                             adx_v = adx[brk]
@@ -120,9 +154,8 @@ def _generate_block_candidates_nb(
                             elif di_plus[brk] <= di_minus[brk]:
                                 ok = False
                         if ok:
-                            move = (
-                                (close[brk] - close[idx])
-                                / max(close[idx], 1e-9)
+                            move = (close[brk] - close[idx]) / max(
+                                close[idx], 1e-9
                             )
                             strength = max(0.0, move)
                             block_types.append(1)  # demand
@@ -137,7 +170,10 @@ def _generate_block_candidates_nb(
                         ok = False
                     if ok and breakout_impulse_multiplier > 0:
                         candle_range = high[i] - low[i]
-                        if not np.isfinite(atr[i]) or candle_range < imp_mult * atr[i]:  # noqa: E501
+                        if (
+                            not np.isfinite(atr[i])
+                            or candle_range < imp_mult * atr[i]
+                        ):
                             ok = False
                     if ok and use_adx_filter:
                         if adx[i] != adx[i] or adx[i] < adx_threshold:
@@ -173,42 +209,59 @@ def generate_block_candidates(
         peak_mask[peak_indices] = True
     if len(valley_indices) > 0:
         valley_mask[valley_indices] = True
-    avg_volume = indicators['avg_volume']
-    atr = indicators['atr']
-    local_highs = indicators['local_highs']
-    local_lows = indicators['local_lows']
+    avg_volume = indicators["avg_volume"]
+    atr = indicators["atr"]
+    local_highs = indicators["local_highs"]
+    local_lows = indicators["local_lows"]
     # ADX arrays (or placeholders)
-    if cfg.use_adx_filter and 'adx' in indicators:
-        adx = indicators['adx']
-        di_plus = indicators['di_plus']
-        di_minus = indicators['di_minus']
+    if cfg.use_adx_filter and "adx" in indicators:
+        adx = indicators["adx"]
+        di_plus = indicators["di_plus"]
+        di_minus = indicators["di_minus"]
     else:
         adx = np.full(n, np.nan, dtype=np.float64)
         di_plus = np.full(n, np.nan, dtype=np.float64)
         di_minus = np.full(n, np.nan, dtype=np.float64)
-    block_types, idx_list, break_idx_list, strength_list = _generate_block_candidates_nb(  # noqa: E501
-        high, low, close, volume,
-        avg_volume, atr, local_highs, local_lows,
-        peak_mask, valley_mask,
-        adx, di_plus, di_minus,
-        lookback, cfg.lookback_max,
-        cfg.breakout_volume_threshold,
-        cfg.breakout_impulse_multiplier,
-        cfg.liquidity_tolerance,
-        cfg.use_adx_filter,
-        cfg.adx_threshold,
-        cfg.multiple_breakouts,
+    block_types, idx_list, break_idx_list, strength_list = (
+        _generate_block_candidates_nb(
+            high,
+            low,
+            close,
+            volume,
+            avg_volume,
+            atr,
+            local_highs,
+            local_lows,
+            peak_mask,
+            valley_mask,
+            adx,
+            di_plus,
+            di_minus,
+            lookback,
+            cfg.lookback_max,
+            cfg.breakout_volume_threshold,
+            cfg.breakout_impulse_multiplier,
+            cfg.liquidity_tolerance,
+            cfg.use_adx_filter,
+            cfg.adx_threshold,
+            cfg.multiple_breakouts,
+        )
     )
     candidates = []
     for bt, idx, brk, st in zip(
-        block_types, idx_list, break_idx_list, strength_list,
+        block_types,
+        idx_list,
+        break_idx_list,
+        strength_list, strict=False,
     ):
-        block_type = 'supply' if bt == 0 else 'demand'
-        candidates.append({
-            'block_type': block_type,
-            'idx': idx,
-            'break_idx': brk,
-            'strength': st,
-            'start_date': dates[idx],
-        })
+        block_type = "supply" if bt == 0 else "demand"
+        candidates.append(
+            {
+                "block_type": block_type,
+                "idx": idx,
+                "break_idx": brk,
+                "strength": st,
+                "start_date": dates[idx],
+            }
+        )
     return candidates

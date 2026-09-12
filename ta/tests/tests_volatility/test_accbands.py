@@ -102,7 +102,7 @@ def test_accbands_numpy_non_contiguous_input(
         length=10,
         use_talib=False,
     )
-    for res, exp in zip(result, expected):
+    for res, exp in zip(result, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 

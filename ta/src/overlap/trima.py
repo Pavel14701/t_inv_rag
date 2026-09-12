@@ -7,6 +7,7 @@ TRIMA is a double-smoothed SMA whose weighting forms a triangle:
 
 Both variants match TA-Lib's TRIMA kernel exactly.
 """
+
 import numpy as np
 import polars as pl
 
@@ -27,7 +28,7 @@ def trima_numba(
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Triangular Moving Average using the Numba SMA core.
 
@@ -68,11 +69,11 @@ def trima_numba(
 
     """
     if length < 1:
-        raise ValueError('TRIMA length must be >= 1')
+        raise ValueError("TRIMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -86,31 +87,27 @@ def trima_numba(
         # Odd: double SMA with half = (length + 1) // 2.
         h = (length + 1) // 2
         sma1 = _sma_numba_opt(close, h)
-        sma2_tail = _sma_numba_opt(
-            np.ascontiguousarray(sma1[h - 1:]), h
-        )
-        trima[length - 1:] = sma2_tail[h - 1:]
+        sma2_tail = _sma_numba_opt(np.ascontiguousarray(sma1[h - 1 :]), h)
+        trima[length - 1 :] = sma2_tail[h - 1 :]
     else:
         # Even: SMA(SMA(x, length/2), length/2 + 1).
         h = length // 2
         sma1 = _sma_numba_opt(close, h)
-        sma2_tail = _sma_numba_opt(
-            np.ascontiguousarray(sma1[h - 1:]), h + 1
-        )
-        trima[length - 1:] = sma2_tail[h:]
+        sma2_tail = _sma_numba_opt(np.ascontiguousarray(sma1[h - 1 :]), h + 1)
+        trima[length - 1 :] = sma2_tail[h:]
 
     return _apply_offset_fillna(trima, offset, fillna)
 
 
 # ----------------------------------------------------------------------
-# TRIMA using TA‑Lib (if available)
+# TRIMA using TA-Lib (if available)
 # ----------------------------------------------------------------------
 def trima_talib(
     close: np.ndarray,
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Triangular Moving Average via TA-Lib.
 
@@ -148,14 +145,14 @@ def trima_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     if length < 1:
-        raise ValueError('TRIMA length must be >= 1')
+        raise ValueError("TRIMA length must be >= 1")
 
     close = np.asarray(close, dtype=np.float64)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     trima = talib.TRIMA(close, timeperiod=length)
     return _apply_offset_fillna(trima, offset, fillna)
@@ -170,7 +167,7 @@ def trima_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal TRIMA with backend selection.
 
@@ -185,7 +182,7 @@ def trima_ind(
     fillna : float or None, default None
         Value to fill NaNs.
     use_talib : bool, default True
-        If True and TA‑Lib is available, use it; else use Numba.
+        If True and TA-Lib is available, use it; else use Numba.
     nan_policy : str, default 'raise'
         How to handle NaN values in `close`:
         'raise', 'ignore', 'ffill', 'bfill', or 'both'.
@@ -215,13 +212,13 @@ def trima_ind(
 # ----------------------------------------------------------------------
 def trima_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
-    output_col: str | None = None
+    nan_policy: str = "raise",
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add TRIMA column to Polars DataFrame.
 
@@ -238,7 +235,7 @@ def trima_polars(
     fillna : float or None, default None
         Value to fill NaNs.
     use_talib : bool, default True
-        If True and TA‑Lib is available, use it; else use Numba.
+        If True and TA-Lib is available, use it; else use Numba.
     nan_policy : str, default 'raise'
         How to handle NaN values in `close`:
         'raise', 'ignore', 'ffill', 'bfill', or 'both'.
@@ -252,8 +249,6 @@ def trima_polars(
 
     """
     close = df[close_col].to_numpy()
-    result = trima_ind(
-        close, length, offset, fillna, use_talib, nan_policy
-    )
-    out_name = output_col or f'TRIMA_{length}'
+    result = trima_ind(close, length, offset, fillna, use_talib, nan_policy)
+    out_name = output_col or f"TRIMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

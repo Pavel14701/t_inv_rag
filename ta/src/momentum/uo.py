@@ -19,6 +19,7 @@ IEEE 754 notes
 - a zero total true range in a window yields NaN for that average
   (0/0 undefined), which propagates to the final value.
 """
+
 import numpy as np
 import polars as pl
 
@@ -62,7 +63,7 @@ def _uo_numba(
                 sum_bp += bp
                 sum_tr += hi - lo
             avg = np.nan
-            if sum_tr != 0.0:
+            if sum_tr != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
                 avg = sum_bp / sum_tr
             if idx == 0:
                 avg_fast = avg
@@ -110,11 +111,11 @@ def uo_numpy(
 
     """
     if fast < 1:
-        raise ValueError('fast must be >= 1')
+        raise ValueError("fast must be >= 1")
     if medium < 1:
-        raise ValueError('medium must be >= 1')
+        raise ValueError("medium must be >= 1")
     if slow < 1:
-        raise ValueError('slow must be >= 1')
+        raise ValueError("slow must be >= 1")
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
@@ -132,8 +133,12 @@ def uo_numpy(
         close = np.ascontiguousarray(close)
     if use_talib and talib_available:
         result = talib.ULTOSC(
-            high, low, close,
-            timeperiod1=fast, timeperiod2=medium, timeperiod3=slow,
+            high,
+            low,
+            close,
+            timeperiod1=fast,
+            timeperiod2=medium,
+            timeperiod3=slow,
         )
     else:
         result = _uo_numba(high, low, close, fast, medium, slow)
@@ -159,16 +164,23 @@ def uo_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return uo_numpy(
-        high, low, close, fast, medium, slow,
-        offset=offset, fillna=fillna, use_talib=use_talib,
+        high,
+        low,
+        close,
+        fast,
+        medium,
+        slow,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
 
 
 def uo_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     fast: int = 7,
     medium: int = 14,
     slow: int = 28,
@@ -185,8 +197,15 @@ def uo_polars(
     low = df[low_col].cast(pl.Float64).to_numpy()
     close = df[close_col].cast(pl.Float64).to_numpy()
     result = uo_numpy(
-        high, low, close, fast, medium, slow,
-        offset=offset, fillna=fillna, use_talib=use_talib,
+        high,
+        low,
+        close,
+        fast,
+        medium,
+        slow,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
-    out_name = output_col or f'UO_{fast}_{medium}_{slow}'
+    out_name = output_col or f"UO_{fast}_{medium}_{slow}"
     return df.with_columns(pl.Series(out_name, result))
