@@ -18,6 +18,7 @@
 | `dte-ai` | `ai/` | torch, tensorboard, pyyaml | `uv run --package dte-ai pytest ai/tests` |
 | `dte-infer` | `infer/` | polars, yfinance, t-tech (+`ml`: torch) | `uv run --package dte-infer pytest infer/tests` |
 | `dte-rag` | `rag/` | llama-index, qdrant, sentence-transformers | `uv run --package dte-rag pytest rag/tests` |
+| `dte-risk` | `risk/` | numpy, pyyaml | `uv run --package dte-risk pytest risk/tests` |
 | `dte-main` | `main/` | dishka, faststream, aiogram, sqlalchemy, alembic | — (TZ-08/10) |
 
 Принципы монорепозитория:
@@ -70,7 +71,7 @@ ta ──(TaProvider, TZ-03)──► dsl ──► backtest (TZ-04) ──► �
 | 8 | TZ-10 white api skeleton | ⬜ | Каркас ingest + REST; после контрактов очередей (TZ-09) |
 | 9 | TZ-07 rag | 🔨 (LLM-слой ✅; ingestion/retrieval/generation ⬜, блокируется TZ-02 manifest_hash) | RAG поверх готового формата стратегий и валидатора DSL |
 | 10 | TZ-08 contracts/DI | ⬜ | Финальная склейка; фактически ведётся параллельно с TZ-02 |
-| 11 | TZ-11 risk engine | ⬜ | Ключевая фича детерминизма; после TZ-04 (движок исполнения) |
+| 11 | TZ-11 risk engine | 🔨 (спека config-driven; скелет dte-risk: конфиг+реестр правил+check()+22 теста зелёные) | Ключевая фича детерминизма; после TZ-04 (движок исполнения) |
 | 12 | TZ-12 ta benchmarks | ⬜ | Публичное доказательство производительности Numba-ядер |
 | 13 | TZ-13 ci | ⬜ | ruff + mypy + pytest matrix по членам workspace |
 
