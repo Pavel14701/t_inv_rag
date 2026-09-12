@@ -102,3 +102,50 @@ def test_cli_synthetic_smoke(tmp_path, capsys):
     assert 'entry_signal' in signals.columns
     captured = capsys.readouterr()
     assert 'bars=300' in captured.out
+
+
+def test_predict_p_win_at_price_feature_mismatch():
+    """Бандл с n_price_feats != 5 даёт понятный DSLError до предиктора."""
+    from dsl.exceptions import DSLError
+
+    from infer.engine import predict_p_win_at
+
+    class _Bundle:
+        seq_len = 8
+        model_config = {
+            'n_price_feats': 4,
+            'n_ind_feats': 0,
+            'n_sig_feats': 0,
+            'n_tp_sl_feats': 0,
+        }
+
+    class _Predictor:
+        bundle = _Bundle()
+
+    df = load_synthetic(n_bars=50)
+    with pytest.raises(DSLError, match='price feature count mismatch'):
+        predict_p_win_at(_Predictor(), df, t=20)
+
+
+def test_predict_p_win_at_matching_bundle():
+    """Хеппи-путь: бандл на 5 ценовых фич возвращает P(win)."""
+    import torch  # noqa: F401 - гарантирует наличие зависимостей ai
+
+    from ai.src.bundle import EntryExitPredictor, build_bundle
+    from ai.src.transformer import EntryExitTransformer
+    from infer.engine import predict_p_win_at
+
+    model_cfg = {
+        'n_price_feats': 5, 'n_ind_feats': 0, 'n_sig_feats': 0,
+        'n_tp_sl_feats': 0, 'hidden_size': 16, 'num_layers': 1,
+        'num_heads': 2, 'max_seq_len': 64, 'max_ob_seq_len': 8,
+        'n_patterns': 2, 'ob_embedding_dim': 4,
+    }
+    model = EntryExitTransformer(**model_cfg)
+    bundle = build_bundle(model, model_config=model_cfg, seq_len=8)
+    predictor = EntryExitPredictor(bundle)
+
+    df = load_synthetic(n_bars=50)
+    p_win = predict_p_win_at(predictor, df, t=20)
+    assert p_win is not None
+    assert 0.0 <= p_win <= 1.0

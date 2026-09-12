@@ -1,5 +1,9 @@
 """Tests for the YAML configuration layer (TZ-06 п.10)."""
 
+from pathlib import Path
+
+import pytest
+
 from ..config import (  # noqa: TID100 - package-relative for pytest isolation
     AIConfig,
     RiskConfig,
@@ -16,6 +20,7 @@ def test_defaults_equal_legacy_hardcode():
     assert (r.atr_period, r.atr_floor) == (14, 1.0e-6)
     assert (r.tp_atr_multiplier, r.sl_atr_multiplier) == (2.0, 1.5)
     assert abs(r.min_rr - 1 / 3) < 1e-4
+    assert r.min_rr == 1 / 3  # exact, not a rounded 0.3333
     assert (r.commission_pct, r.slippage_pct, r.max_bars_hold) == (
         0.001, 0.0005, 20,
     )
@@ -76,3 +81,22 @@ def test_set_seed_reproducible():
     set_seed(123)
     b = np.random.rand()
     assert a == b
+
+
+def test_shipped_yaml_equals_dataclass_defaults():
+    """configs/ai.yaml must reproduce the dataclass defaults bit-for-bit.
+
+    Rounded literals (e.g. ``0.3333`` for ``1/3``) would silently change
+    the effective configuration, so every section must compare exactly.
+
+    """
+    repo_yaml = Path(__file__).resolve().parents[3] / 'configs' / 'ai.yaml'
+    if not repo_yaml.exists():
+        pytest.skip('configs/ai.yaml not present')
+    cfg = load_config(repo_yaml)
+    defaults = AIConfig()
+    assert cfg.seed == defaults.seed
+    assert cfg.risk == defaults.risk
+    assert cfg.model == defaults.model
+    assert cfg.training == defaults.training
+    assert cfg.compute == defaults.compute

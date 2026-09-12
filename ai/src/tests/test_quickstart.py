@@ -124,3 +124,56 @@ def test_quick_train_with_pattern_cols(
         save_best_path=None,
     )
     assert isinstance(model, EntryExitTransformer)
+
+
+@pytest.mark.integration
+def test_quick_train_applies_model_config(
+    sample_parquet_files: dict[str, str],
+) -> None:
+    """All ModelConfig architecture fields reach EntryExitTransformer.
+
+    Config values for dropout, max_seq_len, max_ob_seq_len, class
+    counts, embedding size and atr_global must affect the trained
+    model.  Priority: explicit arguments > ``**model_kwargs`` > config.
+
+    """
+    from ..config import AIConfig, with_overrides
+
+    cfg = with_overrides(
+        AIConfig(),
+        model={
+            'dropout': 0.0,
+            'max_seq_len': 333,
+            'max_ob_seq_len': 64,
+            'n_action_classes': 3,
+            'n_outcome_classes': 2,
+            'ob_embedding_dim': 6,
+            'atr_global': 2.5,
+        },
+    )
+    model: EntryExitTransformer = quick_train(
+        features=sample_parquet_files['features_path'],
+        labels=sample_parquet_files['labels_path'],
+        order_blocks=sample_parquet_files['order_blocks_path'],
+        price_cols=['open', 'high', 'low', 'close', 'volume'],
+        sig_cols=['sig1', 'sig2'],
+        tp_sl_cols=['tp', 'sl'],
+        ind_cols=['ind1', 'ind2', 'ind3'],
+        hidden_size=16,  # explicit argument must beat the config default
+        seq_len=32,
+        batch_size=2,
+        epochs=1,
+        device='cpu',
+        config=cfg,
+        dropout=0.25,  # lands in **model_kwargs: beats the config value
+    )
+    assert isinstance(model, EntryExitTransformer)
+    # config fields propagated into the architecture
+    assert model.max_seq_len == 333
+    assert model.max_ob_seq_len == 64
+    assert model.atr_global == 2.5
+    assert model.ob_type_embedding.embedding_dim == 6
+    # **model_kwargs take priority over the config value (0.0)
+    assert model.time_encoder.layers[0].dropout.p == pytest.approx(0.25)
+    # explicit arguments keep priority over the config (128)
+    assert model.hidden_size == 16

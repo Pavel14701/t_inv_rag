@@ -231,6 +231,12 @@ def predict_p_win_at(predictor, df: pl.DataFrame, t: int) -> float | None:
         dtype=torch.float32,
     )
     cfg = predictor.bundle.model_config
+    n_price = int(cfg.get('n_price_feats', prices.shape[1]))
+    if n_price != prices.shape[1]:
+        raise DSLError(
+            f'price feature count mismatch: bundle expects {n_price}, '
+            f'constructed {prices.shape[1]}'
+        )
     n_ind = int(cfg.get('n_ind_feats', 0))
     n_sig = int(cfg.get('n_sig_feats', 0))
     n_tpsl = int(cfg.get('n_tp_sl_feats', 0))

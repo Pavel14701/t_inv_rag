@@ -22,6 +22,8 @@ Example usage::
 
 from __future__ import annotations
 
+import dataclasses
+
 import torch
 
 from .config import AIConfig, load_config, set_seed
@@ -165,6 +167,17 @@ def quick_train(
     # ---------- Load order blocks ----------
     obs: list[OrderBlock] = load_order_blocks_parquet(order_blocks)
     # ---------- Build model ----------
+    # Architecture fields not covered by explicit arguments come from the
+    # config; ``**model_kwargs`` still wins over both (TZ-06 п.10).
+    config_model_kwargs = dataclasses.asdict(m)
+    for key in (
+        'seq_len',  # explicit, computed above
+        'hidden_size', 'num_layers', 'num_heads',  # explicit arguments
+        'outcome_mode', 'n_patterns',  # explicit arguments
+        'close_idx',  # training-only, not a constructor kwarg
+    ):
+        config_model_kwargs.pop(key, None)
+    config_model_kwargs.update(model_kwargs)
     model = EntryExitTransformer(
         n_price_feats=len(price_cols),
         n_ind_feats=len(ind_cols) if ind_cols else 0,
@@ -175,7 +188,7 @@ def quick_train(
         num_heads=num_heads,
         outcome_mode=outcome_mode,
         n_patterns=n_patterns,
-        **model_kwargs,
+        **config_model_kwargs,
     ).to(torch_device)
     # ---------- Build labeled loader ----------
     train_loader_all, df = build_loader_from_parquet(

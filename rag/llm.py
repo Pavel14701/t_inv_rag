@@ -222,7 +222,23 @@ class OpenAICompatProvider:
 
     async def acomplete(self, prompt: str, options: CompletionOptions) -> str:
         """Async counterpart of :meth:`complete`."""
-        return self.complete(prompt, options)
+        body = self._body(prompt, options)
+        try:
+            if self._async_transport is not None:
+                response = await self._async_transport(self._url(), body)
+            else:
+                async with niquests.AsyncSession() as session:
+                    resp = await session.post(
+                        self._url(), json=body, headers=self._headers(),
+                        timeout=self.timeout,
+                    )
+                    response = resp.json()
+        except LLMError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            msg = f'OpenAI-compatible async request failed: {exc}'
+            raise LLMError(msg) from exc
+        return self._extract(response)
 
 
 def build_router_from_env(

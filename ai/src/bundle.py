@@ -96,9 +96,13 @@ def load_bundle(path: str | Path) -> ModelBundle:
         The deserialized :class:`ModelBundle`.
 
     """
-    payload = torch.load(
-        Path(path), map_location='cpu', weights_only=False
-    )
+    payload = torch.load(Path(path), map_location='cpu', weights_only=True)
+    if not isinstance(payload, dict):
+        msg = (
+            f'{path}: not a ModelBundle payload '
+            f'(expected mapping, got {type(payload).__name__})'
+        )
+        raise TypeError(msg)
     payload.setdefault('version', 1)
     return ModelBundle(**payload)
 

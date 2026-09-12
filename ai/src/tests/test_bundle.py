@@ -112,3 +112,17 @@ def test_predict_requires_no_grad():
     ]
     out = predictor.predict_proba(*args)
     assert 'p_win' in out
+
+
+def test_load_bundle_rejects_non_dict_payload(tmp_path):
+    """A non-mapping payload is rejected instead of being trusted.
+
+    Bundles are saved as plain mappings (``dataclasses.asdict``), so the
+    restricted ``weights_only=True`` unpickler is sufficient; anything
+    else must fail loudly before reaching :class:`ModelBundle`.
+
+    """
+    path = tmp_path / 'bad.pt'
+    torch.save(torch.zeros(3), path)
+    with pytest.raises(TypeError, match='not a ModelBundle payload'):
+        load_bundle(path)

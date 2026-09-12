@@ -162,6 +162,47 @@ def test_router_async_completion():
     assert asyncio.run(run()) == 'async-ok'
 
 
+def test_openai_async_completion_uses_async_transport():
+    """Async OpenAI path goes through the injected async transport."""
+    import asyncio
+
+    async def run() -> str:
+        calls: list[tuple[str, dict]] = []
+
+        async def atransport(url: str, body: dict) -> dict:
+            calls.append((url, body))
+            return {'choices': [{'message': {'content': 'async-done'}}]}
+
+        provider = OpenAICompatProvider(
+            base_url='http://fake/v1', default_model='m1',
+            api_key='secret', async_transport=atransport,
+        )
+        out = await provider.acomplete('hi', CompletionOptions(model='m2'))
+        assert calls[0][0] == 'http://fake/v1/chat/completions'
+        assert calls[0][1]['model'] == 'm2'
+        return out
+
+    assert asyncio.run(run()) == 'async-done'
+
+
+def test_openai_async_transport_error_wrapped():
+    """Async transport failures are wrapped into LLMError as well."""
+    import asyncio
+
+    async def boom(url: str, body: dict) -> dict:
+        raise ConnectionError('down')
+
+    async def run() -> None:
+        provider = OpenAICompatProvider(
+            base_url='http://fake/v1', default_model='m1',
+            async_transport=boom,
+        )
+        await provider.acomplete('hi', CompletionOptions())
+
+    with pytest.raises(LLMError, match='async request failed'):
+        asyncio.run(run())
+
+
 def test_build_router_from_env_selects_default():
     """LLM_PROVIDER sets the default provider of the router."""
     router = build_router_from_env({'LLM_PROVIDER': 'ollama'})
