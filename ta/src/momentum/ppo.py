@@ -131,7 +131,8 @@ def ppo_ind(
     nan_policy: str = 'ignore',
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Universal wrapper for PPO that accepts either a NumPy array or a
-    Polars Series. All parameters are the same as in ``ppo_numpy``."""
+    Polars Series. All parameters are the same as in ``ppo_numpy``.
+    """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return ppo_numpy(

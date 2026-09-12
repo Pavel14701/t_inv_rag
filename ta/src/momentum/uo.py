@@ -41,7 +41,8 @@ def _uo_numba(
     slow: int,
 ) -> np.ndarray:
     """Ultimate Oscillator core (fastmath disabled: value-dependent
-    ``sum(tr) == 0`` guard)."""
+    ``sum(tr) == 0`` guard).
+    """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
     for i in range(slow, n):

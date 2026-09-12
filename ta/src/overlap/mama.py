@@ -130,6 +130,7 @@ def _mama_numba_core(
         fama[:prenan] = np.nan
     return mama, fama
 
+
 # ----------------------------------------------------------------------
 # MAMA using Numba
 # ----------------------------------------------------------------------
@@ -177,6 +178,7 @@ def mama_numba(
     - A NaN in the input poisons the recursive filter from that point
       onward (IEEE 754 propagation).
     - This function is IEEE 754 compliant (no fastmath).
+
     """
     if not (0.0 < slowlimit <= fastlimit <= 1.0):
         raise ValueError(

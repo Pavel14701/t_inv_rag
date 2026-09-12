@@ -143,6 +143,7 @@ def test_midprice_numba_core_matches_random_walk(
 # Tests for midprice_numba (public wrapper)
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_midprice_numba_vs_talib(
     prices_random_walk: npt.NDArray[np.float64],
@@ -163,7 +164,7 @@ def test_midprice_numba_vs_talib(
 
 @pytest.mark.overlap
 def test_midprice_numba_length_gt_n(prices_short) -> None:
-    """length > len(close) returns all NaN (no crash)."""
+    """Length > len(close) returns all NaN (no crash)."""
     result = midprice_numba(prices_short, prices_short, length=10)
     assert np.isnan(result).all()
 
@@ -183,7 +184,7 @@ def test_midprice_numba_offset_fillna() -> None:
 
 @pytest.mark.overlap
 def test_midprice_numba_invalid_length() -> None:
-    """length < 1 must raise ValueError, never corrupt the output."""
+    """Length < 1 must raise ValueError, never corrupt the output."""
     high = np.array([10.0, 11.0, 12.0], dtype=np.float64)
     low = np.array([9.0, 10.0, 11.0], dtype=np.float64)
     with pytest.raises(ValueError, match='length must be >= 1'):
@@ -219,6 +220,7 @@ def test_midprice_numba_input_types() -> None:
 # -----------------------------------------------------------------------------
 # Universal wrapper tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_midprice_ind_matches_numba(
@@ -263,6 +265,7 @@ def test_midprice_ind_talib_backend(
 # -----------------------------------------------------------------------------
 # Polars integration tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_midprice_polars_basic(df_random_walk: pl.DataFrame) -> None:
@@ -340,6 +343,7 @@ def test_midprice_polars_with_offset_fillna(
 # -----------------------------------------------------------------------------
 # IEEE 754 compliance tests (using fixtures from conftest.py)
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_midprice_with_nan(prices_with_nan) -> None:

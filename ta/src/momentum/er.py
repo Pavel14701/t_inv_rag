@@ -26,7 +26,8 @@ from .._array_ops import _apply_offset_fillna
 @njit((float64[:], int64), fastmath=False, cache=True)
 def _er_numba(close: np.ndarray, length: int) -> np.ndarray:
     """Efficiency Ratio core (fastmath disabled: value-dependent
-    ``denominator != 0.0`` guard)."""
+    ``denominator != 0.0`` guard).
+    """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
     for i in range(length, n):

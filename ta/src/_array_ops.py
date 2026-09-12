@@ -1,5 +1,4 @@
-"""
-Numba-accelerated array operations for rolling windows, NaN handling, and offset shifts.
+"""Numba-accelerated array operations for rolling windows, NaN handling, and offset shifts.
 
 All floating‑point operations strictly follow IEEE 754 rules (no fastmath optimisations).
 NaN and Inf propagate naturally, and no exceptions are raised for extreme values.
@@ -22,8 +21,7 @@ def _apply_offset_fillna(
     offset: int,
     fillna: float | None,
 ) -> np.ndarray:
-    """
-    Apply a shift (offset) and optionally fill NaN values in a single pass.
+    """Apply a shift (offset) and optionally fill NaN values in a single pass.
 
     The function creates a new array where the data is shifted by `offset`
     positions. Positive offset shifts the data forward (past values move to later
@@ -52,6 +50,7 @@ def _apply_offset_fillna(
     -----
     - Empty arrays return an empty array.
     - All operations are IEEE 754 compliant (NaN and Inf are handled gracefully).
+
     """
     n = len(arr)
     if n == 0:
@@ -95,8 +94,7 @@ def _apply_offset_fillna(
 
 @njit((types.float64[:], types.int64), fastmath=False, cache=True)
 def _rolling_max_numba(arr: np.ndarray, window: int) -> np.ndarray:
-    """
-    Numba‑accelerated rolling maximum.
+    """Numba‑accelerated rolling maximum.
 
     If any NaN appears in the window, the result for that window is NaN
     (IEEE 754 propagation).
@@ -119,6 +117,7 @@ def _rolling_max_numba(arr: np.ndarray, window: int) -> np.ndarray:
     -----
     - NaN values in the input cause the corresponding window result to be NaN.
     - Empty input returns an empty array.
+
     """
     n = len(arr)
     if n == 0 or window <= 0 or window > n:
@@ -178,8 +177,7 @@ def _rolling_max_numba(arr: np.ndarray, window: int) -> np.ndarray:
 
 @njit((types.float64[:], types.int64), fastmath=False, cache=True)
 def _rolling_min_numba(arr: np.ndarray, window: int) -> np.ndarray:
-    """
-    Numba‑accelerated rolling minimum.
+    """Numba‑accelerated rolling minimum.
 
     If any NaN appears in the window, the result for that window is NaN
     (IEEE 754 propagation).
@@ -202,6 +200,7 @@ def _rolling_min_numba(arr: np.ndarray, window: int) -> np.ndarray:
     -----
     - NaN values in the input cause the corresponding window result to be NaN.
     - Empty input returns an empty array.
+
     """
     n = len(arr)
     if n == 0 or window <= 0 or window > n:
@@ -265,8 +264,7 @@ def _rolling_min_numba(arr: np.ndarray, window: int) -> np.ndarray:
 
 @njit(types.void(types.float64[:], types.unicode_type), cache=True, fastmath=False)
 def _fill_nan_policy_numba(arr: np.ndarray, nan_policy: str) -> None:
-    """
-    In‑place forward/backward fill of NaN values according to policy.
+    """In‑place forward/backward fill of NaN values according to policy.
 
     Parameters
     ----------
@@ -280,6 +278,7 @@ def _fill_nan_policy_numba(arr: np.ndarray, nan_policy: str) -> None:
     -----
     - If the entire array is NaN, it remains unchanged (no value to fill).
     - This function is Numba‑compiled for speed.
+
     """
     n = len(arr)
     if n == 0:
@@ -296,8 +295,7 @@ def _fill_nan_policy_numba(arr: np.ndarray, nan_policy: str) -> None:
 
 
 def _handle_nan_policy(arr: np.ndarray, nan_policy: str, name: str) -> np.ndarray:
-    """
-    Apply a NaN handling policy to an array, optionally raising an error.
+    """Apply a NaN handling policy to an array, optionally raising an error.
 
     Parameters
     ----------
@@ -319,6 +317,7 @@ def _handle_nan_policy(arr: np.ndarray, nan_policy: str, name: str) -> np.ndarra
     ------
     ValueError
         If `nan_policy == 'raise'` and any NaN is present.
+
     """
     _VALID_POLICIES = ('raise', 'ignore', 'ffill', 'bfill', 'both')
     if nan_policy not in _VALID_POLICIES:
@@ -341,8 +340,7 @@ def _handle_nan_policy(arr: np.ndarray, nan_policy: str, name: str) -> np.ndarra
 
 
 def replace_inf_with_nan(arr: np.ndarray) -> np.ndarray:
-    """
-    Replace all infinite values (inf and -inf) with NaN in‑place.
+    """Replace all infinite values (inf and -inf) with NaN in‑place.
 
     Parameters
     ----------
@@ -357,6 +355,7 @@ def replace_inf_with_nan(arr: np.ndarray) -> np.ndarray:
     Notes
     -----
     - This operation is IEEE 754 compliant and does not raise errors.
+
     """
     arr[~np.isfinite(arr)] = np.nan
     return arr

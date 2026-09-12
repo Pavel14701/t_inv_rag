@@ -49,7 +49,8 @@ def _ema_from_first_valid(x: np.ndarray, length: int) -> np.ndarray:
 
 def _double_ema(x: np.ndarray, short: int, long: int) -> np.ndarray:
     """EMA(EMA(x, short), long) warm-up friendly:
-    each stage is seeded at the first valid value of its input."""
+    each stage is seeded at the first valid value of its input.
+    """
     first = _ema_from_first_valid(x, short)
     return _ema_from_first_valid(first, long)
 

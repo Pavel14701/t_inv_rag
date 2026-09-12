@@ -72,7 +72,8 @@ def test_pivot_woodie_formula() -> None:
 @pytest.mark.overlap
 def test_pivot_demark_branches() -> None:
     """Demark X: open==close -> (H+L+2C)/4; close>open -> (2H+L+C)/4;
-    close<open -> (H+2L+C)/4."""
+    close<open -> (H+2L+C)/4.
+    """
     o = np.array([10.0, 10.0, 12.0])
     h = np.array([11.0, 11.0, 13.0])
     l = np.array([9.0, 9.0, 10.0])
@@ -132,7 +133,8 @@ def test_pivot_camarilla_formula() -> None:
 @pytest.mark.overlap
 def test_pivots_ind_traditional_reference() -> None:
     """Daily traditional pivots: TP=(H+L+C)/3, S1=2TP-H, R1=2TP-L of the
-    *previous* day's aggregate; constant within the current day."""
+    *previous* day's aggregate; constant within the current day.
+    """
     df = make_hourly_df()
     result = pivots_ind(df, method='traditional', anchor='D')
     day1 = df.filter(pl.col('date') < datetime(2024, 1, 2))

@@ -34,3 +34,15 @@ class ProviderError(DSLError):
     parameters, or internal errors. The DSL context will catch
     this exception and attempt the next available provider.
     """
+
+
+class DslValidationError(DSLError, ValueError):
+    """Raised when an indicator request violates the manifest schema.
+
+    Наследует и ``DSLError`` (единый контракт для RAG repair-loop —
+    TZ-01 п.2.2), и ``ValueError`` (обратная совместимость: ранее
+    ``Context._validate`` бросал голый ValueError, и существующие
+    клиенты ловят его). Текст содержит человекочитаемые формулировки
+    манифест-валидатора (``Unknown indicator: X``, ``Invalid parameter
+    'Y' for indicator 'Z'``) — они парсятся RAG-ом как repair-подсказки.
+    """

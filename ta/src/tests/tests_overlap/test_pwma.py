@@ -161,7 +161,7 @@ def test_pwma_offset_fillna() -> None:
 
 @pytest.mark.overlap
 def test_pwma_invalid_length() -> None:
-    """length < 1 must raise ValueError, never corrupt the output."""
+    """Length < 1 must raise ValueError, never corrupt the output."""
     close = np.array([10.0, 11.0, 12.0])
     with pytest.raises(ValueError, match='length must be >= 1'):
         pwma_numba(close, length=0)
@@ -208,6 +208,7 @@ def test_pwma_ind_with_pl_series(
 # -----------------------------------------------------------------------------
 # Polars integration tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_pwma_polars_basic(df_random_walk: pl.DataFrame) -> None:

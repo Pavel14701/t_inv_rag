@@ -57,6 +57,16 @@ sentence-transformers тянет PyTorch (~1–2 ГБ RAM) в процесс. Д
 
 ## 3. Требования
 
+0. **LLM-слой с per-request роутингом — ✅ реализован** (`rag/llm.py`):
+   `LLM_PROVIDER` из env задаёт только провайдера **по умолчанию** для воркера;
+   каждый запрос может переопределить и провайдера (`router.complete(prompt,
+   provider=...)`), и модель (`CompletionOptions(model=...)`). Для Ollama и
+   OpenAI-compatible бэкендов `model` — поле запроса, поэтому один воркер
+   обслуживает несколько моделей одновременно — мультитенантные сценарии
+   поддержаны. Транспорты инъектируются → тесты без сети (11 тестов
+   `rag/tests/test_llm.py`). Проект лицензируется под **MIT** (файл `LICENSE`,
+   поля `license`/`license-files` в pyproject).
+
 1. `rag/ingestion`: чанкер + white-list путей + рендер манифеста + две коллекции.
 2. `rag/retrieval`: docs top-k (5–8) + cases top-k (2–3, фильтр по актуальному
    manifest_hash из TZ-02).

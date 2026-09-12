@@ -108,7 +108,8 @@ def test_rma_lags_price_direction(
 @pytest.mark.overlap
 def test_rma_matches_ewm_asymptotically() -> None:
     """RMA(l) recursion equals EWM(alpha=1/l): seeded differently, so the
-    difference decays geometrically; after 10*length bars it is tiny."""
+    difference decays geometrically; after 10*length bars it is tiny.
+    """
     rng = np.random.default_rng(42)
     length = 5
     arr = 100 + np.cumsum(rng.normal(0, 1, 300))
@@ -181,7 +182,7 @@ def test_rma_unknown_nan_policy() -> None:
 
 @pytest.mark.overlap
 def test_rma_invalid_length() -> None:
-    """length < 1 raises ValueError."""
+    """Length < 1 raises ValueError."""
     close = np.array([10.0, 11.0, 12.0])
     with pytest.raises(ValueError, match='length must be >= 1'):
         rma_numba(close, length=0)
@@ -290,10 +291,12 @@ def test_rma_polars_with_offset_fillna(df_random_walk) -> None:
 # IEEE 754 / edge case tests (using fixtures from conftest.py)
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_rma_with_inf(prices_with_inf) -> None:
     """Inf is not NaN: it enters the recursion and then inf - inf -> NaN
-    in the very next step (IEEE 754), so NaN starts one step after the Inf."""
+    in the very next step (IEEE 754), so NaN starts one step after the Inf.
+    """
     result = rma_numba(prices_with_inf, 3, nan_policy='ignore')
     assert result[5] == np.inf
     assert np.isnan(result[6:]).all()

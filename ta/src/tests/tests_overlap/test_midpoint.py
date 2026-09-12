@@ -130,7 +130,7 @@ def test_midpoint_numba_vs_talib(
 
 @pytest.mark.overlap
 def test_midpoint_numba_length_gt_n(prices_short) -> None:
-    """length > len(close) returns all NaN (no crash)."""
+    """Length > len(close) returns all NaN (no crash)."""
     result = midpoint_numba(prices_short, length=10)
     assert np.isnan(result).all()
 
@@ -149,7 +149,7 @@ def test_midpoint_numba_offset_fillna() -> None:
 
 @pytest.mark.overlap
 def test_midpoint_numba_invalid_length() -> None:
-    """length < 1 must raise ValueError, never corrupt the output."""
+    """Length < 1 must raise ValueError, never corrupt the output."""
     close = np.array([10.0, 11.0, 12.0], dtype=np.float64)
     with pytest.raises(ValueError, match='length must be >= 1'):
         midpoint_numba(close, length=0)

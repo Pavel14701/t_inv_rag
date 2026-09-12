@@ -11,19 +11,16 @@ Tests cover:
 
 import pytest
 import numpy as np
-import numpy.typing as npt
 import polars as pl
 from numpy.testing import assert_allclose
 
 from ...overlap.mama import (
     _mama_numba_core,
     mama_numba,
-    mama_talib,
     mama_ind,
     mama_polars,
 )
 from ..._array_ops import _apply_offset_fillna
-from ...external import talib_available
 
 
 # ----------------------------------------------------------------------
@@ -168,6 +165,7 @@ def test_mama_numba_with_inf(prices_with_inf):
     assert np.isnan(result_mama[5:]).all()
     assert np.isnan(result_fama[5:]).all()
 
+
 @pytest.mark.overlap
 def test_mama_numba_all_nan(prices_all_nan):
     fastlimit = 0.5
@@ -180,6 +178,7 @@ def test_mama_numba_all_nan(prices_all_nan):
     assert (result_mama_fill == 0.0).all()
     assert (result_fama_fill == 0.0).all()
 
+
 @pytest.mark.overlap
 def test_mama_numba_extreme_values(prices_extreme):
     fastlimit = 0.5
@@ -188,6 +187,7 @@ def test_mama_numba_extreme_values(prices_extreme):
     result_mama, result_fama = mama_numba(prices_extreme, fastlimit, slowlimit, prenan, nan_policy='ignore')
     assert result_mama is not None
     assert result_fama is not None
+
 
 @pytest.mark.overlap
 def test_mama_polars_with_nan(df_random_walk):

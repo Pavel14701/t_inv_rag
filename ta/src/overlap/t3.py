@@ -150,6 +150,7 @@ def t3_talib(
     -----
     - Infinites in `close` are replaced with NaN before calculation
       (IEEE 754 compliance).
+
     """
     if length < 1:
         raise ValueError('T3 length must be >= 1')

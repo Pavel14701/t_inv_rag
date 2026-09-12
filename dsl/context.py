@@ -7,7 +7,7 @@ from .providers import (
     IndicatorProvider,
     AsyncIndicatorProvider
 )
-from .exceptions import ProviderError
+from .exceptions import DslValidationError, ProviderError
 
 
 class Context:
@@ -68,11 +68,28 @@ class Context:
         """Validate an indicator request against the manifest.
 
         Raises:
-            ValueError: If validation fails.
+            DslValidationError: If validation fails (also a ValueError
+                for backward compatibility; TZ-01 п.2.2).
 
         """
         if errors := self._validator.validate(indicator, params, attributes):
-            raise ValueError(f"Validation errors: {', '.join(errors)}")
+            raise DslValidationError(
+                f"Validation errors: {', '.join(errors)}"
+            )
+
+    def _candidates(self, indicator: str) -> list:
+        """Провайдеры, чей манифест содержит этот индикатор (TZ-01 п.2.1).
+
+        Отбор по манифесту вместо ``getattr``-проверок: детерминировано,
+        O(1), и позволяет отличить «провайдер не знает индикатор»
+        (пропустить) от «ошибка данных на этом баре» (пробросить).
+
+        """
+        return [
+            p
+            for p in self.providers
+            if indicator in self._provider_manifests[p].indicators
+        ]
 
     def get_value(
         self,
@@ -100,22 +117,21 @@ class Context:
         provider: IndicatorProvider
         self._validate(indicator, params, attributes)
         first_error: ProviderError | None = None
-        for provider in self.providers:
-            if getattr(provider, 'resolve'):
-                try:
-                    return provider.resolve(
-                        indicator,
-                        params,
-                        attributes,
-                        offset
-                    )
-                except ProviderError as exc:
-                    # Preserve the most specific error (e.g. warmup
-                    # unavailability) instead of masking it with a
-                    # generic "No provider found" (TZ-01 п.1).
-                    if first_error is None:
-                        first_error = exc
-                    continue
+        for provider in self._candidates(indicator):
+            try:
+                return provider.resolve(
+                    indicator,
+                    params,
+                    attributes,
+                    offset
+                )
+            except ProviderError as exc:
+                # Preserve the most specific error (e.g. warmup
+                # unavailability) instead of masking it with a
+                # generic "No provider found".
+                if first_error is None:
+                    first_error = exc
+                continue
         if first_error is not None:
             raise first_error
         raise ProviderError(f"No provider found for indicator '{indicator}'")
@@ -145,8 +161,9 @@ class Context:
         """
         provider: IndicatorProvider
         self._validate(indicator, params, attributes)
-        for provider in self.providers:
-            if getattr(provider, 'resolve_history'):
+        first_error: ProviderError | None = None
+        for provider in self._candidates(indicator):
+            if getattr(provider, 'resolve_history', None) is not None:
                 try:
                     return provider.resolve_history(
                         indicator,
@@ -154,7 +171,9 @@ class Context:
                         attributes,
                         n
                     )
-                except ProviderError:
+                except ProviderError as exc:
+                    if first_error is None:
+                        first_error = exc
                     continue
         # fallback: sequential calls
         return [
@@ -191,18 +210,22 @@ class Context:
         """
         provider: AsyncIndicatorProvider | IndicatorProvider
         self._validate(indicator, params, attributes)
-        for provider in self.providers:
-            if getattr(provider, 'resolve_async'):
+        first_error: ProviderError | None = None
+        for provider in self._candidates(indicator):
+            if getattr(provider, 'resolve_async', None) is not None:
                 try:
-                    return await provider.resolve_async(  # type: ignore[union-attr]  # noqa: E501
+                    got = await provider.resolve_async(  # type: ignore[union-attr]  # noqa: E501
                         indicator,
                         params,
                         attributes,
                         offset
                     )
-                except ProviderError:
+                    return got
+                except ProviderError as exc:
+                    if first_error is None:
+                        first_error = exc
                     continue
-            elif getattr(provider, 'resolve'):
+            elif getattr(provider, 'resolve', None) is not None:
                 loop = asyncio.get_running_loop()
                 try:
                     return await loop.run_in_executor(
@@ -213,8 +236,12 @@ class Context:
                         attributes,
                         offset
                     )
-                except ProviderError:
+                except ProviderError as exc:
+                    if first_error is None:
+                        first_error = exc
                     continue
+        if first_error is not None:
+            raise first_error
         raise ProviderError(f"No provider found for indicator '{indicator}'")
 
     async def get_history_async(
@@ -241,8 +268,9 @@ class Context:
         """
         provider: AsyncIndicatorProvider
         self._validate(indicator, params, attributes)
-        for provider in self.providers:
-            if getattr(provider, 'resolve_history_async'):
+        first_error: ProviderError | None = None
+        for provider in self._candidates(indicator):
+            if getattr(provider, 'resolve_history_async', None) is not None:
                 try:
                     return await provider.resolve_history_async(
                         indicator,
@@ -250,7 +278,9 @@ class Context:
                         attributes,
                         n
                     )
-                except ProviderError:
+                except ProviderError as exc:
+                    if first_error is None:
+                        first_error = exc
                     continue
         # fallback: sequential calls
         return [

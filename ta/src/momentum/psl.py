@@ -24,7 +24,8 @@ from .._array_ops import _apply_offset_fillna
 @njit((float64[:], int64, int64), fastmath=False, cache=True)
 def _psl_numba(close: np.ndarray, length: int, drift: int) -> np.ndarray:
     """Psychological Line core (fastmath disabled: value-dependent
-    ``NaN``/``> 0`` comparisons)."""
+    ``NaN``/``> 0`` comparisons).
+    """
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
     first = length + drift - 1
