@@ -1,5 +1,4 @@
-"""
-Unit tests for Numba‑accelerated array operations (_array_ops).
+"""Unit tests for Numba‑accelerated array operations (_array_ops).
 """
 
 import pytest
@@ -182,7 +181,7 @@ def test_handle_nan_policy_ignore():
 
 
 def test_handle_nan_policy_ffill_bfill():
-    """ffill and bfill policies applied correctly via _handle_nan_policy."""
+    """Ffill and bfill policies applied correctly via _handle_nan_policy."""
     arr = np.array([1.0, np.nan, 3.0, np.nan, 5.0])
     result_ff = _handle_nan_policy(arr, 'ffill', 'test')
     expected = np.array([1.0, 1.0, 3.0, 3.0, 5.0])

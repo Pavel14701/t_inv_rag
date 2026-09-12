@@ -22,9 +22,13 @@ Example usage::
 
 from __future__ import annotations
 
+import dataclasses
+
 import torch
 
+from .config import AIConfig, load_config, set_seed
 from .datatypes import OrderBlock
+from .device import resolve_train_device
 from .io import load_order_blocks_parquet
 from .training import (
     _compute_class_weights,
@@ -44,24 +48,25 @@ def quick_train(
     tp_sl_cols: list[str],
     ind_cols: list[str] | None = None,
     pattern_cols: list[str] | None = None,
-    seq_len: int = 128,
-    batch_size: int = 16,
-    epochs: int = 10,
-    outcome_mode: str = 'binary',
-    lambda_outcome: float = 0.3,
-    lr: float = 1e-4,
-    hidden_size: int = 128,
-    num_layers: int = 4,
-    num_heads: int = 8,
+    seq_len: int | None = None,
+    batch_size: int | None = None,
+    epochs: int | None = None,
+    outcome_mode: str | None = None,
+    lambda_outcome: float | None = None,
+    lr: float | None = None,
+    hidden_size: int | None = None,
+    num_layers: int | None = None,
+    num_heads: int | None = None,
     device: str | None = None,
     val_path: str | None = None,
     val_labels_path: str | None = None,
-    val_split: float = 0.2,
-    class_weight: bool = True,
+    val_split: float | None = None,
+    class_weight: bool | None = None,
     log_dir: str | None = None,
-    early_stopping_patience: int = 3,
+    early_stopping_patience: int | None = None,
     save_best_path: str | None = None,
-    n_patterns: int = 10,
+    n_patterns: int | None = None,
+    config: AIConfig | None = None,
     **model_kwargs,
 ) -> EntryExitTransformer:
     """Train the Entry-Exit transformer in a single call.
@@ -119,20 +124,60 @@ def quick_train(
             used to initialise the model but pattern loss is not applied.
         **model_kwargs: Additional keyword arguments forwarded to
             :class:`EntryExitTransformer` constructor.
+        config: Optional :class:`AIConfig`. When None, loaded from
+            ``configs/ai.yaml`` (or defaults). Explicit keyword arguments
+            override config values.
 
     Returns:
         Trained :class:`EntryExitTransformer` model.
 
     """
-    # ---------- Device ----------
-    if device is None:
-        device_str = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # ---------- Config (TZ-06 п.10): all defaults from YAML ----------
+    cfg = config or load_config()
+    set_seed(cfg.seed)
+    m, t = cfg.model, cfg.training
+    seq_len = seq_len if seq_len is not None else m.seq_len
+    batch_size = batch_size if batch_size is not None else t.batch_size
+    epochs = epochs if epochs is not None else t.epochs
+    outcome_mode = outcome_mode if outcome_mode is not None else m.outcome_mode
+    lambda_outcome = (
+        lambda_outcome if lambda_outcome is not None else t.lambda_outcome
+    )
+    lr = lr if lr is not None else t.lr
+    hidden_size = hidden_size if hidden_size is not None else m.hidden_size
+    num_layers = num_layers if num_layers is not None else m.num_layers
+    num_heads = num_heads if num_heads is not None else m.num_heads
+    val_split = val_split if val_split is not None else t.val_split
+    class_weight = (
+        class_weight if class_weight is not None else t.class_weight
+    )
+    early_stopping_patience = (
+        early_stopping_patience
+        if early_stopping_patience is not None
+        else t.patience
+    )
+    n_patterns = n_patterns if n_patterns is not None else m.n_patterns
+
+    # ---------- Device (TZ-06 п.11) ----------
+    if device is not None:
+        torch_device = torch.device(device)
     else:
-        device_str = device
-    torch_device = torch.device(device_str)
+        torch_device = resolve_train_device(cfg.compute).torch_device
+        assert torch_device is not None
     # ---------- Load order blocks ----------
     obs: list[OrderBlock] = load_order_blocks_parquet(order_blocks)
     # ---------- Build model ----------
+    # Architecture fields not covered by explicit arguments come from the
+    # config; ``**model_kwargs`` still wins over both (TZ-06 п.10).
+    config_model_kwargs = dataclasses.asdict(m)
+    for key in (
+        'seq_len',  # explicit, computed above
+        'hidden_size', 'num_layers', 'num_heads',  # explicit arguments
+        'outcome_mode', 'n_patterns',  # explicit arguments
+        'close_idx',  # training-only, not a constructor kwarg
+    ):
+        config_model_kwargs.pop(key, None)
+    config_model_kwargs.update(model_kwargs)
     model = EntryExitTransformer(
         n_price_feats=len(price_cols),
         n_ind_feats=len(ind_cols) if ind_cols else 0,
@@ -143,7 +188,7 @@ def quick_train(
         num_heads=num_heads,
         outcome_mode=outcome_mode,
         n_patterns=n_patterns,
-        **model_kwargs,
+        **config_model_kwargs,
     ).to(torch_device)
     # ---------- Build labeled loader ----------
     train_loader_all, df = build_loader_from_parquet(
@@ -203,13 +248,13 @@ def quick_train(
         outcome_mode=outcome_mode,
         lambda_outcome=lambda_outcome,
         lr=lr,
-        lambda_pattern=0.1 if pattern_cols else 0.0,
+        lambda_pattern=t.lambda_pattern if pattern_cols else 0.0,
         class_weight=cw,
         log_dir=log_dir,
         save_best=True,
         best_model_path=save_best_path,
         early_stopping_patience=early_stopping_patience,
-        close_idx=3,  # default OHLCV
+        close_idx=m.close_idx,
     )
     # Ensure the returned module is indeed an EntryExitTransformer
     assert isinstance(model, EntryExitTransformer), (

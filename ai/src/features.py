@@ -12,10 +12,15 @@ from typing import NamedTuple
 import numpy as np
 import polars as pl
 
+from .config import RiskConfig
 from .datatypes import OrderBlock
 
 
-def compute_atr(df: pl.DataFrame, period: int = 14) -> np.ndarray:
+def compute_atr(
+    df: pl.DataFrame,
+    period: int | None = None,
+    risk: RiskConfig | None = None,
+) -> np.ndarray:
     """Compute the causal Average True Range (ATR) for a DataFrame.
 
     The ATR at bar ``t`` is the mean of true range over the window
@@ -25,13 +30,18 @@ def compute_atr(df: pl.DataFrame, period: int = 14) -> np.ndarray:
 
     Args:
         df: DataFrame with columns 'high', 'low', 'close'.
-        period: Lookback period for the moving average (default 14).
+        period: Lookback period (default 14; overridden by ``risk``).
+        risk: Optional :class:`RiskConfig` supplying ``atr_period`` /
+            ``atr_floor`` (configs/ai.yaml).
 
     Returns:
         np.ndarray of shape (len(df),) with ATR values as float32.
         Minimum value is clipped to 1e-6 to avoid division by zero.
 
     """
+    if period is None:
+        period = risk.atr_period if risk is not None else 14
+    atr_floor = risk.atr_floor if risk is not None else 1e-6
     high = df['high'].to_numpy()
     low = df['low'].to_numpy()
     close = df['close'].to_numpy()
@@ -49,16 +59,17 @@ def compute_atr(df: pl.DataFrame, period: int = 14) -> np.ndarray:
             atr[i] = csum[i] / (i + 1)  # expanding mean warm-up
         else:
             atr[i] = (csum[i] - csum[i - period]) / period
-    atr[atr <= 0] = 1e-6
+    atr[atr <= 0] = atr_floor
     return atr.astype(np.float32)
 
 
 def compute_tp_sl(
     df: pl.DataFrame,
     atr: np.ndarray | None = None,
-    tp_atr_multiplier: float = 2.0,
-    sl_atr_multiplier: float = 1.5,
+    tp_atr_multiplier: float | None = None,
+    sl_atr_multiplier: float | None = None,
     close_col: str = 'close',
+    risk: RiskConfig | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute absolute TP/SL levels from the **previous bar's** ATR.
 
@@ -72,22 +83,34 @@ def compute_tp_sl(
     Args:
         df: DataFrame with a close price column.
         atr: Pre-computed causal ATR series (from :func:`compute_atr`).
-            If ``None``, it is computed with ``period=14``.
+            If ``None``, it is computed with the configured ATR period.
         tp_atr_multiplier: ATR multiplier for the take-profit distance.
         sl_atr_multiplier: ATR multiplier for the stop-loss distance.
         close_col: Name of the close price column (default 'close').
+        risk: Optional :class:`RiskConfig` supplying multipliers and the
+            ATR period (configs/ai.yaml). Explicit arguments win.
 
     Returns:
         A tuple ``(tp, sl)`` of float32 arrays of length ``len(df)``.
 
     """
+    tp_mult = (
+        tp_atr_multiplier
+        if tp_atr_multiplier is not None
+        else (risk.tp_atr_multiplier if risk is not None else 2.0)
+    )
+    sl_mult = (
+        sl_atr_multiplier
+        if sl_atr_multiplier is not None
+        else (risk.sl_atr_multiplier if risk is not None else 1.5)
+    )
     close = df[close_col].to_numpy().astype(np.float64)
     if atr is None:
-        atr = compute_atr(df)
+        atr = compute_atr(df, risk=risk)
     atr_prev = np.roll(atr.astype(np.float64), 1)
     atr_prev[0] = atr[0]  # first bar has no previous bar: use its own ATR
-    tp = close + tp_atr_multiplier * atr_prev
-    sl = np.maximum(close - sl_atr_multiplier * atr_prev, 1e-6)
+    tp = close + tp_mult * atr_prev
+    sl = np.maximum(close - sl_mult * atr_prev, 1e-6)
     return tp.astype(np.float32), sl.astype(np.float32)
 
 
@@ -558,15 +581,20 @@ def _find_decision(
 def generate_labels_from_strategy(
     df: pl.DataFrame,
     order_blocks: list[OrderBlock],
-    min_rr: float = 1 / 3,
-    use_r_multiple: bool = False,
-    use_structure_filter: bool = False,
+    min_rr: float | None = None,
+    use_r_multiple: bool | None = None,
+    use_structure_filter: bool | None = None,
     trend_filter: str | None = None,
-    commission_pct: float = 0.001,
-    slippage_pct: float = 0.0005,
-    max_bars_hold: int = 20,
+    commission_pct: float | None = None,
+    slippage_pct: float | None = None,
+    max_bars_hold: int | None = None,
+    risk: RiskConfig | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate action and outcome labels by simulating a strategy.
+
+    Risk parameters may come from three sources (priority order):
+    explicit keyword argument > ``risk`` (RiskConfig from configs/ai.yaml)
+    > legacy defaults (identical to the YAML defaults).
 
     Execution model (look-ahead free):
 
@@ -601,6 +629,8 @@ def generate_labels_from_strategy(
             orders (default 0.0005 = 0.05%).
         max_bars_hold: Maximum bars to hold before a time-based exit
             (default 20; 0 disables).
+        risk: Optional :class:`RiskConfig` from configs/ai.yaml supplying
+            all of the above; explicit keyword arguments win.
 
     Returns:
         A tuple of two 1D numpy arrays:
@@ -610,6 +640,36 @@ def generate_labels_from_strategy(
             2 (ignore).  In R-multiple mode: realised R-multiple or NaN.
 
     """
+    # ---------- Risk parameter resolution (TZ-06 п.10) ----------
+    # explicit kwarg > risk config > legacy default
+    _r = risk
+    min_rr = (
+        min_rr if min_rr is not None
+        else (_r.min_rr if _r is not None else 1 / 3)
+    )
+    use_r_multiple = (
+        use_r_multiple if use_r_multiple is not None
+        else (_r.use_r_multiple if _r is not None else False)
+    )
+    use_structure_filter = (
+        use_structure_filter if use_structure_filter is not None
+        else (_r.use_structure_filter if _r is not None else False)
+    )
+    if trend_filter is None and _r is not None:
+        trend_filter = _r.trend_filter
+    commission_pct = (
+        commission_pct if commission_pct is not None
+        else (_r.commission_pct if _r is not None else 0.001)
+    )
+    slippage_pct = (
+        slippage_pct if slippage_pct is not None
+        else (_r.slippage_pct if _r is not None else 0.0005)
+    )
+    max_bars_hold = (
+        max_bars_hold if max_bars_hold is not None
+        else (_r.max_bars_hold if _r is not None else 20)
+    )
+
     n = df.height
     action = np.full(n, -100, dtype=int)
     outcome = np.full(n, np.nan if use_r_multiple else 2, dtype=float)

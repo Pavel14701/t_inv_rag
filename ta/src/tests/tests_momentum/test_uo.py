@@ -86,8 +86,6 @@ def test_uo_native_matches_talib_custom_periods(ohlc) -> None:
 
 
 @pytest.mark.momentum
-
-
 @pytest.mark.momentum
 def test_uo_all_rising_close() -> None:
     # Gapping-up bars closing at their high: bp == tr -> UO == 100.
@@ -188,6 +186,7 @@ def test_uo_readonly_input(ohlc) -> None:
         arr.setflags(write=False)
     result = uo_numpy(high, low, close, use_talib=False)
     assert_allclose(result, expected, rtol=1e-12, equal_nan=True)
+
 
 def test_uo_kernel_bitwise_vs_numpy(ohlc) -> None:
     high, low, close = ohlc

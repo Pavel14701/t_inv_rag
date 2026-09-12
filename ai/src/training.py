@@ -19,7 +19,9 @@ handles the absence of a validation set gracefully.
 from __future__ import annotations
 
 import itertools
+import logging
 import math
+from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -38,6 +40,8 @@ from .io import (
 )
 from .losses import dual_loss
 from .metrics import compute_action_accuracy, compute_trade_metrics
+
+logger = logging.getLogger(__name__)
 
 
 def build_loader_from_parquet(
@@ -454,7 +458,7 @@ def _log_epoch(
         f'Acc: {action_acc["overall"]:.3f} (entry: {action_acc["entry"]:.3f}) | '  # noqa: E501
         f'WR: {trade_metrics["win_rate"]:.3f} PF: {trade_metrics["profit_factor"]:.2f}'  # noqa: E501
     )
-    print(msg)
+    logger.info(msg)
 
     if writer is not None:
         writer.add_scalar('Loss/train', train_loss, epoch)
@@ -489,7 +493,7 @@ def _checkpoint_and_stop(
         no_improve_count = 0
         if best_model_path is not None:
             torch.save(model.state_dict(), best_model_path)
-            print(f'  -> Best model saved (val_loss={best_val_loss:.4f})')
+            logger.info('  -> Best model saved (val_loss=%.4f)', best_val_loss)
     else:
         no_improve_count += 1
 
@@ -587,7 +591,12 @@ def train_one_round(
             if stop:
                 break
         else:
-            print(f'Epoch {epoch + 1}/{epochs} | Train Loss: {train_loss:.4f}')
+            logger.info(
+                'Epoch %d/%d | Train Loss: %.4f',
+                epoch + 1,
+                epochs,
+                train_loss,
+            )
             if writer:
                 writer.add_scalar('Loss/train', train_loss, epoch)
 
@@ -747,11 +756,18 @@ def _update_labels_parquet(
     labels_path: str,
     new_pseudo: list[tuple[int, int, float]],
     outcome_mode: str = 'binary',
-) -> None:
-    """Persist pseudo-labels into the existing labels Parquet file.
+    round_idx: int = 0,
+) -> int:
+    """Persist pseudo-labels without destructive mutation (TZ-06 п.2.3).
 
-    The file is loaded, modified in memory, and overwritten.  Rows
-    that fall outside the length of the file are ignored.
+    Before any modification the current ``labels.parquet`` is backed up
+    to ``<path>.bak_round<round_idx>`` so a failed or corrupted round can
+    be rolled back with :func:`_rollback_labels`.  A boolean ``is_pseudo``
+    column is added on first write to keep human labels and pseudo-labels
+    separable; bars already marked ``is_pseudo`` are *never overwritten*
+    by a later round (prevents iterative error accumulation).
+
+    Rows that fall outside the length of the file are ignored.
 
     Args:
         labels_path: Path to ``labels.parquet``.
@@ -759,9 +775,21 @@ def _update_labels_parquet(
             as returned by :func:`_generate_pseudo_labels_batch`.
         outcome_mode: Used to choose the fill value for missing
             outcome columns.
+        round_idx: Self-training round index (for the backup name).
+
+    Returns:
+        Number of pseudo-labels actually applied (skips already-pseudo
+        and out-of-range bars).
 
     """
+    import shutil
+
     df_lbl = load_labels_parquet(labels_path)
+
+    # Per-round backup for rollback.
+    backup_path = f'{labels_path}.bak_round{round_idx}.parquet'
+    if not Path(backup_path).exists():
+        shutil.copyfile(labels_path, backup_path)
 
     if 'action' not in df_lbl.columns:
         df_lbl = df_lbl.with_columns([
@@ -770,21 +798,60 @@ def _update_labels_parquet(
                 float('nan') if outcome_mode == 'regression' else 2.0
             ).alias('outcome'),
         ])
+    if 'is_pseudo' not in df_lbl.columns:
+        df_lbl = df_lbl.with_columns([pl.lit(False).alias('is_pseudo')])
 
     action_arr = df_lbl['action'].to_numpy().copy()
     outcome_arr = df_lbl['outcome'].to_numpy().copy()
+    is_pseudo_arr = df_lbl['is_pseudo'].to_numpy().copy()
     n_rows = len(action_arr)
 
+    applied = 0
     for global_bar, pseudo_action, pseudo_outcome in new_pseudo:
-        if 0 <= global_bar < n_rows:
-            action_arr[global_bar] = pseudo_action
-            outcome_arr[global_bar] = pseudo_outcome
+        if not (0 <= global_bar < n_rows):
+            continue
+        if bool(is_pseudo_arr[global_bar]):
+            # Already a pseudo-label from a previous round: do not
+            # re-overwrite it (the model could keep ``correcting`` its
+            # own earlier confident answers).
+            continue
+        action_arr[global_bar] = pseudo_action
+        outcome_arr[global_bar] = pseudo_outcome
+        is_pseudo_arr[global_bar] = True
+        applied += 1
 
     df_lbl = df_lbl.with_columns([
         pl.Series('action', action_arr),
         pl.Series('outcome', outcome_arr),
+        pl.Series('is_pseudo', is_pseudo_arr),
     ])
     save_labels_parquet(df_lbl, labels_path)
+    return applied
+
+
+def _rollback_labels(labels_path: str, round_idx: int) -> None:
+    """Restore ``labels.parquet`` from a per-round backup (TZ-06 п.2.3).
+
+    If the backup for ``round_idx`` exists it is copied back over
+    ``labels_path``.  Useful for undoing a bad self-training round whose
+    pseudo-labels corrupted the dataset.
+
+    Args:
+        labels_path: Path to the live ``labels.parquet``.
+        round_idx: Round whose backup should be restored.
+
+    Raises:
+        FileNotFoundError: If no backup exists for that round.
+
+    """
+    import shutil
+
+    backup_path = f'{labels_path}.bak_round{round_idx}.parquet'
+    if not Path(backup_path).exists():
+        raise FileNotFoundError(
+            f'No backup for round {round_idx}: {backup_path}'
+        )
+    shutil.copyfile(backup_path, labels_path)
 
 
 def _split_train_val(
@@ -888,7 +955,9 @@ def _self_training_round(
         List of pseudo-labels, or ``None``.
 
     """
-    print(f'\n=== Self-training round {round_idx + 1}/{num_rounds} ===')
+    logger.info(
+        '=== Self-training round %d/%d ===', round_idx + 1, num_rounds
+    )
     model = train_one_round(
         model,
         train_loader,
@@ -925,11 +994,11 @@ def _self_training_round(
             all_new_pseudo.extend(batch_pseudo)
 
     if not all_new_pseudo:
-        print('No new pseudo-labels, stopping self-training.')
+        logger.info('No new pseudo-labels, stopping self-training.')
         return None
-    print(
-        f'Generated {len(all_new_pseudo)} pseudo-labels. '
-        'Updating labels.parquet...'
+    logger.info(
+        'Generated %d pseudo-labels. Updating labels...',
+        len(all_new_pseudo),
     )
     return all_new_pseudo
 
@@ -1044,9 +1113,9 @@ def self_training_loop(
         if pseudo_labels is None:
             break
 
-        _update_labels_parquet(labels_path, pseudo_labels, outcome_mode)
-
-        # Rebuild labeled loaders with updated labels
+        _update_labels_parquet(
+            labels_path, pseudo_labels, outcome_mode, round_idx=round_idx
+        )
         loader, df = build_loader_from_parquet(
             features_path, labels_path, order_blocks,
             seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,

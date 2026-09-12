@@ -32,7 +32,8 @@ from .._array_ops import (
 
 def _stoch_of_series(x: np.ndarray, window: int) -> np.ndarray:
     """Rolling stochastic normalisation of a series:
-    100 * (x - LL) / (HH - LL); flat windows -> NaN."""
+    100 * (x - LL) / (HH - LL); flat windows -> NaN.
+    """
     highest = _rolling_max_numba(x, window)
     lowest = _rolling_min_numba(x, window)
     denom = highest - lowest

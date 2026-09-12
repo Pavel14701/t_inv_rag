@@ -123,6 +123,7 @@ def vidya_numba(
     - A NaN in the input poisons the recursive filter from that point
       onward (IEEE 754 propagation, consistent with EMA-like filters).
     - This function is IEEE 754 compliant (no fastmath).
+
     """
     if length < 1:
         raise ValueError(f'VIDYA length must be >= 1, got {length}.')
@@ -209,6 +210,7 @@ def vidya_talib(
     - Infinities are replaced with NaN before calculation.
     - A NaN in the input poisons the recursive filter from that point
       onward (IEEE 754 propagation).
+
     """
     if not talib_available:
         raise ImportError('TA-Lib not available')
@@ -285,6 +287,7 @@ def vidya_ind(
     -----
     - If `close` is a Polars Series, it is converted to NumPy.
     - All operations are IEEE 754 compliant.
+
     """
     if isinstance(close, pl.Series):
         close = close.to_numpy()
@@ -338,6 +341,7 @@ def vidya_polars(
     Notes
     -----
     - All operations are IEEE 754 compliant.
+
     """
     close = df[close_col].to_numpy()
     result = vidya_ind(

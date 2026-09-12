@@ -37,7 +37,8 @@ def _tmo_main_numba(
     drift: int,
 ) -> np.ndarray:
     """Rolling sum of (open[i] - close[i - drift]) over ``length``
-    bars; any NaN in a window poisons that window only."""
+    bars; any NaN in a window poisons that window only.
+    """
     n = len(open_)
     out = np.full(n, np.nan, dtype=np.float64)
     for i in range(length + drift - 1, n):

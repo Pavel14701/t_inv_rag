@@ -77,6 +77,16 @@ class TradingDataset(Dataset):
         if bar_index is not None:
             self.bar_index = torch.tensor(bar_index, dtype=torch.long)
 
+        # TZ-06 п.2.6: order blocks sorted by end_idx so that each window
+        # only scans the prefix of blocks that could fall inside it
+        # (bisect instead of a full scan over all blocks).
+        self._ob_sorted = sorted(
+            self.order_blocks, key=lambda ob: ob.end_idx
+        )
+        self._ob_end_idx = np.asarray(
+            [ob.end_idx for ob in self._ob_sorted], dtype=np.int64
+        )
+
     def __len__(self) -> int:
         """Return the number of possible sliding windows."""
         return len(self.data) - self.seq_len + 1
@@ -110,10 +120,15 @@ class TradingDataset(Dataset):
 
         start_bar = idx
         end_bar = idx + self.seq_len - 1
+        # blocks with end_idx <= end_bar form a prefix (sorted); among
+        # them keep those whose end is not before the window start
+        prefix = int(
+            np.searchsorted(self._ob_end_idx, end_bar, side='right')
+        )
         ob_window = [
             ob
-            for ob in self.order_blocks
-            if start_bar <= ob.end_idx <= end_bar
+            for ob in self._ob_sorted[:prefix]
+            if ob.end_idx >= start_bar
         ]
 
         action_target = self.action_targets[idx: idx + self.seq_len]

@@ -103,7 +103,6 @@ def test_tsi_bounded_and_signed(prices_random_walk) -> None:
     assert tsi2[-1] > 0.0
 
 
-
 @pytest.mark.momentum
 def test_tsi_signal_is_ema_of_tsi(prices_random_walk) -> None:
     close = np.ascontiguousarray(prices_random_walk)

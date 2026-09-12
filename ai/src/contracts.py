@@ -4,9 +4,13 @@ Performs checks on tensor shapes, dtypes, finite values,
 label ranges, and order block integrity before training.
 """
 
+import logging
+
 import torch
 
 from .datatypes import OrderBlock
+
+logger = logging.getLogger(__name__)
 
 
 def _check_tensor(
@@ -73,9 +77,9 @@ def validate_prices(prices: torch.Tensor, n_price_feats: int):
             f'got {prices.shape[-1]}'
         )
     if prices.min() <= 0:
-        print(
-            'Warning: prices contain non-positive values. '
-            'Ensure proper normalization (e.g., z-score or ATR).'
+        logger.warning(
+            'prices contain non-positive values. Ensure proper '
+            'normalization (e.g., z-score or ATR).'
         )
 
 
@@ -106,10 +110,10 @@ def validate_indicators(indicators: torch.Tensor, n_ind_feats: int):
                 f'got {indicators.shape[-1]}'
             )
     elif indicators.shape[-1] != 0:
-        print(
-            'Warning: n_ind_feats=0 but indicators has '
-            f'{indicators.shape[-1]} features. '
-            'Will be ignored by model.'
+        logger.warning(
+            'n_ind_feats=0 but indicators has %d features; '
+            'they will be ignored by the model.',
+            indicators.shape[-1],
         )
 
 
@@ -138,9 +142,9 @@ def validate_signals(signals: torch.Tensor, n_sig_feats: int):
                 f'got {signals.shape[-1]}'
             )
     elif signals.shape[-1] != 0:
-        print(
-            'Warning: n_sig_feats=0 but signals has '
-            f'{signals.shape[-1]} features.'
+        logger.warning(
+            'n_sig_feats=0 but signals has %d features.',
+            signals.shape[-1],
         )
 
 
@@ -320,9 +324,9 @@ def validate_outcome_targets(
             )
     elif outcome_mode == 'regression':
         if outcome_targets.abs().max() > 1e6:
-            print(
-                'Warning: outcome_targets has very large values, '
-                'consider normalization.'
+            logger.warning(
+                'outcome_targets has very large values; consider '
+                'normalization.'
             )
 
 
@@ -410,18 +414,18 @@ def validate_batch(
             f'bar_indices shape {bar_indices.shape} != ({b},)'
         )
     if pattern_tgt.dtype not in (torch.float32, torch.float64):
-        print(
-            'Warning: pattern_targets should be float32; '
-            f'got {pattern_tgt.dtype}.'
+        logger.warning(
+            'pattern_targets should be float32; got %s.',
+            pattern_tgt.dtype,
         )
     if prices.dtype == torch.float64:
-        print(
-            'Warning: prices are float64, consider '
-            'converting to float32 for performance.'
+        logger.warning(
+            'prices are float64; consider converting to float32 '
+            'for performance.'
         )
     if prices.dtype == torch.float16:
-        print(
-            'Warning: float16 detected. Use mixed precision '
-            '(torch.amp), otherwise instability may occur.'
+        logger.warning(
+            'float16 detected. Use mixed precision (torch.amp), '
+            'otherwise instability may occur.'
         )
-    print('Batch validation passed.')
+    logger.debug('Batch validation passed.')

@@ -481,7 +481,7 @@ def test_zigzag_polars_does_not_mutate_input(
 
 @pytest.mark.trend
 def test_zigzag_polars_suffix(df_ohlc_small: pl.DataFrame) -> None:
-    """suffix is appended to the new column names."""
+    """Suffix is appended to the new column names."""
     result = zigzag_polars(df_ohlc_small, suffix='_zz')
     assert 'is_peak_zz' in result.columns
     assert 'is_valley_zz' in result.columns

@@ -4,7 +4,7 @@
 import numpy as np
 import polars as pl
 import pytest
-from numpy.testing import assert_allclose, assert_array_equal
+from numpy.testing import assert_allclose
 
 from ...external import talib, talib_available
 from ...ma import ma_mode

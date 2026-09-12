@@ -215,7 +215,7 @@ def test_sinwma_numba_negative_offset(
 def test_sinwma_numba_fillna(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
-    """fillna replaces warm-up NaNs."""
+    """Fillna replaces warm-up NaNs."""
     result = sinwma_numba(prices_random_walk, length=10, fillna=0.0)
     assert not np.isnan(result).any()
     assert (result[:9] == 0.0).all()

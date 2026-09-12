@@ -25,17 +25,44 @@ Parquet — для тестов. Данные проходят через `Price
 
 ## 3. Требования
 
-1. CLI: `infer --strategy <id|файл> --ticker --timeframe --from --to [--ml <bundle_path>]`.
-2. Конвейер: загрузка свечей → `PriceDataFramePolars` → `TaProvider` →
-   `evaluate_dsl(entry/exit)` по барам (interpreter на бар, провайдер с кэшем TZ-03) →
-   серии сигналов → если `--ml`: окна → predict_p_win → фильтр по порогу.
-3. Выход: CSV/Parquet `{date, entry_signal, exit_signal, p_win}` + сводка
-   (число сигналов, warmup-пропуски). Никакой торговли — только сигналы.
-4. Производительность: через `resolve_history`-батчи; цель < 1 с на 5000 баров × 2 выражения.
-5. Никаких обращений к брокерским ордерам — модуль read-only по отношению к рынку.
+1. ✅ CLI: `infer.cli` — `--source {synthetic|parquet|yfinance|tinvest}`,
+   `--entry/--exit` или `--strategy-file` (JSON `{dsl_entry, dsl_exit}` —
+   заготовка формата Strategy TZ-02), `--ml <bundle>` + `--p-threshold`,
+   `--output` (csv/parquet по расширению).
+2. ✅ Конвейер: загрузка свечей → `BarSeriesProvider` (compute-once + кэш,
+   каузальные ema/sma/rsi/atr + серии цен) → parse один раз, Interpreter
+   на бар → серии сигналов → `--ml`: окна → `predict_p_win_at` (контракт
+   TZ-06) → фильтр по порогу.
+   - Кэш валидации `_CachedContext` (манифест-валидатор не гоняется
+     на каждом обращении);
+   - Interpreter переиспользуется, если в AST нет `let` (безопасность
+     `_locals`, TZ-01 п.3);
+   - фикс попутный (TZ-01 п.1, частично): `Context.get_value` больше не
+     глотает исходный `ProviderError` провайдера — раньше он маскировал
+     `WarmupNotReady` безликим «No provider found».
+3. ✅ Выход: `{date, entry_signal, exit_signal, p_win}` + сводка
+   `summary()` (bars/entry/exit/warmup_skips/ml_filtered/time) и список
+   provider-ошибок. Никакой торговли — модуль read-only.
+4. ✅ Производительность: тёплый прогон 5000 баров × 2 выражения
+   (`ema+rsi` / `sma`) — **~180 мс** (цель < 1 с). Первый прогон в
+   процессе включает numba-JIT (~1.4 с) — одноразово.
+5. ✅ Никаких обращений к брокерским ордерам.
+
+Ограничения (честно зафиксированы):
+- ML-окно: indicators/signals/tp/sl — нули (полный фичевый конвейер
+  появится в TZ-02/TZ-04); размерности сверяются с bundle.
+- Набор индикаторов провайдера пока минимальный (ema/sma/rsi/atr +
+  цены/volume); расширение до полного реестра ta — TZ-03.
+- T-Invest-загрузчик требует `INVEST_TOKEN`; yfinance — dev-фолбэк.
 
 ## 4. Критерии приёмки
 
-- Смоук на синтетическом ряде: сигналы совпадают с бэктестом на тех же данных (bar-by-bar).
-- Ручной прогон на реальных свечах T-Invest.
-- С `--ml` и bundle: P(win) в [0,1] на каждом сигнальном баре, латентность < 5 мс/бар (CPU).
+- ✅ Смоук на синтетическом ряде: 8 тестов `infer/tests/` — паритет
+  resolve с прямыми ta-функциями, offset-семантика (`[n]` = n баров
+  назад), warmup-исключения, нормализация legacy-схемы, end-to-end
+  сигналы+сводка, ранняя ошибка parse, CLI-смоук с записью CSV.
+- ⬜ Ручной прогон на реальных свечах T-Invest (нужен `INVEST_TOKEN`).
+- ✅ Контракт `--ml`: P(win) в [0,1] на сигнальных барах через
+  `EntryExitPredictor.predict_p_win` (проверено тестами TZ-06);
+  латентность — замерить на реальном железе.
+- Полный набор: 302 passed, 7 skipped (infer + dsl + ai), ruff чист.
