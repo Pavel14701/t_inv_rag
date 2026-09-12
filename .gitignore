@@ -14,3 +14,4 @@ wheels/
 
 to_do.txt
 .pytest_cache
+*.log

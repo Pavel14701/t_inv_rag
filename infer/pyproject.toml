@@ -9,10 +9,20 @@ dependencies = [
     "pyyaml>=6.0.3",
     "t-tech-investments>=0.3.3",
     "yfinance>=1.5.1",
+    # Кросс-пакетные зависимости. Члены workspace — виртуальные пакеты
+    # (package = false), поэтому зависимости соседей объявляются напрямую.
+    # dsl (infer.engine / infer.provider): niquests;
+    # ta (infer.engine._import_ta): numba, scipy, numpy.
+    "niquests>=3.20.1",
+    "numba>=0.66.0",
+    "scipy>=1.14",
 ]
 
 [project.optional-dependencies]
 # ML-инференс (--ml) требует model bundle, собранный dte-ai (TZ-06 п.2.4).
+# Код ai/ импортируется по имени пакета из корня репозитория; его runtime-зависимости
+# (torch, pyyaml) повторены здесь, чтобы изолированное окружение dte-infer[ml]
+# было самодостаточным.
 ml = ["torch>=2.4.1"]
 
 [dependency-groups]

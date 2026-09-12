@@ -1,5 +1,10 @@
 # TZ-12. Бенчмарки индикаторов ta/
 
+> Источники для выбора сценариев и эталонных значений: `dev_docs/overlap_indicators..md`,
+> `dev_docs/momentum_indicators..md`, `dev_docs/volatility_indicators.md`,
+> `dev_docs/trend_indicators..md`, `dev_docs/candle.md` (эффективность паттернов
+> по Булковски — для smoke-корректности, не для скорости).
+
 ## 1. Контекст
 
 Сильная сторона проекта — Numba-ядра ta/ (1952 теста, каузальность) — не подкреплена
