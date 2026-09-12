@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Tests for Harami (cdl_harami)."""
 
+from ta.src.candle.cdl_harami import cdl_harami, cdl_harami_polars
+
 from ._helpers import pattern_suite
-from ....candle.cdl_harami import cdl_harami, cdl_harami_polars
+
 
 # large black body, small white body inside it
 BULL = [
@@ -16,15 +18,17 @@ BEAR = [
     (102.8, 103.0, 99.8, 100.2),
 ]
 
-globals().update(pattern_suite(
-    name='cdl_harami',
-    fn=cdl_harami,
-    polars_fn=cdl_harami_polars,
-    output_col='CDL_HARAMI',
-    bull=BULL,
-    bear=BEAR,
-    bull_value=1.0,
-    bear_value=-1.0,
-    talib_values=(0.0, 1.0, -1.0),
-    extra={'strict': False},
-))
+globals().update(
+    pattern_suite(
+        name="cdl_harami",
+        fn=cdl_harami,
+        polars_fn=cdl_harami_polars,
+        output_col="CDL_HARAMI",
+        bull=BULL,
+        bear=BEAR,
+        bull_value=1.0,
+        bear_value=-1.0,
+        talib_values=(0.0, 1.0, -1.0),
+        extra={"strict": False},
+    )
+)

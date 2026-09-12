@@ -1,11 +1,12 @@
 """Unit tests for Heikin-Ashi calculation (Numba implementation)."""
 
-import pytest
 import numpy as np
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...candle.heikin_ashi import ha_numpy, ha, ha_polars
+from ta.src.candle.heikin_ashi import ha, ha_numpy, ha_polars
 
 
 @pytest.mark.unit
@@ -79,20 +80,22 @@ def test_heikin_ashi_with_pl_series():
 @pytest.mark.candle
 def test_heikin_ashi_polars_basic():
     """Test HA Polars wrapper returns correct DataFrame."""
-    df = pl.DataFrame({
-        'date': [1, 2, 3, 4],
-        'open': [100, 102, 104, 106],
-        'high': [101, 103, 105, 107],
-        'low': [99, 101, 103, 105],
-        'close': [102, 104, 106, 108],
-    })
-    result = ha_polars(df, suffix='_HA')
+    df = pl.DataFrame(
+        {
+            "date": [1, 2, 3, 4],
+            "open": [100, 102, 104, 106],
+            "high": [101, 103, 105, 107],
+            "low": [99, 101, 103, 105],
+            "close": [102, 104, 106, 108],
+        }
+    )
+    result = ha_polars(df, suffix="_HA")
     expected_cols = [
-        'date',
-        'HA_open_HA',
-        'HA_high_HA',
-        'HA_low_HA',
-        'HA_close_HA'
+        "date",
+        "HA_open_HA",
+        "HA_high_HA",
+        "HA_low_HA",
+        "HA_close_HA",
     ]
     assert list(result.columns) == expected_cols
     assert len(result) == len(df)
@@ -100,42 +103,40 @@ def test_heikin_ashi_polars_basic():
     for col in expected_cols[1:]:
         assert result[col].dtype == pl.Float64
     # Check that the values are the same as from ha_numpy (skip date col)
-    open_arr = df['open'].to_numpy()
-    high_arr = df['high'].to_numpy()
-    low_arr = df['low'].to_numpy()
-    close_arr = df['close'].to_numpy()
+    open_arr = df["open"].to_numpy()
+    high_arr = df["high"].to_numpy()
+    low_arr = df["low"].to_numpy()
+    close_arr = df["close"].to_numpy()
     ha_o_np, ha_h_np, ha_l_np, ha_c_np = ha_numpy(
-        open_arr,
-        high_arr,
-        low_arr,
-        close_arr
+        open_arr, high_arr, low_arr, close_arr
     )
-    assert_allclose(result['HA_open_HA'].to_numpy(), ha_o_np)
-    assert_allclose(result['HA_high_HA'].to_numpy(), ha_h_np)
-    assert_allclose(result['HA_low_HA'].to_numpy(), ha_l_np)
-    assert_allclose(result['HA_close_HA'].to_numpy(), ha_c_np)
+    assert_allclose(result["HA_open_HA"].to_numpy(), ha_o_np)
+    assert_allclose(result["HA_high_HA"].to_numpy(), ha_h_np)
+    assert_allclose(result["HA_low_HA"].to_numpy(), ha_l_np)
+    assert_allclose(result["HA_close_HA"].to_numpy(), ha_c_np)
 
 
 @pytest.mark.unit
 @pytest.mark.candle
 def test_heikin_ashi_polars_with_offset_fillna():
     """Test HA Polars with offset and fillna."""
-    df = pl.DataFrame({
-        'date': [1, 2, 3, 4],
-        'open': [100, 102, 104, 106],
-        'high': [101, 103, 105, 107],
-        'low': [99, 101, 103, 105],
-        'close': [102, 104, 106, 108],
-    })
-    result = ha_polars(df, offset=1, fillna=0.0, suffix='_HA')
-    assert result['HA_open_HA'][0] == 0.0
-    assert result['HA_high_HA'][0] == 0.0
-    assert result['HA_low_HA'][0] == 0.0
-    assert result['HA_close_HA'][0] == 0.0
+    df = pl.DataFrame(
+        {
+            "date": [1, 2, 3, 4],
+            "open": [100, 102, 104, 106],
+            "high": [101, 103, 105, 107],
+            "low": [99, 101, 103, 105],
+            "close": [102, 104, 106, 108],
+        }
+    )
+    result = ha_polars(df, offset=1, fillna=0.0, suffix="_HA")
+    assert result["HA_open_HA"][0] == 0.0
+    assert result["HA_high_HA"][0] == 0.0
+    assert result["HA_low_HA"][0] == 0.0
+    assert result["HA_close_HA"][0] == 0.0
     # Compare shifted values
-    result_no_offset = ha_polars(df, suffix='_HA')
-    for col in ['HA_open_HA', 'HA_high_HA', 'HA_low_HA', 'HA_close_HA']:
+    result_no_offset = ha_polars(df, suffix="_HA")
+    for col in ["HA_open_HA", "HA_high_HA", "HA_low_HA", "HA_close_HA"]:
         assert_allclose(
-            result[col].to_numpy()[1:],
-            result_no_offset[col].to_numpy()[:-1]
+            result[col].to_numpy()[1:], result_no_offset[col].to_numpy()[:-1]
         )

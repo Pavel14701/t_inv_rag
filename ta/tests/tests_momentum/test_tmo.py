@@ -4,10 +4,11 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...momentum.tmo import _tmo_main_numba, tmo_ind, tmo_numpy, tmo_polars
-from ...overlap.ema import ema_ind
+from ta.src.momentum.tmo import _tmo_main_numba, tmo_ind, tmo_numpy, tmo_polars
+from ta.src.overlap.ema import ema_ind
 
 
 @pytest.fixture
@@ -31,7 +32,7 @@ def _tmo_reference(
     mom[drift:] = open_[drift:] - close[:-drift]
     main = np.full(n, np.nan)
     for i in range(length + drift - 1, n):
-        window = mom[i - length + 1:i + 1]
+        window = mom[i - length + 1 : i + 1]
         if np.isnan(window).any():
             continue
         main[i] = window.sum()
@@ -40,9 +41,10 @@ def _tmo_reference(
     first_valid = np.argmax(~np.isnan(main))
     if not np.isnan(main[first_valid]):
         filled[:first_valid] = main[first_valid]
-    signalma = ema_ind(filled, length=smooth, use_talib=False,
-                       nan_policy='ignore')
-    signalma[:first_valid + smooth - 1] = np.nan
+    signalma = ema_ind(
+        filled, length=smooth, use_talib=False, nan_policy="ignore"
+    )
+    signalma[: first_valid + smooth - 1] = np.nan
     if normalize:
         main = main * 100.0 / length
         signalma = signalma * 100.0 / length
@@ -76,7 +78,7 @@ def test_tmo_main_is_rolling_sum(oc) -> None:
     mom[1:] = open_[1:] - close[:-1]
     expected = np.full(200, np.nan)
     for i in range(14, 200):
-        expected[i] = mom[i - 13:i + 1].sum()
+        expected[i] = mom[i - 13 : i + 1].sum()
     assert_allclose(main, expected, rtol=1e-12, equal_nan=True)
 
 
@@ -136,9 +138,14 @@ def test_tmo_nan_propagation(oc) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.parametrize('kw', [
-    {'length': 0}, {'drift': 0}, {'smooth': -1},
-])
+@pytest.mark.parametrize(
+    "kw",
+    [
+        {"length": 0},
+        {"drift": 0},
+        {"smooth": -1},
+    ],
+)
 def test_tmo_invalid_params(kw: dict) -> None:
     with pytest.raises(ValueError):
         tmo_numpy(np.arange(40.0), np.arange(40.0), **kw)
@@ -181,19 +188,19 @@ def test_tmo_ind_numpy_and_series(oc) -> None:
 def test_tmo_polars(df_ohlc: pl.DataFrame) -> None:
     # df_ohlc has no 'open' column -> synthesise one from high/low.
     df = df_ohlc.with_columns(
-        ((df_ohlc['high'] + df_ohlc['low']) / 2.0).alias('open')
+        ((df_ohlc["high"] + df_ohlc["low"]) / 2.0).alias("open")
     )
-    open_ = df['open'].to_numpy()
-    close = df['close'].to_numpy()
+    open_ = df["open"].to_numpy()
+    close = df["close"].to_numpy()
     main, signalma = tmo_numpy(open_, close)
     result = tmo_polars(df)
-    assert 'TMO_14' in result.columns
-    assert 'TMOS_14' in result.columns
+    assert "TMO_14" in result.columns
+    assert "TMOS_14" in result.columns
     assert_allclose(
-        result['TMO_14'].to_numpy(), main, rtol=1e-12, equal_nan=True
+        result["TMO_14"].to_numpy(), main, rtol=1e-12, equal_nan=True
     )
     assert_allclose(
-        result['TMOS_14'].to_numpy(), signalma, rtol=1e-12, equal_nan=True
+        result["TMOS_14"].to_numpy(), signalma, rtol=1e-12, equal_nan=True
     )
 
 
@@ -216,5 +223,5 @@ def test_tmo_drift(oc) -> None:
     mom[3:] = open_[3:] - close[:-3]
     expected = np.full(200, np.nan)
     for i in range(16, 200):
-        expected[i] = mom[i - 13:i + 1].sum()
+        expected[i] = mom[i - 13 : i + 1].sum()
     assert_allclose(main, expected, rtol=1e-12, equal_nan=True)

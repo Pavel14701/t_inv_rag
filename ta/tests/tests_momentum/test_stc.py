@@ -4,16 +4,17 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...momentum.stc import (
+from ta.src.momentum.stc import (
     _ema_of_warmup,
     _stoch_of_series,
     stc_ind,
     stc_numpy,
     stc_polars,
 )
-from ...overlap.ema import ema_ind
+from ta.src.overlap.ema import ema_ind
 
 
 def _stoch_reference(x: np.ndarray, window: int) -> np.ndarray:
@@ -21,7 +22,7 @@ def _stoch_reference(x: np.ndarray, window: int) -> np.ndarray:
     n = len(x)
     out = np.full(n, np.nan)
     for i in range(window - 1, n):
-        w = x[i - window + 1:i + 1]
+        w = x[i - window + 1 : i + 1]
         if np.isnan(w).any():
             continue
         denom = w.max() - w.min()
@@ -39,10 +40,9 @@ def _stc_reference(
     factor: int = 3,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Pure numpy STC reference with the same warm-up seeding."""
-    macd = (
-        ema_ind(close, length=fast, use_talib=False, nan_policy='ignore')
-        - ema_ind(close, length=slow, use_talib=False, nan_policy='ignore')
-    )
+    macd = ema_ind(
+        close, length=fast, use_talib=False, nan_policy="ignore"
+    ) - ema_ind(close, length=slow, use_talib=False, nan_policy="ignore")
 
     def seeded_ema(x: np.ndarray, length: int) -> np.ndarray:
         out = np.full(len(x), np.nan)
@@ -51,9 +51,10 @@ def _stc_reference(
             return out
         filled = x.copy()
         filled[:first_valid] = x[first_valid]
-        res = ema_ind(filled, length=length, use_talib=False,
-                      nan_policy='ignore')
-        res[:first_valid + length - 1] = np.nan
+        res = ema_ind(
+            filled, length=length, use_talib=False, nan_policy="ignore"
+        )
+        res[: first_valid + length - 1] = np.nan
         return res
 
     stoch = seeded_ema(_stoch_reference(macd, tclen), factor)
@@ -111,8 +112,7 @@ def test_ema_of_warmup_masks_prefix() -> None:
     # Compare with direct EMA on the filled series.
     filled = x.copy()
     filled[:10] = x[10]
-    expected = ema_ind(filled, length=4, use_talib=False,
-                       nan_policy='ignore')
+    expected = ema_ind(filled, length=4, use_talib=False, nan_policy="ignore")
     expected[:13] = np.nan
     assert_allclose(result, expected, rtol=1e-12, equal_nan=True)
 
@@ -124,9 +124,15 @@ def test_ema_of_warmup_all_nan() -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.parametrize('kw', [
-    {'tclen': 0}, {'fast': 0}, {'slow': -1}, {'factor': 0},
-])
+@pytest.mark.parametrize(
+    "kw",
+    [
+        {"tclen": 0},
+        {"fast": 0},
+        {"slow": -1},
+        {"factor": 0},
+    ],
+)
 def test_stc_invalid_params(kw: dict) -> None:
     with pytest.raises(ValueError):
         stc_numpy(np.arange(60.0), **kw)
@@ -165,13 +171,13 @@ def test_stc_ind_numpy_and_series(prices_random_walk) -> None:
 
 @pytest.mark.momentum
 def test_stc_polars(df_random_walk: pl.DataFrame) -> None:
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     stc, macd, stoch = stc_numpy(close)
     result = stc_polars(df_random_walk)
     for col, exp in (
-        ('STC_10_12_26_3', stc),
-        ('STCmacd_10_12_26_3', macd),
-        ('STCstoch_10_12_26_3', stoch),
+        ("STC_10_12_26_3", stc),
+        ("STCmacd_10_12_26_3", macd),
+        ("STCstoch_10_12_26_3", stoch),
     ):
         assert col in result.columns
         assert_allclose(

@@ -5,15 +5,15 @@ engineering and label generation functions scale correctly and produce
 valid outputs without memory or performance issues.
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
 
-from ..features import (
+from ai.src.features import (
     compute_atr,
     compute_ob_distances,
-    generate_labels_from_strategy
+    generate_labels_from_strategy,
 )
 
 
@@ -60,7 +60,7 @@ def test_compute_ob_distances_large(
     """
     atr: npt.NDArray[np.float32] = compute_atr(large_dataframe, period=14)
     supply, demand, strongest, is_in_zone = compute_ob_distances(
-        large_dataframe, large_order_blocks, atr, close_col='close'
+        large_dataframe, large_order_blocks, atr, close_col="close"
     )
     assert len(supply) == len(large_dataframe)
     assert len(demand) == len(large_dataframe)

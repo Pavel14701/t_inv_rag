@@ -4,11 +4,12 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...momentum.kst import kst_ind, kst_numpy, kst_polars
-from ...momentum.roc import roc_ind
-from ...overlap.sma import sma_ind
+from ta.src.momentum.kst import kst_ind, kst_numpy, kst_polars
+from ta.src.momentum.roc import roc_ind
+from ta.src.overlap.sma import sma_ind
 
 
 def _kst_reference(
@@ -22,11 +23,11 @@ def _kst_reference(
     for i, (roc_len, sma_len) in enumerate(zip(rocs, smas)):
         roc = roc_ind(close, length=roc_len, use_talib=False)
         smoothed = sma_ind(
-            roc, length=sma_len, use_talib=False, nan_policy='ignore'
+            roc, length=sma_len, use_talib=False, nan_policy="ignore"
         )
         kst = kst + (i + 1.0) * smoothed
     signalma = sma_ind(
-        kst, length=signal, use_talib=False, nan_policy='ignore'
+        kst, length=signal, use_talib=False, nan_policy="ignore"
     )
     return kst, signalma
 
@@ -47,11 +48,14 @@ def test_kst_weighted_sum_identity(prices_random_walk) -> None:
     kst, _ = kst_numpy(close)
     total = np.zeros_like(close)
     for weight, roc_len, sma_len in (
-        (1.0, 10, 10), (2.0, 15, 10), (3.0, 20, 10), (4.0, 30, 15)
+        (1.0, 10, 10),
+        (2.0, 15, 10),
+        (3.0, 20, 10),
+        (4.0, 30, 15),
     ):
         roc = roc_ind(close, length=roc_len, use_talib=False)
         smoothed = sma_ind(
-            roc, length=sma_len, use_talib=False, nan_policy='ignore'
+            roc, length=sma_len, use_talib=False, nan_policy="ignore"
         )
         total += weight * smoothed
     assert_allclose(kst, total, rtol=1e-12, equal_nan=True)
@@ -72,26 +76,40 @@ def test_kst_warmup_nan(prices_random_walk) -> None:
 def test_kst_signal_is_sma_of_kst(prices_random_walk) -> None:
     close = np.ascontiguousarray(prices_random_walk)
     kst, signalma = kst_numpy(close)
-    expected = sma_ind(
-        kst, length=9, use_talib=False, nan_policy='ignore'
-    )
+    expected = sma_ind(kst, length=9, use_talib=False, nan_policy="ignore")
     assert_allclose(signalma, expected, rtol=1e-12, equal_nan=True)
 
 
 @pytest.mark.momentum
 def test_kst_custom_periods() -> None:
     close = np.linspace(10.0, 40.0, 80)
-    kst, _ = kst_numpy(close, roc1=3, roc2=4, roc3=5, roc4=6,
-                       sma1=2, sma2=2, sma3=2, sma4=2, signal=2)
+    kst, _ = kst_numpy(
+        close,
+        roc1=3,
+        roc2=4,
+        roc3=5,
+        roc4=6,
+        sma1=2,
+        sma2=2,
+        sma3=2,
+        sma4=2,
+        signal=2,
+    )
     # Longest chain: ROC(6) valid from 6, SMA(2) from 7.
     assert np.isnan(kst[:7]).all()
     assert not np.isnan(kst[7:]).any()
 
 
 @pytest.mark.momentum
-@pytest.mark.parametrize('kw', [
-    {'roc1': 0}, {'roc4': -1}, {'sma2': 0}, {'signal': -3},
-])
+@pytest.mark.parametrize(
+    "kw",
+    [
+        {"roc1": 0},
+        {"roc4": -1},
+        {"sma2": 0},
+        {"signal": -3},
+    ],
+)
 def test_kst_invalid_params(kw: dict) -> None:
     with pytest.raises(ValueError):
         kst_numpy(np.arange(60.0), **kw)
@@ -131,18 +149,22 @@ def test_kst_ind_numpy_and_series(prices_random_walk) -> None:
 
 @pytest.mark.momentum
 def test_kst_polars(df_random_walk: pl.DataFrame) -> None:
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     kst, signalma = kst_numpy(close)
     result = kst_polars(df_random_walk)
-    assert 'KST_10_15_20_30' in result.columns
-    assert 'KSTs_10_15_20_30' in result.columns
+    assert "KST_10_15_20_30" in result.columns
+    assert "KSTs_10_15_20_30" in result.columns
     assert_allclose(
-        result['KST_10_15_20_30'].to_numpy(), kst,
-        rtol=1e-12, equal_nan=True,
+        result["KST_10_15_20_30"].to_numpy(),
+        kst,
+        rtol=1e-12,
+        equal_nan=True,
     )
     assert_allclose(
-        result['KSTs_10_15_20_30'].to_numpy(), signalma,
-        rtol=1e-12, equal_nan=True,
+        result["KSTs_10_15_20_30"].to_numpy(),
+        signalma,
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 

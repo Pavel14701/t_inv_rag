@@ -13,17 +13,18 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, extreme, all-NaN)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose, assert_almost_equal
 
-from ...overlap.sinwma import (
+from ta.src.overlap.sinwma import (
     _sine_weights,
     _sinwma_numba_core,
-    sinwma_numba,
     sinwma_ind,
+    sinwma_numba,
     sinwma_polars,
 )
 
@@ -43,7 +44,7 @@ def _sinwma_reference(
     w = np.sin(np.arange(1, length + 1) * np.pi / (length + 1))
     w /= w.sum()
     # Most recent bar gets w[-1]; reverse for np.convolve ('valid' mode)
-    out[length - 1:] = np.convolve(close, w[::-1], mode='valid')
+    out[length - 1 :] = np.convolve(close, w[::-1], mode="valid")
     return out
 
 
@@ -69,9 +70,7 @@ def test_sinwma_weights_symmetric() -> None:
 def test_sinwma_weights_formula() -> None:
     """Weights must equal sin(i * pi / (length + 1)) normalised."""
     length = 7
-    expected = np.sin(
-        np.arange(1, length + 1) * np.pi / (length + 1)
-    )
+    expected = np.sin(np.arange(1, length + 1) * np.pi / (length + 1))
     expected /= expected.sum()
     assert_allclose(_sine_weights(length), expected, rtol=1e-12)
 
@@ -97,7 +96,7 @@ def test_sinwma_weights_readonly() -> None:
 def test_sinwma_weights_invalid_length() -> None:
     """Length below 1 raises ValueError (no silent NaN weights)."""
     for bad_length in (0, -1, -10):
-        with pytest.raises(ValueError, match='must be >= 1'):
+        with pytest.raises(ValueError, match="must be >= 1"):
             _sine_weights(bad_length)
 
 
@@ -110,9 +109,7 @@ def test_sinwma_core_against_reference(
 ) -> None:
     """_sinwma_numba_core must match the pure Python reference."""
     for length in (1, 4, 14, 30):
-        result = _sinwma_numba_core(
-            prices_random_walk, _sine_weights(length)
-        )
+        result = _sinwma_numba_core(prices_random_walk, _sine_weights(length))
         expected = _sinwma_reference(prices_random_walk, length)
         assert_allclose(result, expected, rtol=1e-10, equal_nan=True)
 
@@ -142,14 +139,14 @@ def test_sinwma_numba_invalid_length() -> None:
     """Length below 1 raises ValueError."""
     close = np.arange(1.0, 21.0)
     for bad_length in (0, -5):
-        with pytest.raises(ValueError, match='must be >= 1'):
+        with pytest.raises(ValueError, match="must be >= 1"):
             sinwma_numba(close, length=bad_length)
 
 
 @pytest.mark.overlap
 def test_sinwma_numba_too_short() -> None:
     """Series shorter than `length` raises ValueError, not silent NaN."""
-    with pytest.raises(ValueError, match='Input series too short'):
+    with pytest.raises(ValueError, match="Input series too short"):
         sinwma_numba(np.array([1.0, 2.0]), length=5)
 
 
@@ -167,8 +164,8 @@ def test_sinwma_numba_warmup_nans(
     """First length-1 values are NaN, the rest are finite."""
     length = 14
     result = sinwma_numba(prices_random_walk, length=length)
-    assert np.isnan(result[:length - 1]).all()
-    assert np.isfinite(result[length - 1:]).all()
+    assert np.isnan(result[: length - 1]).all()
+    assert np.isfinite(result[length - 1 :]).all()
     assert len(result) == len(prices_random_walk)
 
 
@@ -227,14 +224,14 @@ def test_sinwma_numba_fillna(
 @pytest.mark.overlap
 def test_sinwma_numba_nan_policy_raise(prices_with_nan) -> None:
     """Default nan_policy='raise' rejects input containing NaN."""
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         sinwma_numba(prices_with_nan, length=5)
 
 
 @pytest.mark.overlap
 def test_sinwma_numba_nan_policy_ignore(prices_with_nan) -> None:
     """nan_policy='ignore' lets NaN propagate within affected windows."""
-    result = sinwma_numba(prices_with_nan, length=5, nan_policy='ignore')
+    result = sinwma_numba(prices_with_nan, length=5, nan_policy="ignore")
     # NaN at index 5 affects windows ending at indices 5..9
     assert np.isnan(result[5:10]).all()
     # Windows without the NaN stay finite
@@ -244,7 +241,7 @@ def test_sinwma_numba_nan_policy_ignore(prices_with_nan) -> None:
 @pytest.mark.overlap
 def test_sinwma_numba_nan_policy_ffill(prices_with_nan) -> None:
     """nan_policy='ffill' fills the input NaN and yields finite output."""
-    result = sinwma_numba(prices_with_nan, length=5, nan_policy='ffill')
+    result = sinwma_numba(prices_with_nan, length=5, nan_policy="ffill")
     # First length-1 slots are the warm-up period (no full window yet)
     assert np.isnan(result[:4]).all()
     # From the first full window on, everything is finite
@@ -255,18 +252,18 @@ def test_sinwma_numba_nan_policy_ffill(prices_with_nan) -> None:
 def test_sinwma_numba_invalid_nan_policy() -> None:
     """Unknown nan_policy raises ValueError."""
     close = np.arange(1.0, 21.0)
-    with pytest.raises(ValueError, match='nan_policy'):
-        sinwma_numba(close, length=5, nan_policy='drop')
+    with pytest.raises(ValueError, match="nan_policy"):
+        sinwma_numba(close, length=5, nan_policy="drop")
 
 
 @pytest.mark.overlap
 def test_sinwma_numba_inf_replaced_with_nan(prices_with_inf) -> None:
     """Inf is replaced with NaN and handled like NaN."""
     # Input contains Inf -> default policy raises (Inf became NaN)
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         sinwma_numba(prices_with_inf, length=5)
     # With 'ignore', Inf behaves exactly like NaN (no inf in output)
-    result = sinwma_numba(prices_with_inf, length=5, nan_policy='ignore')
+    result = sinwma_numba(prices_with_inf, length=5, nan_policy="ignore")
     assert np.isnan(result[5:10]).all()
     assert not np.isinf(result).any()
     assert np.isfinite(result[10:]).all()
@@ -318,14 +315,14 @@ def test_sinwma_ind_non_contiguous() -> None:
 @pytest.mark.overlap
 def test_sinwma_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """sinwma_polars adds a column matching the reference."""
-    result_df = sinwma_polars(df_random_walk, length=14, output_col='SINWMA')
-    assert 'SINWMA' in result_df.columns
-    assert result_df['SINWMA'].dtype == pl.Float64
+    result_df = sinwma_polars(df_random_walk, length=14, output_col="SINWMA")
+    assert "SINWMA" in result_df.columns
+    assert result_df["SINWMA"].dtype == pl.Float64
     assert len(result_df) == len(df_random_walk)
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _sinwma_reference(close_arr, 14)
     assert_allclose(
-        result_df['SINWMA'].to_numpy(), expected, rtol=1e-10, equal_nan=True
+        result_df["SINWMA"].to_numpy(), expected, rtol=1e-10, equal_nan=True
     )
 
 
@@ -333,10 +330,10 @@ def test_sinwma_polars_basic(df_random_walk: pl.DataFrame) -> None:
 def test_sinwma_polars_default_output_col() -> None:
     """Default output column name is SINWMA_{length}."""
     df = pl.DataFrame(
-        {'close': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]}
+        {"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]}
     )
     result_df = sinwma_polars(df, length=5)
-    assert 'SINWMA_5' in result_df.columns
+    assert "SINWMA_5" in result_df.columns
 
 
 @pytest.mark.overlap
@@ -349,27 +346,25 @@ def test_sinwma_polars_offset_fillna(
         length=10,
         offset=2,
         fillna=0.0,
-        output_col='SINWMA',
+        output_col="SINWMA",
     )
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = sinwma_numba(close_arr, length=10, offset=2, fillna=0.0)
     assert_allclose(
-        result_df['SINWMA'].to_numpy(), expected, rtol=1e-12, equal_nan=True
+        result_df["SINWMA"].to_numpy(), expected, rtol=1e-12, equal_nan=True
     )
 
 
 @pytest.mark.overlap
 def test_sinwma_polars_with_nan(df_random_walk: pl.DataFrame) -> None:
     """sinwma_polars propagates NaN correctly with nan_policy='ignore'."""
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
-    df_with_nan = df_random_walk.with_columns(
-        [pl.Series('close', close_arr)]
-    )
+    df_with_nan = df_random_walk.with_columns([pl.Series("close", close_arr)])
     result_df = sinwma_polars(
-        df_with_nan, length=5, output_col='SINWMA', nan_policy='ignore'
+        df_with_nan, length=5, output_col="SINWMA", nan_policy="ignore"
     )
-    sinwma_vals = result_df['SINWMA'].to_numpy()
+    sinwma_vals = result_df["SINWMA"].to_numpy()
     assert np.isnan(sinwma_vals[5:10]).all()
     assert np.isfinite(sinwma_vals[10:]).all()
 
@@ -380,12 +375,12 @@ def test_sinwma_polars_with_nan(df_random_walk: pl.DataFrame) -> None:
 @pytest.mark.overlap
 def test_sinwma_numba_all_nan(prices_all_nan) -> None:
     """All-NaN input: raise by default, all-NaN with 'ignore'."""
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         sinwma_numba(prices_all_nan, length=5)
-    result = sinwma_numba(prices_all_nan, length=5, nan_policy='ignore')
+    result = sinwma_numba(prices_all_nan, length=5, nan_policy="ignore")
     assert np.isnan(result).all()
     result_fill = sinwma_numba(
-        prices_all_nan, length=5, fillna=0.0, nan_policy='ignore'
+        prices_all_nan, length=5, fillna=0.0, nan_policy="ignore"
     )
     assert (result_fill == 0.0).all()
 
@@ -393,16 +388,13 @@ def test_sinwma_numba_all_nan(prices_all_nan) -> None:
 @pytest.mark.overlap
 def test_sinwma_numba_empty(prices_empty) -> None:
     """Empty input raises ValueError (series too short)."""
-    with pytest.raises(ValueError, match='Input series too short'):
+    with pytest.raises(ValueError, match="Input series too short"):
         sinwma_numba(prices_empty, length=5)
 
 
 @pytest.mark.overlap
 def test_sinwma_numba_extreme_values(prices_extreme) -> None:
     """Extreme values (1e300, 1e-300) must not crash."""
-    result = sinwma_numba(prices_extreme, length=5, nan_policy='ignore')
+    result = sinwma_numba(prices_extreme, length=5, nan_policy="ignore")
     assert result is not None
     assert len(result) == len(prices_extreme)
-
-
-

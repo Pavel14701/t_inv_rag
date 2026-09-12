@@ -19,10 +19,11 @@ replaced with NaN before calculation.
 
 import numpy as np
 import polars as pl
+
 from numba import jit
 
-from ..external import talib_available
 from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
+from ..external import talib_available
 from ..overlap.ema import ema_ind
 from ..overlap.sma import sma_ind
 

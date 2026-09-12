@@ -14,13 +14,14 @@ All functions accept either numpy arrays or Polars Series/DataFrames and
 return numpy arrays (or Polars DataFrames with the new column added).
 """
 
+from typing import Literal, Optional, Union
+
 import numpy as np
 import polars as pl
-from typing import Optional, Union, Literal
 
+from .._array_ops import _apply_offset_fillna
 from ..overlap.sma import sma_ind
 from ..statistics.stdev import stdev_ind
-from .._array_ops import _apply_offset_fillna
 
 
 def zscore_numpy(

@@ -18,9 +18,10 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...momentum.roc import roc_ind, roc_numpy, roc_polars
+from ta.src.momentum.roc import roc_ind, roc_numpy, roc_polars
 
 
 @pytest.mark.momentum
@@ -32,9 +33,9 @@ def test_roc_matches_formula(
     close = prices_random_walk
     result = roc_numpy(close, length=length, scalar=scalar, use_talib=False)
     expected = np.full(len(close), np.nan)
-    expected[length:] = scalar * (
-        close[length:] - close[:-length]
-    ) / close[:-length]
+    expected[length:] = (
+        scalar * (close[length:] - close[:-length]) / close[:-length]
+    )
     assert_allclose(result, expected, rtol=1e-12, equal_nan=True)
 
 
@@ -53,10 +54,12 @@ def test_roc_scalar_scaling(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """scalar=1.0 gives the fraction, scalar=100.0 the percentage."""
-    fraction = roc_numpy(prices_random_walk, length=10, scalar=1.0,
-                         use_talib=False)
-    percent = roc_numpy(prices_random_walk, length=10, scalar=100.0,
-                        use_talib=False)
+    fraction = roc_numpy(
+        prices_random_walk, length=10, scalar=1.0, use_talib=False
+    )
+    percent = roc_numpy(
+        prices_random_walk, length=10, scalar=100.0, use_talib=False
+    )
     assert_allclose(fraction[10:], percent[10:] / 100.0, rtol=1e-12)
 
 
@@ -76,7 +79,7 @@ def test_roc_zero_denominator_no_warning() -> None:
     close = np.linspace(1.0, 10.0, 30)
     close[15:] = 0.0
     with warnings.catch_warnings():
-        warnings.simplefilter('error')
+        warnings.simplefilter("error")
         result = roc_numpy(close, length=10, use_talib=False)
     # Base price hits zero first at i=25 (close[15] == 0).
     assert np.isnan(result[25:]).all()
@@ -93,12 +96,16 @@ def test_roc_non_contiguous_and_readonly(
     close_nc = mk_nc(prices_random_walk)
     assert not close_nc.flags.c_contiguous
     assert_allclose(
-        roc_numpy(close_nc, use_talib=False), expected,
-        rtol=1e-12, equal_nan=True,
+        roc_numpy(close_nc, use_talib=False),
+        expected,
+        rtol=1e-12,
+        equal_nan=True,
     )
     assert_allclose(
         roc_ind(pl.Series(prices_random_walk), use_talib=False),
-        expected, rtol=1e-12, equal_nan=True,
+        expected,
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -107,7 +114,7 @@ def test_roc_validation_raises(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Length < 1 is rejected."""
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         roc_numpy(prices_random_walk, length=0, use_talib=False)
 
 
@@ -119,12 +126,18 @@ def test_roc_offset_fillna(
     length = 10
     r0 = roc_numpy(prices_random_walk, length=length, use_talib=False)
     r2 = roc_numpy(
-        prices_random_walk, length=length, offset=2, fillna=0.0,
+        prices_random_walk,
+        length=length,
+        offset=2,
+        fillna=0.0,
         use_talib=False,
     )
     assert r2[0] == 0.0 and r2[1] == 0.0
     assert_allclose(
-        r2[length + 2 :], r0[length:-2], rtol=1e-12, equal_nan=True,
+        r2[length + 2 :],
+        r0[length:-2],
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -132,7 +145,7 @@ def test_roc_offset_fillna(
 def test_roc_polars_basic(df_ohlc: pl.DataFrame) -> None:
     """roc_polars default column is ROC_{length}."""
     result = roc_polars(df_ohlc, use_talib=False)
-    assert 'ROC_10' in result.columns
-    assert result['ROC_10'].dtype == pl.Float64
-    expected = roc_numpy(df_ohlc['close'].to_numpy(), use_talib=False)
-    assert_allclose(result['ROC_10'].to_numpy(), expected, equal_nan=True)
+    assert "ROC_10" in result.columns
+    assert result["ROC_10"].dtype == pl.Float64
+    expected = roc_numpy(df_ohlc["close"].to_numpy(), use_talib=False)
+    assert_allclose(result["ROC_10"].to_numpy(), expected, equal_nan=True)

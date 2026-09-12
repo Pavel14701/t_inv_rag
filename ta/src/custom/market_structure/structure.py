@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import numpy as np
-from numba import float64, int64, int8, njit  # type: ignore[attr-defined]
+
+from numba import float64, int8, int64, njit  # type: ignore[attr-defined]
 
 
 @njit((int64[:], int64[:], float64[:], float64[:], int64, int64),

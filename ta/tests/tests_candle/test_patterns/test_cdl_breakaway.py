@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Tests for Breakaway (cdl_breakaway)."""
 
+from ta.src.candle.cdl_breakaway import cdl_breakaway, cdl_breakaway_polars
+
 from ._helpers import pattern_suite
-from ....candle.cdl_breakaway import cdl_breakaway, cdl_breakaway_polars
+
 
 # four blacks in a downtrend, then a white closing into the gap
 BULL = [
@@ -22,15 +24,17 @@ BEAR = [
     (105.8, 106.0, 96.0, 96.5),
 ]
 
-globals().update(pattern_suite(
-    name='cdl_breakaway',
-    fn=cdl_breakaway,
-    polars_fn=cdl_breakaway_polars,
-    output_col='CDL_BREAKAWAY',
-    bull=BULL,
-    bear=BEAR,
-    bull_value=1.0,
-    bear_value=-1.0,
-    talib_values=(0.0, 1.0, -1.0),
-    extra={'strict': False},
-))
+globals().update(
+    pattern_suite(
+        name="cdl_breakaway",
+        fn=cdl_breakaway,
+        polars_fn=cdl_breakaway_polars,
+        output_col="CDL_BREAKAWAY",
+        bull=BULL,
+        bear=BEAR,
+        bull_value=1.0,
+        bear_value=-1.0,
+        talib_values=(0.0, 1.0, -1.0),
+        extra={"strict": False},
+    )
+)

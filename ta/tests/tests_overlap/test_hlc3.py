@@ -9,14 +9,15 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, extreme)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.hlc3 import _hlc3, hlc3_ind, hlc3_polars
-from ..._array_ops import _apply_offset_fillna
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.overlap.hlc3 import _hlc3, hlc3_ind, hlc3_polars
 
 
 # -----------------------------------------------------------------------------
@@ -101,27 +102,28 @@ def test_hlc3_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """hlc3_polars should add HLC3 column correctly."""
     np.random.seed(42)
     n = len(df_random_walk)
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     high_arr = close + np.abs(np.random.randn(n) * 0.5)
     low_arr = close - np.abs(np.random.randn(n) * 0.5)
-    df = df_random_walk.with_columns([
-        pl.Series('high', high_arr),
-        pl.Series('low', low_arr),
-    ])
+    df = df_random_walk.with_columns(
+        [
+            pl.Series("high", high_arr),
+            pl.Series("low", low_arr),
+        ]
+    )
     result_df = hlc3_polars(
         df,
-        high_col='high',
-        low_col='low',
-        close_col='close',
-        output_col='HLC3',
+        high_col="high",
+        low_col="low",
+        close_col="close",
+        output_col="HLC3",
     )
-    assert 'HLC3' in result_df.columns
-    assert result_df['HLC3'].dtype == pl.Float64
+    assert "HLC3" in result_df.columns
+    assert result_df["HLC3"].dtype == pl.Float64
     assert len(result_df) == len(df)
     expected = _hlc3_reference(high_arr, low_arr, close)
     assert_allclose(
-        result_df['HLC3'].to_numpy(), expected,
-        rtol=1e-6, equal_nan=True
+        result_df["HLC3"].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -130,30 +132,31 @@ def test_hlc3_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
     """hlc3_polars should apply offset and fillna."""
     np.random.seed(42)
     n = len(df_random_walk)
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     high_arr = close + np.abs(np.random.randn(n) * 0.5)
     low_arr = close - np.abs(np.random.randn(n) * 0.5)
-    df = df_random_walk.with_columns([
-        pl.Series('high', high_arr),
-        pl.Series('low', low_arr),
-    ])
+    df = df_random_walk.with_columns(
+        [
+            pl.Series("high", high_arr),
+            pl.Series("low", low_arr),
+        ]
+    )
 
     offset = 2
     fillna = 0.0
     result_df = hlc3_polars(
         df,
-        high_col='high',
-        low_col='low',
-        close_col='close',
+        high_col="high",
+        low_col="low",
+        close_col="close",
         offset=offset,
         fillna=fillna,
-        output_col='HLC3',
+        output_col="HLC3",
     )
 
     expected = _hlc3(high_arr, low_arr, close, offset=offset, fillna=fillna)
     assert_allclose(
-        result_df['HLC3'].to_numpy(), expected,
-        rtol=1e-6, equal_nan=True
+        result_df["HLC3"].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -162,7 +165,7 @@ def test_hlc3_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
 # -----------------------------------------------------------------------------
 @pytest.mark.overlap
 def test_hlc3_with_nan(prices_with_nan):
-    """NaN in input propagates correctly to output."""  # noqa: D403
+    """NaN in input propagates correctly to output."""
     high = prices_with_nan + 1.0
     low = prices_with_nan - 1.0
     close = prices_with_nan
@@ -223,24 +226,26 @@ def test_hlc3_polars_with_nan(df_random_walk):
     """Polars integration should propagate NaN correctly."""
     np.random.seed(42)
     n = len(df_random_walk)
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
     high_arr = close_arr + np.abs(np.random.randn(n) * 0.5)
     low_arr = close_arr - np.abs(np.random.randn(n) * 0.5)
-    df = df_random_walk.with_columns([
-        pl.Series('close', close_arr),
-        pl.Series('high', high_arr),
-        pl.Series('low', low_arr),
-    ])
+    df = df_random_walk.with_columns(
+        [
+            pl.Series("close", close_arr),
+            pl.Series("high", high_arr),
+            pl.Series("low", low_arr),
+        ]
+    )
 
     result_df = hlc3_polars(
         df,
-        high_col='high',
-        low_col='low',
-        close_col='close',
-        output_col='HLC3',
+        high_col="high",
+        low_col="low",
+        close_col="close",
+        output_col="HLC3",
     )
-    hlc3_vals = result_df['HLC3'].to_numpy()
+    hlc3_vals = result_df["HLC3"].to_numpy()
     assert np.isnan(hlc3_vals[5])
     assert np.isfinite(hlc3_vals[:5]).all()
     assert np.isfinite(hlc3_vals[6:]).all()

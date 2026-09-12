@@ -2,8 +2,8 @@
 import numpy as np
 import polars as pl
 
-from ..overlap.wma import wma_ind
 from .._array_ops import _apply_offset_fillna
+from ..overlap.wma import wma_ind
 from .roc import roc_ind
 
 

@@ -4,9 +4,10 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...momentum.psl import _psl_numba, psl_ind, psl_numpy, psl_polars
+from ta.src.momentum.psl import _psl_numba, psl_ind, psl_numpy, psl_polars
 
 
 def _psl_reference(
@@ -18,7 +19,7 @@ def _psl_reference(
     diff = np.full(n, np.nan)
     diff[drift:] = close[drift:] - close[:-drift]
     for i in range(length + drift - 1, n):
-        window = diff[i - length + 1:i + 1]
+        window = diff[i - length + 1 : i + 1]
         if np.isnan(window).any():
             continue
         out[i] = 100.0 * (window > 0).sum() / length
@@ -104,7 +105,7 @@ def test_psl_offset_fillna(prices_random_walk) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.parametrize('length, drift', [(0, 1), (5, 0), (-2, 1)])
+@pytest.mark.parametrize("length, drift", [(0, 1), (5, 0), (-2, 1)])
 def test_psl_invalid_params(length: int, drift: int) -> None:
     with pytest.raises(ValueError):
         psl_numpy(np.arange(20.0), length=length, drift=drift)
@@ -113,9 +114,7 @@ def test_psl_invalid_params(length: int, drift: int) -> None:
 @pytest.mark.momentum
 def test_psl_empty_and_short() -> None:
     assert psl_numpy(np.array([], dtype=np.float64), length=4).size == 0
-    assert np.isnan(
-        psl_numpy(np.array([1.0, 2.0, 3.0]), length=5)
-    ).all()
+    assert np.isnan(psl_numpy(np.array([1.0, 2.0, 3.0]), length=5)).all()
 
 
 @pytest.mark.momentum
@@ -129,23 +128,23 @@ def test_psl_ind_numpy_and_series(prices_random_walk) -> None:
 
 @pytest.mark.momentum
 def test_psl_polars(df_random_walk: pl.DataFrame) -> None:
-    expected = psl_numpy(df_random_walk['close'].to_numpy(), length=12)
+    expected = psl_numpy(df_random_walk["close"].to_numpy(), length=12)
     result = psl_polars(df_random_walk, length=12)
-    assert 'PSL_12' in result.columns
+    assert "PSL_12" in result.columns
     assert_allclose(
-        result['PSL_12'].to_numpy(), expected, rtol=1e-12, equal_nan=True
+        result["PSL_12"].to_numpy(), expected, rtol=1e-12, equal_nan=True
     )
 
 
 @pytest.mark.momentum
 def test_psl_polars_int_column_with_null() -> None:
     df = pl.DataFrame(
-        {'close': [1, 2, None, 4, 5, 6, 7, 8, 9, 10]},
-        schema={'close': pl.Int64},
+        {"close": [1, 2, None, 4, 5, 6, 7, 8, 9, 10]},
+        schema={"close": pl.Int64},
     )
     result = psl_polars(df, length=4)
-    assert result['PSL_4'].dtype == pl.Float64
-    v = result['PSL_4'].to_numpy()
+    assert result["PSL_4"].dtype == pl.Float64
+    v = result["PSL_4"].to_numpy()
     assert np.isnan(v[:7]).all()  # windows touching the null at index 2
     assert not np.isnan(v[7:]).any()
 

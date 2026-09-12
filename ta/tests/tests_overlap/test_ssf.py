@@ -13,18 +13,20 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.ssf import ssf_numba, ssf_ind, ssf_polars
+from ta.src.overlap.ssf import ssf_ind, ssf_numba, ssf_polars
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation (pure Python)
 # -----------------------------------------------------------------------------
+
 
 def _ssf_reference(
     close: npt.NDArray[np.float64],
@@ -42,9 +44,11 @@ def _ssf_reference(
     if m > 1:
         out[1] = close[1]
     for i in range(2, m):
-        out[i] = 0.5 * (a * a - b + 1.0) * (
-            close[i] + close[i - 1]
-        ) + b * out[i - 1] - a * a * out[i - 2]
+        out[i] = (
+            0.5 * (a * a - b + 1.0) * (close[i] + close[i - 1])
+            + b * out[i - 1]
+            - a * a * out[i - 2]
+        )
     return out
 
 
@@ -52,9 +56,10 @@ def _ssf_reference(
 # Regression / correctness
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_ssf_ehlers_matches_reference(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Regression: the Ehlers variant now uses pi*ratio (radians) instead of
     the broken cos(180*ratio) (evaluated in radians => wrong by 180/pi).
@@ -67,7 +72,7 @@ def test_ssf_ehlers_matches_reference(
 
 @pytest.mark.overlap
 def test_ssf_everget_matches_reference(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Everget variant matches its pure Python recurrence."""
     close = prices_random_walk
@@ -78,7 +83,7 @@ def test_ssf_everget_matches_reference(
 
 @pytest.mark.overlap
 def test_ssf_variants_agree_for_same_pi(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Regression: with the degrees-bug fixed, both variants implement the
     identical recurrence and must agree to floating-point precision.
@@ -91,7 +96,7 @@ def test_ssf_variants_agree_for_same_pi(
 
 @pytest.mark.overlap
 def test_ssf_pi_precision_changes_result(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Using a different pi (np.pi) changes the output only slightly —
     the variants differ historically only in pi precision.
@@ -108,9 +113,10 @@ def test_ssf_pi_precision_changes_result(
 # Smoothing properties
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_ssf_smooths_input(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """SSF output is smoother (lower std) than its input."""
     close = prices_random_walk
@@ -128,7 +134,7 @@ def test_ssf_constant_input() -> None:
 
 @pytest.mark.overlap
 def test_ssf_finite_output(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """No warm-up NaNs: the filter seeds directly from the input."""
     close = prices_random_walk
@@ -137,7 +143,7 @@ def test_ssf_finite_output(
 
 
 @pytest.mark.overlap
-@pytest.mark.parametrize('everget', [False, True])
+@pytest.mark.parametrize("everget", [False, True])
 def test_ssf_short_inputs_do_not_corrupt(everget: bool) -> None:
     """Regression: with bounds checking disabled, writing out[1] on a
     1-element array silently corrupted memory; short inputs now seed safely.
@@ -148,23 +154,24 @@ def test_ssf_short_inputs_do_not_corrupt(everget: bool) -> None:
     two = np.array([5.0, 7.0])
     assert_allclose(ssf_numba(two, length=10, everget=everget), two)
 
+
 # -----------------------------------------------------------------------------
 # Validation / contiguity / read-only
 # -----------------------------------------------------------------------------
 
 
 @pytest.mark.overlap
-@pytest.mark.parametrize('length', [0, -5])
+@pytest.mark.parametrize("length", [0, -5])
 def test_ssf_invalid_length(length: int) -> None:
     """Length below 1 raises ValueError."""
     close = np.arange(1.0, 11.0)
-    with pytest.raises(ValueError, match='must be >= 1'):
+    with pytest.raises(ValueError, match="must be >= 1"):
         ssf_numba(close, length=length)
 
 
 @pytest.mark.overlap
 def test_ssf_non_contiguous_input(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Strided input is accepted and matches the reference on that data."""
     close = prices_random_walk[::2]
@@ -175,7 +182,7 @@ def test_ssf_non_contiguous_input(
 
 @pytest.mark.overlap
 def test_ssf_ind_polars_series(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """ssf_ind accepts pl.Series (read-only numpy underneath)."""
     close = prices_random_walk
@@ -187,6 +194,7 @@ def test_ssf_ind_polars_series(
 # -----------------------------------------------------------------------------
 # Offset / fillna
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_ssf_offset(prices_random_walk: npt.NDArray[np.float64]) -> None:
@@ -211,13 +219,14 @@ def test_ssf_fillna(prices_random_walk: npt.NDArray[np.float64]) -> None:
 # Polars integration
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_ssf_polars_default_column(df_random_walk: pl.DataFrame) -> None:
     """ssf_polars adds an 'SSF_{length}' column by default."""
     out = ssf_polars(df_random_walk, length=20)
-    assert 'SSF_20' in out.columns
-    expected = ssf_numba(df_random_walk['close'].to_numpy(), length=20)
-    assert_allclose(out['SSF_20'].to_numpy(), expected, rtol=0, atol=0)
+    assert "SSF_20" in out.columns
+    expected = ssf_numba(df_random_walk["close"].to_numpy(), length=20)
+    assert_allclose(out["SSF_20"].to_numpy(), expected, rtol=0, atol=0)
     assert len(out) == len(df_random_walk)
 
 
@@ -225,23 +234,24 @@ def test_ssf_polars_default_column(df_random_walk: pl.DataFrame) -> None:
 def test_ssf_polars_everget_column(df_random_walk: pl.DataFrame) -> None:
     """everget=True produces the 'SSFe_{length}' column."""
     out = ssf_polars(df_random_walk, length=10, everget=True)
-    assert 'SSFe_10' in out.columns
+    assert "SSFe_10" in out.columns
 
 
 @pytest.mark.overlap
 def test_ssf_polars_custom_column(df_random_walk: pl.DataFrame) -> None:
     """Custom output column name is honoured."""
-    out = ssf_polars(df_random_walk, length=10, output_col='MY_SSF')
-    assert 'MY_SSF' in out.columns
-    assert 'SSF_10' not in out.columns
+    out = ssf_polars(df_random_walk, length=10, output_col="MY_SSF")
+    assert "MY_SSF" in out.columns
+    assert "SSF_10" not in out.columns
 
 
 # -----------------------------------------------------------------------------
 # IEEE 754 edge cases
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
-@pytest.mark.parametrize('everget', [False, True])
+@pytest.mark.parametrize("everget", [False, True])
 def test_ssf_nan_poisons_tail(everget: bool) -> None:
     """Recursive filter: a single NaN poisons everything after it (IIR
     feedback). Documented IIR semantics.
@@ -254,7 +264,7 @@ def test_ssf_nan_poisons_tail(everget: bool) -> None:
 
 
 @pytest.mark.overlap
-@pytest.mark.parametrize('everget', [False, True])
+@pytest.mark.parametrize("everget", [False, True])
 def test_ssf_inf_poisons_tail(everget: bool) -> None:
     """Inf enters the recurrence, then inf - inf turns the tail into NaN."""
     close = np.arange(1.0, 21.0)
@@ -266,7 +276,7 @@ def test_ssf_inf_poisons_tail(everget: bool) -> None:
 
 
 @pytest.mark.overlap
-@pytest.mark.parametrize('everget', [False, True])
+@pytest.mark.parametrize("everget", [False, True])
 def test_ssf_empty_input(everget: bool) -> None:
     """Regression: empty input used to write out of bounds silently
     (numba bounds checking is off).

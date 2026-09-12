@@ -18,9 +18,10 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...momentum.brar import brar_ind, brar_polars
+from ta.src.momentum.brar import brar_ind, brar_polars
 
 
 def _brar_reference(
@@ -53,7 +54,7 @@ def _brar_reference(
     s_ol = _roll(open_ - low)
     s_hcy = _roll(hcy)
     s_cyl = _roll(cyl)
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         ar = np.where(s_ol != 0.0, scalar * s_ho / s_ol, np.nan)
         br = np.where(s_cyl != 0.0, scalar * s_hcy / s_cyl, np.nan)
     return ar, br
@@ -89,7 +90,12 @@ def test_brar_matches_reference(
     length, drift = 26, 1
     ar, br = brar_ind(open_, high, low, close, length=length, drift=drift)
     ref_ar, ref_br = _brar_reference(
-        open_, high, low, close, length=length, drift=drift,
+        open_,
+        high,
+        low,
+        close,
+        length=length,
+        drift=drift,
     )
     assert_allclose(ar, ref_ar, rtol=1e-12, equal_nan=True)
     assert_allclose(br, ref_br, rtol=1e-12, equal_nan=True)
@@ -114,7 +120,7 @@ def test_brar_flat_ohlc_nan_no_warnings() -> None:
     """Flat OHLC -> zero denominators -> NaN, never inf, no warnings."""
     flat = np.full(60, 100.0)
     with warnings.catch_warnings():
-        warnings.simplefilter('error')
+        warnings.simplefilter("error")
         ar, br = brar_ind(flat, flat, flat, flat, length=26)
     assert np.isnan(ar).all()
     assert np.isnan(br).all()
@@ -147,14 +153,21 @@ def test_brar_non_contiguous_and_readonly(
     # strided views
     mk_nc = lambda a: np.stack([a, a], axis=1)[:, 0]  # noqa: E731
     result_nc = brar_ind(
-        mk_nc(open_), mk_nc(high), mk_nc(low), mk_nc(close), length=10,
+        mk_nc(open_),
+        mk_nc(high),
+        mk_nc(low),
+        mk_nc(close),
+        length=10,
     )
     for res, exp in zip(result_nc, expected):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
     # read-only polars series
     result_pl = brar_ind(
-        pl.Series(open_), pl.Series(high),
-        pl.Series(low), pl.Series(close), length=10,
+        pl.Series(open_),
+        pl.Series(high),
+        pl.Series(low),
+        pl.Series(close),
+        length=10,
     )
     for res, exp in zip(result_pl, expected):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
@@ -166,9 +179,9 @@ def test_brar_validation_raises(
 ) -> None:
     """Length < 1 and drift < 1 are rejected."""
     open_, high, low, close = _ohlc_arrays(prices_random_walk)
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         brar_ind(open_, high, low, close, length=0)
-    with pytest.raises(ValueError, match='drift must be >= 1'):
+    with pytest.raises(ValueError, match="drift must be >= 1"):
         brar_ind(open_, high, low, close, length=10, drift=0)
 
 
@@ -181,17 +194,27 @@ def test_brar_offset_fillna(
     length, drift = 10, 1
     ar0, br0 = brar_ind(open_, high, low, close, length=length)
     ar2, br2 = brar_ind(
-        open_, high, low, close, length=length, offset=2, fillna=0.0,
+        open_,
+        high,
+        low,
+        close,
+        length=length,
+        offset=2,
+        fillna=0.0,
     )
     assert ar2[0] == 0.0 and br2[0] == 0.0
     # compare only past the warm-up zone: fillna replaced warm-up NaNs
     assert_allclose(
-        ar2[length + 1 :], ar0[length - 1 : -2], rtol=1e-12, equal_nan=True,
+        ar2[length + 1 :],
+        ar0[length - 1 : -2],
+        rtol=1e-12,
+        equal_nan=True,
     )
     assert_allclose(
         br2[length + drift + 1 :],
         br0[length + drift - 1 : -2],
-        rtol=1e-12, equal_nan=True,
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -199,13 +222,16 @@ def test_brar_offset_fillna(
 def test_brar_polars_basic(df_ohlc: pl.DataFrame) -> None:
     """brar_polars returns date + AR_{length}/BR_{length} columns."""
     result = brar_polars(df_ohlc, length=26)
-    for col in ('AR_26', 'BR_26'):
+    for col in ("AR_26", "BR_26"):
         assert col in result.columns
         assert result[col].dtype == pl.Float64
     assert len(result) == len(df_ohlc)
     expected = brar_ind(
-        df_ohlc['open'].to_numpy(), df_ohlc['high'].to_numpy(),
-        df_ohlc['low'].to_numpy(), df_ohlc['close'].to_numpy(), length=26,
+        df_ohlc["open"].to_numpy(),
+        df_ohlc["high"].to_numpy(),
+        df_ohlc["low"].to_numpy(),
+        df_ohlc["close"].to_numpy(),
+        length=26,
     )
-    assert_allclose(result['AR_26'].to_numpy(), expected[0], equal_nan=True)
-    assert_allclose(result['BR_26'].to_numpy(), expected[1], equal_nan=True)
+    assert_allclose(result["AR_26"].to_numpy(), expected[0], equal_nan=True)
+    assert_allclose(result["BR_26"].to_numpy(), expected[1], equal_nan=True)

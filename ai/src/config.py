@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import random
+
 from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any
@@ -17,15 +18,16 @@ from typing import Any
 import numpy as np
 import yaml
 
+
 __all__ = (
+    'AIConfig',
     'ComputeConfig',
     'ModelConfig',
     'RiskConfig',
     'TrainingConfig',
-    'AIConfig',
     'load_config',
-    'set_seed',
     'risk_kwargs',
+    'set_seed',
 )
 
 DEFAULT_CONFIG_PATH = Path('configs/ai.yaml')

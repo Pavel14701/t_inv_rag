@@ -10,24 +10,26 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, extreme values)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose, assert_almost_equal
 
-from ...overlap.alma import (
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.overlap.alma import (
     _alma_weights,
-    alma_numba_opt,
     alma_ind,
-    alma_polars
+    alma_numba_opt,
+    alma_polars,
 )
-from ..._array_ops import _apply_offset_fillna
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation (pure Python)
 # -----------------------------------------------------------------------------
+
 
 def _alma_reference(
     close: npt.NDArray[np.float64],
@@ -60,6 +62,7 @@ def _alma_reference(
 # -----------------------------------------------------------------------------
 # Tests for weight generation
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_alma_weights_sum_to_one() -> None:
@@ -96,7 +99,7 @@ def test_alma_weights_readonly() -> None:
 def test_alma_numba_opt_invalid_length() -> None:
     """Length below 1 raises ValueError."""
     close = np.arange(1.0, 11.0)
-    with pytest.raises(ValueError, match='must be >= 1'):
+    with pytest.raises(ValueError, match="must be >= 1"):
         alma_numba_opt(close, length=0)
 
 
@@ -104,9 +107,10 @@ def test_alma_numba_opt_invalid_length() -> None:
 # Tests for alma_numba_opt
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_alma_numba_opt_against_reference(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Test alma_numba_opt against pure Python reference."""
     close = prices_random_walk
@@ -114,8 +118,7 @@ def test_alma_numba_opt_against_reference(
     sigma = 6.0
     dist_offset = 0.85
     result_numba = alma_numba_opt(
-        close, length=length, sigma=sigma,
-        dist_offset=dist_offset
+        close, length=length, sigma=sigma, dist_offset=dist_offset
     )
     expected = _alma_reference(close, length, sigma, dist_offset)
     assert_allclose(result_numba, expected, rtol=1e-6, equal_nan=True)
@@ -136,7 +139,7 @@ def test_alma_numba_opt_short_window() -> None:
 
 @pytest.mark.overlap
 def test_alma_numba_opt_offset_fillna(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Test offset and fillna using the real _apply_offset_fillna."""
     close = prices_random_walk
@@ -147,15 +150,23 @@ def test_alma_numba_opt_offset_fillna(
     fillna = 0.0
     # Base result without offset/fillna
     base = alma_numba_opt(
-        close, length=length, sigma=sigma,
-        dist_offset=dist_offset, offset=0, fillna=None
+        close,
+        length=length,
+        sigma=sigma,
+        dist_offset=dist_offset,
+        offset=0,
+        fillna=None,
     )
     # Apply offset and fillna using the same function as in ALMA
     expected = _apply_offset_fillna(base, offset, fillna)
 
     result = alma_numba_opt(
-        close, length=length, sigma=sigma,
-        dist_offset=dist_offset, offset=offset, fillna=fillna
+        close,
+        length=length,
+        sigma=sigma,
+        dist_offset=dist_offset,
+        offset=offset,
+        fillna=fillna,
     )
     assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
 
@@ -164,9 +175,10 @@ def test_alma_numba_opt_offset_fillna(
 # Tests for alma_ind (universal wrapper)
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_alma_ind_with_pl_series(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Test alma_ind with Polars Series input."""
     s = pl.Series(prices_random_walk)
@@ -182,6 +194,7 @@ def test_alma_ind_with_pl_series(
 # Tests for alma_polars (DataFrame integration)
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_alma_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """Test alma_polars adds a column correctly."""
@@ -190,20 +203,19 @@ def test_alma_polars_basic(df_random_walk: pl.DataFrame) -> None:
     dist_offset = 0.85
     result_df = alma_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
         sigma=sigma,
         dist_offset=dist_offset,
-        output_col='ALMA'
+        output_col="ALMA",
     )
-    assert 'ALMA' in result_df.columns
-    assert result_df['ALMA'].dtype == pl.Float64
+    assert "ALMA" in result_df.columns
+    assert result_df["ALMA"].dtype == pl.Float64
     assert len(result_df) == len(df_random_walk)
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _alma_reference(close_arr, length, sigma, dist_offset)
     assert_allclose(
-        result_df['ALMA'].to_numpy(),
-        expected, rtol=1e-6, equal_nan=True
+        result_df["ALMA"].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -211,19 +223,19 @@ def test_alma_polars_basic(df_random_walk: pl.DataFrame) -> None:
 def test_alma_polars_default_output_col() -> None:
     """Test default output column name."""
     df = pl.DataFrame(
-        {'close': [
-            1.0, 2.0, 3.0, 4.0, 5.0,
-            6.0, 7.0, 8.0, 9.0, 10.0
-        ]}
+        {"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]}
     )
     length = 9
     sigma = 6.0
     dist_offset = 0.85
     result_df = alma_polars(
-        df, close_col='close', length=length,
-        sigma=sigma, dist_offset=dist_offset
+        df,
+        close_col="close",
+        length=length,
+        sigma=sigma,
+        dist_offset=dist_offset,
     )
-    expected_col = f'ALMA_{length}_{sigma}_{dist_offset}'
+    expected_col = f"ALMA_{length}_{sigma}_{dist_offset}"
     assert expected_col in result_df.columns
 
 
@@ -237,26 +249,25 @@ def test_alma_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
     fillna = 0.0
     result_df = alma_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
         sigma=sigma,
         dist_offset=dist_offset,
         offset=offset,
         fillna=fillna,
-        output_col='ALMA'
+        output_col="ALMA",
     )
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = alma_numba_opt(
         close_arr,
         length=length,
         sigma=sigma,
         dist_offset=dist_offset,
         offset=offset,
-        fillna=fillna
+        fillna=fillna,
     )
     assert_allclose(
-        result_df['ALMA'].to_numpy(),
-        expected, rtol=1e-6, equal_nan=True
+        result_df["ALMA"].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -267,16 +278,18 @@ def test_alma_polars_no_output_col(df_random_walk: pl.DataFrame) -> None:
     sigma = 5.0
     dist_offset = 0.8
     result_df = alma_polars(
-        df_random_walk, close_col='close', length=length,
-        sigma=sigma, dist_offset=dist_offset
+        df_random_walk,
+        close_col="close",
+        length=length,
+        sigma=sigma,
+        dist_offset=dist_offset,
     )
-    expected_col = f'ALMA_{length}_{sigma}_{dist_offset}'
+    expected_col = f"ALMA_{length}_{sigma}_{dist_offset}"
     assert expected_col in result_df.columns
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _alma_reference(close_arr, length, sigma, dist_offset)
     assert_allclose(
-        result_df[expected_col].to_numpy(),
-        expected, rtol=1e-6, equal_nan=True
+        result_df[expected_col].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -284,20 +297,24 @@ def test_alma_polars_no_output_col(df_random_walk: pl.DataFrame) -> None:
 # IEEE 754 compliance tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_alma_numba_opt_with_nan(prices_with_nan):
-    """NaN in input propagates correctly through ALMA calculation."""  # noqa: D403, E501
+    """NaN in input propagates correctly through ALMA calculation."""
     length = 5
     result = alma_numba_opt(
-        prices_with_nan, length=length, offset=0, fillna=None,
-        nan_policy='ignore',
+        prices_with_nan,
+        length=length,
+        offset=0,
+        fillna=None,
+        nan_policy="ignore",
     )
     # NaN at index 5
     # First valid at index length-1 = 4 (no NaN in window 0-4)
     # Windows 5-9 include index 5 NaN -> NaN
     # Window 10 (6-10) no NaN -> finite
-    assert np.isfinite(result[4])          # index 4 is finite
-    assert np.isnan(result[5:10]).all()    # indices 5-9 are NaN
+    assert np.isfinite(result[4])  # index 4 is finite
+    assert np.isnan(result[5:10]).all()  # indices 5-9 are NaN
     assert np.isfinite(result[10:]).all()  # from 10 onward finite
 
 
@@ -306,7 +323,7 @@ def test_alma_numba_opt_with_inf(prices_with_inf):
     """Inf in input is replaced with NaN, so it behaves like NaN."""
     length = 5
     result = alma_numba_opt(
-        prices_with_inf, length=length, nan_policy='ignore'
+        prices_with_inf, length=length, nan_policy="ignore"
     )
     # Same as with NaN because Inf is replaced with NaN
     assert np.isfinite(result[4])
@@ -324,10 +341,10 @@ def test_alma_numba_opt_empty(prices_empty):
 @pytest.mark.overlap
 def test_alma_numba_opt_all_nan(prices_all_nan):
     """All NaNs -> all NaNs (or fillna if provided)."""
-    result = alma_numba_opt(prices_all_nan, length=5, nan_policy='ignore')
+    result = alma_numba_opt(prices_all_nan, length=5, nan_policy="ignore")
     assert np.isnan(result).all()
     result_fill = alma_numba_opt(
-        prices_all_nan, length=5, fillna=0.0, nan_policy='ignore'
+        prices_all_nan, length=5, fillna=0.0, nan_policy="ignore"
     )
     # _apply_offset_fillna replaces all NaNs with fillna
     assert (result_fill == 0.0).all()
@@ -337,7 +354,7 @@ def test_alma_numba_opt_all_nan(prices_all_nan):
 def test_alma_numba_opt_extreme_values(prices_extreme):
     """Extreme values (1e300, 1e-300) must not crash."""
     length = 5
-    result = alma_numba_opt(prices_extreme, length=length, nan_policy='ignore')
+    result = alma_numba_opt(prices_extreme, length=length, nan_policy="ignore")
     # Should not crash; may contain inf or nan, but at least the function runs.
     assert result is not None
 
@@ -346,16 +363,19 @@ def test_alma_numba_opt_extreme_values(prices_extreme):
 def test_alma_polars_with_nan(df_random_walk):
     """Polars integration should propagate NaN correctly."""
     # Create a copy and insert NaN at index 5
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
-    df_with_nan = df_random_walk.with_columns([pl.Series('close', close_arr)])
+    df_with_nan = df_random_walk.with_columns([pl.Series("close", close_arr)])
     result_df = alma_polars(
-        df_with_nan, close_col='close',
-        length=5, output_col='ALMA', nan_policy='ignore'
+        df_with_nan,
+        close_col="close",
+        length=5,
+        output_col="ALMA",
+        nan_policy="ignore",
     )
-    assert 'ALMA' in result_df.columns
+    assert "ALMA" in result_df.columns
     assert len(result_df) == len(df_random_walk)
-    alma_vals = result_df['ALMA'].to_numpy()
+    alma_vals = result_df["ALMA"].to_numpy()
     # Check that the NaN appears in the output
     # ALMA window length 5,
     # NaN at index 5 will affect windows starting from 5 to 9
@@ -371,7 +391,7 @@ def test_alma_numba_opt_nan_policy_raise() -> None:
         [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
         dtype=np.float64,
     )
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         alma_numba_opt(data, length=3)
 
 
@@ -382,6 +402,6 @@ def test_alma_numba_opt_nan_policy_ffill() -> None:
         [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
         dtype=np.float64,
     )
-    result = alma_numba_opt(data, length=3, nan_policy='ffill')
+    result = alma_numba_opt(data, length=3, nan_policy="ffill")
     # after warmup all values must be finite
     assert np.isfinite(result[2:]).all()

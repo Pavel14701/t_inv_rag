@@ -4,10 +4,11 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...momentum.pgo import pgo_ind, pgo_numpy, pgo_polars
-from ...overlap.ema import ema_ind
+from ta.src.momentum.pgo import pgo_ind, pgo_numpy, pgo_polars
+from ta.src.overlap.ema import ema_ind
 
 
 @pytest.fixture
@@ -26,12 +27,13 @@ def _pgo_reference(
 ) -> np.ndarray:
     """Pure numpy PGO reference."""
     n = len(close)
-    ema = ema_ind(close, length=length, use_talib=False,
-                  nan_policy='ignore')
+    ema = ema_ind(close, length=length, use_talib=False, nan_policy="ignore")
     out = np.full(n, np.nan)
     for i in range(length - 1, n):
-        denom = (high[i - length + 1:i + 1].max()
-                 - low[i - length + 1:i + 1].min())
+        denom = (
+            high[i - length + 1 : i + 1].max()
+            - low[i - length + 1 : i + 1].min()
+        )
         out[i] = np.nan if denom == 0.0 else (close[i] - ema[i]) / denom
     return out
 
@@ -88,11 +90,13 @@ def test_pgo_breakout_magnitude(ohlc) -> None:
 @pytest.mark.momentum
 def test_pgo_ema_component_matches_ema_ind(ohlc) -> None:
     high, low, close = ohlc
-    ema = ema_ind(close, length=14, use_talib=False, nan_policy='ignore')
-    high_max = np.array([high[max(0, i - 13):i + 1].max()
-                         for i in range(len(high))])
-    low_min = np.array([low[max(0, i - 13):i + 1].min()
-                        for i in range(len(low))])
+    ema = ema_ind(close, length=14, use_talib=False, nan_policy="ignore")
+    high_max = np.array(
+        [high[max(0, i - 13) : i + 1].max() for i in range(len(high))]
+    )
+    low_min = np.array(
+        [low[max(0, i - 13) : i + 1].min() for i in range(len(low))]
+    )
     expected = np.where(
         high_max - low_min == 0.0,
         np.nan,
@@ -105,7 +109,7 @@ def test_pgo_ema_component_matches_ema_ind(ohlc) -> None:
 @pytest.mark.momentum
 def test_pgo_invalid_length(ohlc) -> None:
     high, low, close = ohlc
-    with pytest.raises(ValueError, match='length'):
+    with pytest.raises(ValueError, match="length"):
         pgo_numpy(high, low, close, length=0)
 
 
@@ -140,14 +144,14 @@ def test_pgo_ind_numpy_and_series(ohlc) -> None:
 
 @pytest.mark.momentum
 def test_pgo_polars(df_ohlc: pl.DataFrame) -> None:
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
     expected = pgo_numpy(high, low, close, length=14)
     result = pgo_polars(df_ohlc, length=14)
-    assert 'PGO_14' in result.columns
+    assert "PGO_14" in result.columns
     assert_allclose(
-        result['PGO_14'].to_numpy(), expected, rtol=1e-12, equal_nan=True
+        result["PGO_14"].to_numpy(), expected, rtol=1e-12, equal_nan=True
     )
 
 

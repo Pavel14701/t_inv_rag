@@ -9,16 +9,17 @@ Tests cover:
 - Comparison with reference implementation
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.smma import (
+from ta.src.overlap.smma import (
     _smma_numba_core,
-    smma_numba,
     smma_ind,
+    smma_numba,
     smma_polars,
 )
 
@@ -26,6 +27,7 @@ from ...overlap.smma import (
 # -----------------------------------------------------------------------------
 # Reference implementation (pure Python)
 # -----------------------------------------------------------------------------
+
 
 def _smma_reference(
     close: npt.NDArray[np.float64],
@@ -50,6 +52,7 @@ def _smma_reference(
 # -----------------------------------------------------------------------------
 # Tests for _smma_numba_core
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_smma_numba_core_basic(
@@ -85,6 +88,7 @@ def test_smma_numba_core_single_value() -> None:
 # Helper to apply offset+fillna consistently with the real implementation
 # -----------------------------------------------------------------------------
 
+
 def _apply_offset_fillna_test(
     arr: np.ndarray,
     offset: int,
@@ -105,6 +109,7 @@ def _apply_offset_fillna_test(
 # -----------------------------------------------------------------------------
 # Tests for smma_numba with offset/fillna
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_smma_numba_basic(
@@ -156,6 +161,7 @@ def test_smma_numba_negative_offset(
 # Tests for smma_ind (universal wrapper)
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_smma_ind_with_pl_series(
     prices_random_walk: npt.NDArray[np.float64],
@@ -172,19 +178,20 @@ def test_smma_ind_with_pl_series(
 # Tests for smma_polars (DataFrame integration)
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_smma_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """Test smma_polars adds a column correctly."""
     length = 10
     result_df = smma_polars(
-        df_random_walk, close_col='close', length=length, output_col='SMMA'
+        df_random_walk, close_col="close", length=length, output_col="SMMA"
     )
-    assert 'SMMA' in result_df.columns
-    assert result_df['SMMA'].dtype == pl.Float64
-    close_arr = df_random_walk['close'].to_numpy()
+    assert "SMMA" in result_df.columns
+    assert result_df["SMMA"].dtype == pl.Float64
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _smma_reference(close_arr, length)
     assert_allclose(
-        result_df['SMMA'].to_numpy(), expected, rtol=1e-6, equal_nan=True
+        result_df["SMMA"].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -192,11 +199,11 @@ def test_smma_polars_basic(df_random_walk: pl.DataFrame) -> None:
 def test_smma_polars_default_output_col() -> None:
     """Test default output column name."""
     df = pl.DataFrame(
-        {'close': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]}
+        {"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]}
     )
     length = 3
-    result_df = smma_polars(df, close_col='close', length=length)
-    assert f'SMMA_{length}' in result_df.columns
+    result_df = smma_polars(df, close_col="close", length=length)
+    assert f"SMMA_{length}" in result_df.columns
 
 
 @pytest.mark.overlap
@@ -207,18 +214,18 @@ def test_smma_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
     fillna = 0.0
     result_df = smma_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
         offset=offset,
         fillna=fillna,
-        output_col='SMMA',
+        output_col="SMMA",
     )
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = smma_numba(
         close_arr, length=length, offset=offset, fillna=fillna
     )
     assert_allclose(
-        result_df['SMMA'].to_numpy(), expected, rtol=1e-6, equal_nan=True
+        result_df["SMMA"].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -226,14 +233,13 @@ def test_smma_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
 def test_smma_polars_without_output_col(df_random_walk: pl.DataFrame) -> None:
     """Test default output column naming."""
     length = 7
-    result_df = smma_polars(df_random_walk, close_col='close', length=length)
-    expected_col = f'SMMA_{length}'
+    result_df = smma_polars(df_random_walk, close_col="close", length=length)
+    expected_col = f"SMMA_{length}"
     assert expected_col in result_df.columns
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _smma_reference(close_arr, length)
     assert_allclose(
-        result_df[expected_col].to_numpy(),
-        expected, rtol=1e-6, equal_nan=True
+        result_df[expected_col].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -244,18 +250,19 @@ def test_smma_consistency_with_alligator_import() -> None:
     length = 10
     result = _smma_numba_core(close, length)
     assert result.shape == close.shape
-    assert not np.isnan(result[length - 1:]).any()
+    assert not np.isnan(result[length - 1 :]).any()
 
 
 # -----------------------------------------------------------------------------
 # Validation and NaN-policy tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_smma_numba_invalid_length() -> None:
     """Length below 1 raises ValueError."""
     close = np.arange(1.0, 11.0)
-    with pytest.raises(ValueError, match='must be >= 1'):
+    with pytest.raises(ValueError, match="must be >= 1"):
         smma_numba(close, length=0)
 
 
@@ -266,7 +273,7 @@ def test_smma_numba_nan_policy_raise() -> None:
         [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
         dtype=np.float64,
     )
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         smma_numba(data, length=3)
 
 
@@ -277,16 +284,16 @@ def test_smma_numba_nan_policy_ffill() -> None:
         [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
         dtype=np.float64,
     )
-    result = smma_numba(data, length=3, nan_policy='ffill')
+    result = smma_numba(data, length=3, nan_policy="ffill")
     # after warmup all values must be finite
     assert np.isfinite(result[2:]).all()
 
 
 @pytest.mark.overlap
 def test_smma_numba_with_nan(prices_with_nan):
-    """NaN in input poisons the SMMA recurrence permanently."""  # noqa: D403
+    """NaN in input poisons the SMMA recurrence permanently."""
     length = 5
-    result = smma_numba(prices_with_nan, length=length, nan_policy='ignore')
+    result = smma_numba(prices_with_nan, length=length, nan_policy="ignore")
     # NaN at index 5 -> initial SMA (indices 0-4) is clean,
     # but from index 5 the recurrence propagates NaN forever.
     assert np.isfinite(result[4])
@@ -297,7 +304,7 @@ def test_smma_numba_with_nan(prices_with_nan):
 def test_smma_numba_with_inf(prices_with_inf):
     """Inf in input is replaced with NaN, so it behaves like NaN."""
     length = 5
-    result = smma_numba(prices_with_inf, length=length, nan_policy='ignore')
+    result = smma_numba(prices_with_inf, length=length, nan_policy="ignore")
     assert np.isfinite(result[4])
     assert np.isnan(result[5:]).all()
 
@@ -312,10 +319,10 @@ def test_smma_numba_empty(prices_empty):
 @pytest.mark.overlap
 def test_smma_numba_all_nan(prices_all_nan):
     """All NaNs -> all NaNs (or fillna if provided)."""
-    result = smma_numba(prices_all_nan, length=5, nan_policy='ignore')
+    result = smma_numba(prices_all_nan, length=5, nan_policy="ignore")
     assert np.isnan(result).all()
     result_fill = smma_numba(
-        prices_all_nan, length=5, fillna=0.0, nan_policy='ignore'
+        prices_all_nan, length=5, fillna=0.0, nan_policy="ignore"
     )
     assert (result_fill == 0.0).all()
 
@@ -323,5 +330,5 @@ def test_smma_numba_all_nan(prices_all_nan):
 @pytest.mark.overlap
 def test_smma_numba_extreme_values(prices_extreme):
     """Extreme values (1e300, 1e-300) must not crash."""
-    result = smma_numba(prices_extreme, length=5, nan_policy='ignore')
+    result = smma_numba(prices_extreme, length=5, nan_policy="ignore")
     assert result is not None

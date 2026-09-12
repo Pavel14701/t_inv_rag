@@ -12,10 +12,10 @@
 
 | Пакет | Каталог | Ключевые зависимости | Тесты |
 |-------|---------|----------------------|-------|
-| `dte-ta` | `ta/` | numba, numpy, scipy | `uv run --package dte-ta pytest ta/src/tests` |
+| `dte-ta` | `ta/` | numba, numpy, scipy | `uv run --package dte-ta pytest ta/tests` |
 | `dte-dsl` | `dsl/` | niquests | `uv run --package dte-dsl pytest dsl/tests` |
-| `dte-strategies` | `strategies/` | polars, pandas, ta-lib | — (TZ-02) |
-| `dte-ai` | `ai/` | torch, tensorboard, pyyaml | `uv run --package dte-ai pytest ai/src/tests` |
+| `dte-strategies` | `strategies/` | polars | `uv run --package dte-strategies pytest strategies/tests` (TZ-02) |
+| `dte-ai` | `ai/` | torch, tensorboard, pyyaml | `uv run --package dte-ai pytest ai/tests` |
 | `dte-infer` | `infer/` | polars, yfinance, t-tech (+`ml`: torch) | `uv run --package dte-infer pytest infer/tests` |
 | `dte-rag` | `rag/` | llama-index, qdrant, sentence-transformers | `uv run --package dte-rag pytest rag/tests` |
 | `dte-main` | `main/` | dishka, faststream, aiogram, sqlalchemy, alembic | — (TZ-08/10) |

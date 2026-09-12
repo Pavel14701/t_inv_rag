@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Tests for Gap Side-by-Side White Lines (cdl_gapsidesidewhite)."""
 
-from ._helpers import pattern_suite
-from ....candle.cdl_gapsidesidewhite import (
+from ta.src.candle.cdl_gapsidesidewhite import (
     cdl_gapsidesidewhite,
     cdl_gapsidesidewhite_polars,
 )
+
+from ._helpers import pattern_suite
+
 
 # white, then two whites gapping up with similar bodies
 BULL = [
@@ -21,15 +23,17 @@ BEAR = [
     (96.5, 98.8, 96.1, 98.4),
 ]
 
-globals().update(pattern_suite(
-    name='cdl_gapsidesidewhite',
-    fn=cdl_gapsidesidewhite,
-    polars_fn=cdl_gapsidesidewhite_polars,
-    output_col='CDL_GAPSIDESIDEWHITE',
-    bull=BULL,
-    bear=BEAR,
-    bull_value=1.0,
-    bear_value=-1.0,
-    talib_values=(0.0, 1.0, -1.0),
-    extra={'strict': False},
-))
+globals().update(
+    pattern_suite(
+        name="cdl_gapsidesidewhite",
+        fn=cdl_gapsidesidewhite,
+        polars_fn=cdl_gapsidesidewhite_polars,
+        output_col="CDL_GAPSIDESIDEWHITE",
+        bull=BULL,
+        bear=BEAR,
+        bull_value=1.0,
+        bear_value=-1.0,
+        talib_values=(0.0, 1.0, -1.0),
+        extra={"strict": False},
+    )
+)

@@ -1,14 +1,14 @@
-"""Unit tests for Numba‑accelerated array operations (_array_ops).
-"""
+"""Unit tests for Numba‑accelerated array operations (_array_ops)."""
 
-import pytest
 import numpy as np
-from .._array_ops import (
+import pytest
+
+from ta.src._array_ops import (
     _apply_offset_fillna,
-    _rolling_max_numba,
-    _rolling_min_numba,
     _fill_nan_policy_numba,
     _handle_nan_policy,
+    _rolling_max_numba,
+    _rolling_min_numba,
     replace_inf_with_nan,
 )
 
@@ -17,13 +17,16 @@ from .._array_ops import (
 # Tests for _apply_offset_fillna
 # -----------------------------------------------------------------------------
 
+
 def test_apply_offset_fillna_basic(prices_random_walk, offset, fillna):
     """Test basic shift and fillna: shape preserved, fillna applied."""
     result = _apply_offset_fillna(prices_random_walk, offset, fillna)
     assert result.shape == prices_random_walk.shape
     if offset > 0:
         np.testing.assert_array_equal(result[:offset], fillna)
-        np.testing.assert_array_equal(result[offset:], prices_random_walk[:-offset])
+        np.testing.assert_array_equal(
+            result[offset:], prices_random_walk[:-offset]
+        )
     elif offset < 0:
         off = -offset
         np.testing.assert_array_equal(result[-off:], fillna)
@@ -60,6 +63,7 @@ def test_apply_offset_fillna_offset_gt_length():
 # -----------------------------------------------------------------------------
 # Tests for rolling max/min
 # -----------------------------------------------------------------------------
+
 
 def test_rolling_max_basic():
     """Rolling maximum on a known sequence."""
@@ -119,15 +123,16 @@ def test_rolling_max_min_window_zero():
 # Tests for NaN policy functions
 # -----------------------------------------------------------------------------
 
+
 def test_fill_nan_policy_ffill():
     """Forward fill: propagate last valid value."""
     arr = np.array([1.0, np.nan, 3.0, np.nan, 5.0])
-    _fill_nan_policy_numba(arr, 'ffill')
+    _fill_nan_policy_numba(arr, "ffill")
     expected = np.array([1.0, 1.0, 3.0, 3.0, 5.0])
     np.testing.assert_array_equal(arr, expected)
 
     arr2 = np.array([np.nan, 2.0, np.nan, 4.0])
-    _fill_nan_policy_numba(arr2, 'ffill')
+    _fill_nan_policy_numba(arr2, "ffill")
     expected2 = np.array([np.nan, 2.0, 2.0, 4.0])
     np.testing.assert_array_equal(arr2, expected2)
 
@@ -135,12 +140,12 @@ def test_fill_nan_policy_ffill():
 def test_fill_nan_policy_bfill():
     """Backward fill: propagate next valid value."""
     arr = np.array([1.0, np.nan, 3.0, np.nan, 5.0])
-    _fill_nan_policy_numba(arr, 'bfill')
+    _fill_nan_policy_numba(arr, "bfill")
     expected = np.array([1.0, 3.0, 3.0, 5.0, 5.0])
     np.testing.assert_array_equal(arr, expected)
 
     arr2 = np.array([1.0, np.nan, 3.0, np.nan])
-    _fill_nan_policy_numba(arr2, 'bfill')
+    _fill_nan_policy_numba(arr2, "bfill")
     expected2 = np.array([1.0, 3.0, 3.0, np.nan])
     np.testing.assert_array_equal(arr2, expected2)
 
@@ -148,12 +153,12 @@ def test_fill_nan_policy_bfill():
 def test_fill_nan_policy_both():
     """'both' fills all NaNs (forward then backward), including edges."""
     arr = np.array([1.0, np.nan, 3.0, np.nan, 5.0])
-    _fill_nan_policy_numba(arr, 'both')
+    _fill_nan_policy_numba(arr, "both")
     expected = np.array([1.0, 1.0, 3.0, 3.0, 5.0])
     np.testing.assert_array_equal(arr, expected)
 
     arr2 = np.array([np.nan, 2.0, np.nan, 4.0, np.nan])
-    _fill_nan_policy_numba(arr2, 'both')
+    _fill_nan_policy_numba(arr2, "both")
     expected2 = np.array([2.0, 2.0, 2.0, 4.0, 4.0])
     np.testing.assert_array_equal(arr2, expected2)
 
@@ -161,21 +166,21 @@ def test_fill_nan_policy_both():
 def test_handle_nan_policy_raise():
     """'raise' policy triggers ValueError if NaN present."""
     arr = np.array([1.0, np.nan, 3.0])
-    with pytest.raises(ValueError, match='contains NaN'):
-        _handle_nan_policy(arr, 'raise', 'test')
+    with pytest.raises(ValueError, match="contains NaN"):
+        _handle_nan_policy(arr, "raise", "test")
 
 
 def test_handle_nan_policy_no_nan():
     """No NaNs => returns original array (no copy)."""
     arr = np.array([1.0, 2.0, 3.0])
-    result = _handle_nan_policy(arr, 'raise', 'test')
+    result = _handle_nan_policy(arr, "raise", "test")
     assert result is arr
 
 
 def test_handle_nan_policy_ignore():
     """'ignore' returns the array unchanged even with NaNs."""
     arr = np.array([1.0, np.nan, 3.0])
-    result = _handle_nan_policy(arr, 'ignore', 'test')
+    result = _handle_nan_policy(arr, "ignore", "test")
     assert result is arr
     assert np.isnan(result[1])
 
@@ -183,11 +188,11 @@ def test_handle_nan_policy_ignore():
 def test_handle_nan_policy_ffill_bfill():
     """Ffill and bfill policies applied correctly via _handle_nan_policy."""
     arr = np.array([1.0, np.nan, 3.0, np.nan, 5.0])
-    result_ff = _handle_nan_policy(arr, 'ffill', 'test')
+    result_ff = _handle_nan_policy(arr, "ffill", "test")
     expected = np.array([1.0, 1.0, 3.0, 3.0, 5.0])
     np.testing.assert_array_equal(result_ff, expected)
 
-    result_bf = _handle_nan_policy(arr, 'bfill', 'test')
+    result_bf = _handle_nan_policy(arr, "bfill", "test")
     expected_bf = np.array([1.0, 3.0, 3.0, 5.0, 5.0])
     np.testing.assert_array_equal(result_bf, expected_bf)
 
@@ -195,6 +200,7 @@ def test_handle_nan_policy_ffill_bfill():
 # -----------------------------------------------------------------------------
 # Tests for replace_inf_with_nan
 # -----------------------------------------------------------------------------
+
 
 def test_replace_inf_with_nan():
     """Inf and -Inf are replaced with NaN in-place."""

@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """Tests for Morning Star (cdl_morningstar)."""
 
+from ta.src.candle.cdl_morningstar import (
+    cdl_morningstar,
+    cdl_morningstar_polars,
+)
+
 from ._helpers import pattern_suite
-from ....candle.cdl_morningstar import cdl_morningstar, cdl_morningstar_polars
+
 
 # long black, small-bodied star gapped down, long white above the midpoint
 BULL = [
@@ -11,12 +16,14 @@ BULL = [
     (99.5, 102.5, 99.2, 102.3),
 ]
 
-globals().update(pattern_suite(
-    name='cdl_morningstar',
-    fn=cdl_morningstar,
-    polars_fn=cdl_morningstar_polars,
-    output_col='CDL_MORNINGSTAR',
-    bull=BULL,
-    bull_value=1.0,
-    talib_values=(0.0, 1.0),
-))
+globals().update(
+    pattern_suite(
+        name="cdl_morningstar",
+        fn=cdl_morningstar,
+        polars_fn=cdl_morningstar_polars,
+        output_col="CDL_MORNINGSTAR",
+        bull=BULL,
+        bull_value=1.0,
+        talib_values=(0.0, 1.0),
+    )
+)

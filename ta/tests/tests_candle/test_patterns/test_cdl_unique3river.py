@@ -1,9 +1,10 @@
 """Unit tests for Unique 3 River pattern (Numba implementation)."""
 
 import numpy as np
+
 from numpy.testing import assert_array_equal
 
-from ....candle.cdl_unique3river import _cdl_unique3river_nb
+from ta.src.candle.cdl_unique3river import _cdl_unique3river_nb
 
 
 def test_cdl_unique3river_valid():

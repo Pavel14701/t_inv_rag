@@ -7,9 +7,10 @@ all three outcome modes and pattern loss integration.
 
 import pytest
 import torch
+
 from torch import Tensor
 
-from ..losses import dual_loss
+from ai.src.losses import dual_loss
 
 
 @pytest.mark.unit
@@ -39,7 +40,7 @@ def test_dual_loss_binary() -> None:
         outcome_logits,
         action_targets,
         outcome_targets,
-        outcome_mode='binary',
+        outcome_mode="binary",
         lambda_outcome=0.3,
     )
     assert total_loss is not None
@@ -71,7 +72,7 @@ def test_dual_loss_multiclass() -> None:
         outcome_logits,
         action_targets,
         outcome_targets,
-        outcome_mode='multiclass',
+        outcome_mode="multiclass",
         lambda_outcome=0.3,
     )
     assert total_loss >= 0
@@ -98,7 +99,7 @@ def test_dual_loss_regression() -> None:
         outcome_logits,
         action_targets,
         outcome_targets,
-        outcome_mode='regression',
+        outcome_mode="regression",
         lambda_outcome=0.3,
     )
     assert total_loss >= 0
@@ -132,7 +133,7 @@ def test_dual_loss_with_pattern() -> None:
         outcome_logits,
         action_targets,
         outcome_targets,
-        outcome_mode='binary',
+        outcome_mode="binary",
         lambda_outcome=0.3,
         pattern_logits=pattern_logits,
         pattern_targets=pattern_targets,

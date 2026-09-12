@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Tests for Engulfing (cdl_engulfing)."""
 
+from ta.src.candle.cdl_engulfing import cdl_engulfing, cdl_engulfing_polars
+
 from ._helpers import pattern_suite
-from ....candle.cdl_engulfing import cdl_engulfing, cdl_engulfing_polars
+
 
 # black body engulfed by a larger white body
 BULL = [
@@ -16,15 +18,17 @@ BEAR = [
     (102.2, 102.6, 99.4, 99.8),
 ]
 
-globals().update(pattern_suite(
-    name='cdl_engulfing',
-    fn=cdl_engulfing,
-    polars_fn=cdl_engulfing_polars,
-    output_col='CDL_ENGULFING',
-    bull=BULL,
-    bear=BEAR,
-    bull_value=1.0,
-    bear_value=-1.0,
-    talib_values=(0.0, 1.0, -1.0),
-    extra={'strict': False},
-))
+globals().update(
+    pattern_suite(
+        name="cdl_engulfing",
+        fn=cdl_engulfing,
+        polars_fn=cdl_engulfing_polars,
+        output_col="CDL_ENGULFING",
+        bull=BULL,
+        bear=BEAR,
+        bull_value=1.0,
+        bear_value=-1.0,
+        talib_values=(0.0, 1.0, -1.0),
+        extra={"strict": False},
+    )
+)

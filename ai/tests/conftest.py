@@ -1,17 +1,19 @@
 """Pytest fixtures for the EntryExitTransformer test suite."""
+
+import tempfile
+
 from datetime import datetime
 from pathlib import Path
-import tempfile
 from typing import Any
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
 import torch
 
-from ..datatypes import OrderBlock
-from ..features import compute_atr
+from ai.src.datatypes import OrderBlock
+from ai.src.features import compute_atr
 
 
 Batch = tuple[
@@ -43,14 +45,14 @@ def sample_dataframe() -> pl.DataFrame:
     sl = np.maximum(close - np.abs(np.random.rand(n) * 2) - 1.0, 1.0)
     return pl.DataFrame(
         {
-            'open': open_,
-            'high': high,
-            'low': low,
-            'close': close,
-            'volume': volume,
-            'tp': tp,
-            'sl': sl,
-            'bar_index': np.arange(n),
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+            "tp": tp,
+            "sl": sl,
+            "bar_index": np.arange(n),
         }
     )
 
@@ -66,15 +68,15 @@ def sample_order_blocks() -> list[OrderBlock]:
         zone_high = zone_low + 2
         ob = OrderBlock(
             id=i,
-            block_type='demand' if i % 2 == 0 else 'supply',
+            block_type="demand" if i % 2 == 0 else "supply",
             start=datetime.now(),
             break_=datetime.now(),
             retest=datetime.now(),
             zone_low=zone_low,
             zone_high=zone_high,
             strength=1.0 + i * 0.5,
-            structure_label='valid' if i % 2 == 0 else None,
-            trend_direction='up' if i < 3 else 'down',
+            structure_label="valid" if i % 2 == 0 else None,
+            trend_direction="up" if i < 3 else "down",
             start_idx=start,
             end_idx=end,
         )
@@ -90,13 +92,13 @@ def sample_atr(sample_dataframe: pl.DataFrame) -> np.ndarray:
 
 @pytest.fixture
 def sample_batch(
-    sample_dataframe: pl.DataFrame,
-    sample_order_blocks: list[OrderBlock]
+    sample_dataframe: pl.DataFrame, sample_order_blocks: list[OrderBlock]
 ) -> Batch:
     """Create a small batch (B=2, T=128) for model testing."""
-    from ..dataset import TradingDataset
+    from ai.src.dataset import TradingDataset
+
     data = sample_dataframe.select(
-        ['open', 'high', 'low', 'close', 'volume', 'tp', 'sl']
+        ["open", "high", "low", "close", "volume", "tp", "sl"]
     ).to_numpy()
     n = len(data)
     # Add dummy indicator and signal columns (zeros)
@@ -120,7 +122,8 @@ def sample_batch(
     )
     # Convert to a list of samples and collate manually to avoid dependency
     samples = [dataset[i] for i in range(2)]
-    from ..dataset import collate_ob
+    from ai.src.dataset import collate_ob
+
     return collate_ob(samples)
 
 
@@ -134,16 +137,13 @@ def sample_action_outcome_labels(
     # For testing, we can provide dummy labels.
     n = len(sample_dataframe)
     action = np.random.choice(
-        [-100, 0, 1, 2],
-        size=n,
-        p=[0.8, 0.1, 0.05, 0.05]
+        [-100, 0, 1, 2], size=n, p=[0.8, 0.1, 0.05, 0.05]
     )
     outcome = np.full(n, np.nan, dtype=np.float32)
     # Set some outcomes for entry bars
     entry_mask = action == 1
     outcome[entry_mask] = np.random.choice(
-        [0.0, 1.0, 2.0],
-        size=entry_mask.sum()
+        [0.0, 1.0, 2.0], size=entry_mask.sum()
     )
     return action, outcome
 
@@ -154,54 +154,49 @@ def sample_parquet_files(sample_dataframe, sample_order_blocks):
     labels, and order blocks.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        features_path = Path(tmpdir) / 'features.parquet'
-        labels_path = Path(tmpdir) / 'labels.parquet'
-        order_blocks_path = Path(tmpdir) / 'order_blocks.parquet'
-        unlabeled_path = Path(tmpdir) / 'unlabeled.parquet'
+        features_path = Path(tmpdir) / "features.parquet"
+        labels_path = Path(tmpdir) / "labels.parquet"
+        order_blocks_path = Path(tmpdir) / "order_blocks.parquet"
+        unlabeled_path = Path(tmpdir) / "unlabeled.parquet"
         # Features with all required columns
         df_feat = sample_dataframe.select(
-            [
-                'open',
-                'high',
-                'low',
-                'close',
-                'volume',
-                'tp',
-                'sl',
-                'bar_index'
-            ]
+            ["open", "high", "low", "close", "volume", "tp", "sl", "bar_index"]
         )
         n = len(df_feat)
-        df_feat = df_feat.with_columns([
-            pl.Series('ind1', np.zeros(n)),
-            pl.Series('ind2', np.zeros(n)),
-            pl.Series('ind3', np.zeros(n)),
-            pl.Series('sig1', np.zeros(n)),
-            pl.Series('sig2', np.zeros(n)),
-        ])
+        df_feat = df_feat.with_columns(
+            [
+                pl.Series("ind1", np.zeros(n)),
+                pl.Series("ind2", np.zeros(n)),
+                pl.Series("ind3", np.zeros(n)),
+                pl.Series("sig1", np.zeros(n)),
+                pl.Series("sig2", np.zeros(n)),
+            ]
+        )
         df_feat.write_parquet(features_path)
         # Labels
-        df_lbl = sample_dataframe.select(['bar_index']).with_columns([
-            pl.Series('action', np.full(n, -100, dtype=np.int64)),
-            pl.Series('outcome', np.full(n, 2.0, dtype=np.float32)),
-        ])
+        df_lbl = sample_dataframe.select(["bar_index"]).with_columns(
+            [
+                pl.Series("action", np.full(n, -100, dtype=np.int64)),
+                pl.Series("outcome", np.full(n, 2.0, dtype=np.float32)),
+            ]
+        )
         df_lbl.write_parquet(labels_path)
         # Order blocks
         ob_data = []
         ob_data.extend(
             {
-                'id': ob.id,
-                'block_type': ob.block_type,
-                'start': ob.start,
-                'break_': ob.break_,
-                'retest': ob.retest,
-                'zone_low': ob.zone_low,
-                'zone_high': ob.zone_high,
-                'strength': ob.strength,
-                'structure_label': ob.structure_label,
-                'trend_direction': ob.trend_direction,
-                'start_idx': ob.start_idx,
-                'end_idx': ob.end_idx,
+                "id": ob.id,
+                "block_type": ob.block_type,
+                "start": ob.start,
+                "break_": ob.break_,
+                "retest": ob.retest,
+                "zone_low": ob.zone_low,
+                "zone_high": ob.zone_high,
+                "strength": ob.strength,
+                "structure_label": ob.structure_label,
+                "trend_direction": ob.trend_direction,
+                "start_idx": ob.start_idx,
+                "end_idx": ob.end_idx,
             }
             for ob in sample_order_blocks
         )
@@ -209,11 +204,11 @@ def sample_parquet_files(sample_dataframe, sample_order_blocks):
         # Unlabeled features (same as features for test)
         df_feat.write_parquet(unlabeled_path)
         yield {
-            'features_path': str(features_path),
-            'labels_path': str(labels_path),
-            'order_blocks_path': str(order_blocks_path),
-            'unlabeled_path': str(unlabeled_path),
-            'order_blocks': sample_order_blocks,
+            "features_path": str(features_path),
+            "labels_path": str(labels_path),
+            "order_blocks_path": str(order_blocks_path),
+            "unlabeled_path": str(unlabeled_path),
+            "order_blocks": sample_order_blocks,
         }
 
 
@@ -231,14 +226,14 @@ def large_dataframe() -> pl.DataFrame:
     sl = np.maximum(close - np.abs(np.random.rand(n) * 2) - 1.0, 1.0)
     return pl.DataFrame(
         {
-            'open': open_,
-            'high': high,
-            'low': low,
-            'close': close,
-            'volume': volume,
-            'tp': tp,
-            'sl': sl,
-            'bar_index': np.arange(n),
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+            "tp": tp,
+            "sl": sl,
+            "bar_index": np.arange(n),
         }
     )
 
@@ -254,15 +249,15 @@ def large_order_blocks() -> list[OrderBlock]:
         zone_high = zone_low + 2
         ob = OrderBlock(
             id=i,
-            block_type='demand' if i % 2 == 0 else 'supply',
+            block_type="demand" if i % 2 == 0 else "supply",
             start=datetime.now(),
             break_=datetime.now(),
             retest=datetime.now(),
             zone_low=zone_low,
             zone_high=zone_high,
             strength=1.0 + i * 0.1,
-            structure_label='valid' if i % 2 == 0 else None,
-            trend_direction='up' if i < 50 else 'down',
+            structure_label="valid" if i % 2 == 0 else None,
+            trend_direction="up" if i < 50 else "down",
             start_idx=start,
             end_idx=end,
         )
@@ -279,22 +274,22 @@ def model_params() -> dict[str, Any]:
 
     """
     return {
-        'n_price_feats': 5,
-        'n_ind_feats': 3,
-        'n_sig_feats': 2,
-        'n_tp_sl_feats': 2,
-        'hidden_size': 64,
-        'num_layers': 2,
-        'num_heads': 4,
-        'dropout': 0.1,
-        'max_seq_len': 128,
-        'max_ob_seq_len': 32,
-        'n_action_classes': 3,
-        'outcome_mode': 'binary',
-        'n_outcome_classes': 2,
-        'n_patterns': 5,
-        'ob_embedding_dim': 8,
-        'atr_global': 1.0,
+        "n_price_feats": 5,
+        "n_ind_feats": 3,
+        "n_sig_feats": 2,
+        "n_tp_sl_feats": 2,
+        "hidden_size": 64,
+        "num_layers": 2,
+        "num_heads": 4,
+        "dropout": 0.1,
+        "max_seq_len": 128,
+        "max_ob_seq_len": 32,
+        "n_action_classes": 3,
+        "outcome_mode": "binary",
+        "n_outcome_classes": 2,
+        "n_patterns": 5,
+        "ob_embedding_dim": 8,
+        "atr_global": 1.0,
     }
 
 
@@ -312,10 +307,10 @@ def sample_batch_tensors(sample_batch: tuple) -> dict[str, Any]:
     """
     batch = sample_batch
     return {
-        'prices': batch[0],          # (2, 128, 5)
-        'indicators': batch[1],      # (2, 128, 3)
-        'signals': batch[2],         # (2, 128, 2)
-        'tp': batch[3],              # (2, 128, 1)
-        'sl': batch[4],              # (2, 128, 1)
-        'order_blocks': batch[5],    # list of 2 lists
+        "prices": batch[0],  # (2, 128, 5)
+        "indicators": batch[1],  # (2, 128, 3)
+        "signals": batch[2],  # (2, 128, 2)
+        "tp": batch[3],  # (2, 128, 1)
+        "sl": batch[4],  # (2, 128, 1)
+        "order_blocks": batch[5],  # list of 2 lists
     }

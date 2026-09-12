@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Tests for Abandoned Baby (cdl_abandonedbaby)."""
 
-from ._helpers import pattern_suite
-from ....candle.cdl_abandonedbaby import (
+from ta.src.candle.cdl_abandonedbaby import (
     cdl_abandonedbaby,
     cdl_abandonedbaby_polars,
 )
+
+from ._helpers import pattern_suite
+
 
 # bearish candle, doji with low above the first high, bullish gap-up candle
 BULL = [
@@ -21,15 +23,17 @@ BEAR = [
     (98.0, 98.2, 96.2, 96.5),
 ]
 
-globals().update(pattern_suite(
-    name='cdl_abandonedbaby',
-    fn=cdl_abandonedbaby,
-    polars_fn=cdl_abandonedbaby_polars,
-    output_col='CDL_ABANDONEDBABY',
-    bull=BULL,
-    bear=BEAR,
-    bull_value=1.0,
-    bear_value=-1.0,
-    talib_values=(0.0, 1.0, -1.0),
-    extra={'strict': False},
-))
+globals().update(
+    pattern_suite(
+        name="cdl_abandonedbaby",
+        fn=cdl_abandonedbaby,
+        polars_fn=cdl_abandonedbaby_polars,
+        output_col="CDL_ABANDONEDBABY",
+        bull=BULL,
+        bear=BEAR,
+        bull_value=1.0,
+        bear_value=-1.0,
+        talib_values=(0.0, 1.0, -1.0),
+        extra={"strict": False},
+    )
+)

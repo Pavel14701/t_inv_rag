@@ -19,16 +19,18 @@ from collections.abc import Callable
 import numpy as np
 import numpy.typing as npt
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...statistics.entropy import entropy_numba
-from ...statistics.mad import mad_numba
-from ...statistics.median import median_numba
-from ...statistics.quantile import quantile_numba
-from ...statistics.skew import skew_numba
-from ...statistics.stdev import stdev_numba
-from ...statistics.variance import variance_numba
-from ...statistics.zscore import zscore_numpy
+from ta.src.statistics.entropy import entropy_numba
+from ta.src.statistics.mad import mad_numba
+from ta.src.statistics.median import median_numba
+from ta.src.statistics.quantile import quantile_numba
+from ta.src.statistics.skew import skew_numba
+from ta.src.statistics.stdev import stdev_numba
+from ta.src.statistics.variance import variance_numba
+from ta.src.statistics.zscore import zscore_numpy
+
 
 LENGTH = 12
 WARMUP = LENGTH - 1  # leading NaNs common to all rolling statistics here
@@ -36,36 +38,38 @@ WARMUP = LENGTH - 1  # leading NaNs common to all rolling statistics here
 STATISTICS_FNS: list[object] = [
     pytest.param(
         lambda c, **kw: entropy_numba(c, length=LENGTH, base=2.0, **kw),
-        id='entropy',
+        id="entropy",
     ),
-    pytest.param(lambda c, **kw: mad_numba(c, length=LENGTH, **kw), id='mad'),
+    pytest.param(lambda c, **kw: mad_numba(c, length=LENGTH, **kw), id="mad"),
     pytest.param(
-        lambda c, **kw: median_numba(c, length=LENGTH, **kw), id='median',
+        lambda c, **kw: median_numba(c, length=LENGTH, **kw),
+        id="median",
     ),
     pytest.param(
         lambda c, **kw: quantile_numba(c, length=LENGTH, q=0.5, **kw),
-        id='quantile',
+        id="quantile",
     ),
     pytest.param(
-        lambda c, **kw: skew_numba(c, length=LENGTH, **kw), id='skew',
+        lambda c, **kw: skew_numba(c, length=LENGTH, **kw),
+        id="skew",
     ),
     pytest.param(
         lambda c, **kw: stdev_numba(c, length=LENGTH, ddof=1, **kw),
-        id='stdev',
+        id="stdev",
     ),
     pytest.param(
         lambda c, **kw: variance_numba(c, length=LENGTH, ddof=1, **kw),
-        id='variance',
+        id="variance",
     ),
     pytest.param(
         lambda c, **kw: zscore_numpy(c, length=LENGTH, use_talib=False, **kw),
-        id='zscore',
+        id="zscore",
     ),
 ]
 
 
 @pytest.mark.statistics
-@pytest.mark.parametrize('fn', STATISTICS_FNS)
+@pytest.mark.parametrize("fn", STATISTICS_FNS)
 def test_offset_without_fillna_shifts_and_keeps_nan(
     fn: Callable[..., npt.NDArray[np.float64]],
     prices_random_walk: npt.NDArray[np.float64],
@@ -84,7 +88,7 @@ def test_offset_without_fillna_shifts_and_keeps_nan(
 
 
 @pytest.mark.statistics
-@pytest.mark.parametrize('fn', STATISTICS_FNS)
+@pytest.mark.parametrize("fn", STATISTICS_FNS)
 def test_offset_with_fillna_replaces_warmup_nan(
     fn: Callable[..., npt.NDArray[np.float64]],
     prices_random_walk: npt.NDArray[np.float64],
@@ -101,7 +105,7 @@ def test_offset_with_fillna_replaces_warmup_nan(
 
 
 @pytest.mark.statistics
-@pytest.mark.parametrize('fn', STATISTICS_FNS)
+@pytest.mark.parametrize("fn", STATISTICS_FNS)
 def test_negative_offset(
     fn: Callable[..., npt.NDArray[np.float64]],
     prices_random_walk: npt.NDArray[np.float64],
@@ -116,7 +120,7 @@ def test_negative_offset(
 
 
 @pytest.mark.statistics
-@pytest.mark.parametrize('fn', STATISTICS_FNS)
+@pytest.mark.parametrize("fn", STATISTICS_FNS)
 def test_zero_offset_fillna_only_replaces_nan(
     fn: Callable[..., npt.NDArray[np.float64]],
     prices_random_walk: npt.NDArray[np.float64],

@@ -1,27 +1,31 @@
 # -*- coding: utf-8 -*-
 """Unit tests for variance module (rolling variance)."""
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...statistics.variance import (
-    variance_numba,
-    variance_talib,
+from ta.src.external import talib_available
+from ta.src.statistics.variance import (
     variance_ind,
+    variance_numba,
     variance_polars,
+    variance_talib,
 )
-from ...external import talib_available
 
 
 # -----------------------------------------------------------------------------
 # Numba core tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.statistics
-def test_variance_numba_basic(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_variance_numba_basic(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test variance_numba on a random walk."""
     close = prices_random_walk
     length = 3
@@ -38,7 +42,9 @@ def test_variance_numba_basic(prices_random_walk: npt.NDArray[np.float64]) -> No
 
 
 @pytest.mark.statistics
-def test_variance_numba_ddof(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_variance_numba_ddof(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test that ddof affects the result correctly."""
     close = prices_random_walk
     length = 10
@@ -51,13 +57,17 @@ def test_variance_numba_ddof(prices_random_walk: npt.NDArray[np.float64]) -> Non
 
 
 @pytest.mark.statistics
-def test_variance_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_variance_numba_offset_fillna(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test offset and fillna."""
     close = prices_random_walk
     length = 3
     ddof = 1
 
-    result_no_offset = variance_numba(close, length=length, ddof=ddof, offset=0)
+    result_no_offset = variance_numba(
+        close, length=length, ddof=ddof, offset=0
+    )
     result_offset = variance_numba(
         close,
         length=length,
@@ -77,24 +87,31 @@ def test_variance_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64
 # Backend selection tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.statistics
-def test_variance_ind_uses_numba(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_variance_ind_uses_numba(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test variance_ind uses Numba when TA-Lib is not requested."""
     close = prices_random_walk
     length = 3
     ddof = 1
 
-    result_numba = variance_ind(close, length=length, ddof=ddof, use_talib=False)
+    result_numba = variance_ind(
+        close, length=length, ddof=ddof, use_talib=False
+    )
     expected = variance_numba(close, length=length, ddof=ddof)
     assert_allclose(result_numba, expected, rtol=1e-6, equal_nan=True)
 
 
 @pytest.mark.skipif(
     not talib_available,
-    reason='TA-Lib not installed',
+    reason="TA-Lib not installed",
 )
 @pytest.mark.statistics
-def test_variance_ind_uses_talib(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_variance_ind_uses_talib(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test variance_ind uses TA-Lib when available and requested."""
     close = prices_random_walk
     length = 3
@@ -108,54 +125,61 @@ def test_variance_ind_uses_talib(prices_random_walk: npt.NDArray[np.float64]) ->
 # Polars integration tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.statistics
 def test_variance_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """Test variance_polars adds a column correctly."""
     length = 30
     result_series = variance_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
         use_talib=False,
-        output_col='VAR',
+        output_col="VAR",
     )
 
     assert isinstance(result_series, pl.Series)
-    assert result_series.name == 'VAR'
+    assert result_series.name == "VAR"
     assert len(result_series) == len(df_random_walk)
     assert result_series.dtype == pl.Float64
 
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = variance_numba(close_arr, length=length, ddof=1)
-    assert_allclose(result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True)
+    assert_allclose(
+        result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True
+    )
 
 
 @pytest.mark.statistics
 def test_variance_polars_default_output_col() -> None:
     """Test default output column name."""
-    df = pl.DataFrame({'close': [1.0, 2.0, 3.0, 4.0, 5.0]})
+    df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0]})
     length = 3
-    result_series = variance_polars(df, close_col='close', length=length, use_talib=False)
-    assert result_series.name == f'VAR_{length}'
+    result_series = variance_polars(
+        df, close_col="close", length=length, use_talib=False
+    )
+    assert result_series.name == f"VAR_{length}"
 
 
 @pytest.mark.statistics
-def test_variance_polars_with_offset_fillna(df_random_walk: pl.DataFrame) -> None:
+def test_variance_polars_with_offset_fillna(
+    df_random_walk: pl.DataFrame,
+) -> None:
     """Test variance_polars with offset and fillna."""
     length = 30
     result_series = variance_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
         offset=1,
         fillna=0.0,
         use_talib=False,
-        output_col='VAR',
+        output_col="VAR",
     )
 
     assert result_series[0] == 0.0
 
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = variance_numba(
         close_arr,
         length=length,
@@ -163,11 +187,15 @@ def test_variance_polars_with_offset_fillna(df_random_walk: pl.DataFrame) -> Non
         offset=1,
         fillna=0.0,
     )
-    assert_allclose(result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True)
+    assert_allclose(
+        result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True
+    )
 
 
 @pytest.mark.statistics
-def test_variance_ind_with_pl_series(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_variance_ind_with_pl_series(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test variance_ind with Polars Series input."""
     s = pl.Series(prices_random_walk)
     length = 3
@@ -181,6 +209,7 @@ def test_variance_ind_with_pl_series(prices_random_walk: npt.NDArray[np.float64]
 # -----------------------------------------------------------------------------
 # IEEE-754 corner-case tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.statistics
 def test_variance_numba_nan_recovers() -> None:
@@ -221,7 +250,7 @@ def test_variance_numba_large_prices_accuracy() -> None:
 @pytest.mark.statistics
 def test_variance_numba_invalid_length_raises() -> None:
     """Passing length < 1 raises ValueError."""
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         variance_numba(np.array([1.0, 2.0, 3.0]), length=0)
 
 
@@ -229,7 +258,7 @@ def test_variance_numba_invalid_length_raises() -> None:
 def test_variance_numba_invalid_ddof_raises() -> None:
     """Passing ddof outside [0, length) raises ValueError."""
     close = np.array([1.0, 2.0, 3.0])
-    with pytest.raises(ValueError, match='ddof must satisfy'):
+    with pytest.raises(ValueError, match="ddof must satisfy"):
         variance_numba(close, length=3, ddof=3)
-    with pytest.raises(ValueError, match='ddof must satisfy'):
+    with pytest.raises(ValueError, match="ddof must satisfy"):
         variance_numba(close, length=3, ddof=-1)

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import polars as pl
+
 from numba import jit
 
-from ..external import talib_available
 from .._array_ops import _apply_offset_fillna
+from ..external import talib_available
 from ..volatility import atr_ind
 
 

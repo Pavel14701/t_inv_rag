@@ -4,15 +4,15 @@ These tests verify the dataset class and collation function used in the
 EntryExitTransformer pipeline.
 """
 
-import pytest
 import numpy as np
+import polars as pl
+import pytest
 import torch
+
 from torch import Tensor
 
-import polars as pl
-
-from ..dataset import TradingDataset, collate_ob
-from ..datatypes import OrderBlock
+from ai.src.dataset import TradingDataset, collate_ob
+from ai.src.datatypes import OrderBlock
 
 
 @pytest.mark.unit
@@ -35,7 +35,7 @@ def test_trading_dataset_len(
 
     """
     data = sample_dataframe.select(
-        ['open', 'high', 'low', 'close', 'volume', 'tp', 'sl']
+        ["open", "high", "low", "close", "volume", "tp", "sl"]
     ).to_numpy()
     n = len(data)
     # Add dummy indicator (3) and signal (2) features
@@ -55,7 +55,7 @@ def test_trading_dataset_len(
         tp_sl_feats=2,
     )
     expected_len = n - seq_len + 1
-    assert len(dataset) == expected_len  # noqa: E501
+    assert len(dataset) == expected_len
 
 
 @pytest.mark.unit
@@ -84,7 +84,7 @@ def test_trading_dataset_getitem(
 
     """
     data = sample_dataframe.select(
-        ['open', 'high', 'low', 'close', 'volume', 'tp', 'sl']
+        ["open", "high", "low", "close", "volume", "tp", "sl"]
     ).to_numpy()
     n = len(data)
     data = np.hstack([data, np.zeros((n, 3)), np.zeros((n, 2))])
@@ -148,7 +148,7 @@ def test_collate_ob(
 
     """
     data = sample_dataframe.select(
-        ['open', 'high', 'low', 'close', 'volume', 'tp', 'sl']
+        ["open", "high", "low", "close", "volume", "tp", "sl"]
     ).to_numpy()
     n = len(data)
     data = np.hstack([data, np.zeros((n, 3)), np.zeros((n, 2))])

@@ -1,9 +1,10 @@
 """Unit tests for Tristar pattern (Numba implementation)."""
 
 import numpy as np
+
 from numpy.testing import assert_array_equal
 
-from ....candle.cdl_tristar import _cdl_tristar_nb
+from ta.src.candle.cdl_tristar import _cdl_tristar_nb
 
 
 def test_cdl_tristar_valid():

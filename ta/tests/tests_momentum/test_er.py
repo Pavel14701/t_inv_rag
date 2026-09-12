@@ -4,9 +4,10 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...momentum.er import _er_numba, er_ind, er_numpy, er_polars
+from ta.src.momentum.er import _er_numba, er_ind, er_numpy, er_polars
 
 
 def _er_reference(close: np.ndarray, length: int = 10) -> np.ndarray:
@@ -15,7 +16,7 @@ def _er_reference(close: np.ndarray, length: int = 10) -> np.ndarray:
     out = np.full(n, np.nan)
     for i in range(length, n):
         change = abs(close[i] - close[i - length])
-        vol = np.abs(np.diff(close[i - length:i + 1])).sum()
+        vol = np.abs(np.diff(close[i - length : i + 1])).sum()
         if vol != 0.0:
             out[i] = change / vol
     return out
@@ -87,9 +88,9 @@ def test_er_offset_fillna(prices_random_walk) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.parametrize('length', [0, -1])
+@pytest.mark.parametrize("length", [0, -1])
 def test_er_invalid_length(length: int) -> None:
-    with pytest.raises(ValueError, match='length'):
+    with pytest.raises(ValueError, match="length"):
         er_numpy(np.arange(10.0), length=length)
 
 
@@ -117,27 +118,27 @@ def test_er_ind_numpy_and_series(prices_random_walk) -> None:
 
 @pytest.mark.momentum
 def test_er_polars(df_random_walk: pl.DataFrame) -> None:
-    expected = er_numpy(df_random_walk['close'].to_numpy(), length=10)
+    expected = er_numpy(df_random_walk["close"].to_numpy(), length=10)
     result = er_polars(df_random_walk, length=10)
-    assert 'ER_10' in result.columns
+    assert "ER_10" in result.columns
     assert_allclose(
-        result['ER_10'].to_numpy(), expected, rtol=1e-12, equal_nan=True
+        result["ER_10"].to_numpy(), expected, rtol=1e-12, equal_nan=True
     )
     # Original frame is not mutated (new frame returned).
-    assert 'ER_10' not in df_random_walk.columns
+    assert "ER_10" not in df_random_walk.columns
 
 
 @pytest.mark.momentum
 def test_er_polars_int_column_with_null() -> None:
     df = pl.DataFrame(
-        {'close': [1, 2, None, 4, 5, 6, 7, 8, 9, 10, 11, 12]},
-        schema={'close': pl.Int64},
+        {"close": [1, 2, None, 4, 5, 6, 7, 8, 9, 10, 11, 12]},
+        schema={"close": pl.Int64},
     )
     result = er_polars(df, length=5)
-    assert result['ER_5'].dtype == pl.Float64
-    v = result['ER_5'].to_numpy()
+    assert result["ER_5"].dtype == pl.Float64
+    v = result["ER_5"].to_numpy()
     # Values must match the numpy path on the null -> NaN conversion.
-    close_np = df['close'].cast(pl.Float64).to_numpy()
+    close_np = df["close"].cast(pl.Float64).to_numpy()
     expected = er_numpy(close_np, length=5)
     assert_allclose(v, expected, rtol=1e-12, equal_nan=True)
     # And the nulls actually propagate as NaN.

@@ -15,13 +15,14 @@ Tests cover:
 import numpy as np
 import polars as pl
 import pytest
+
 from scipy.signal import find_peaks
 
-from ...trend.zigzag import (
+from ta.src.trend.zigzag import (
     zigzag_ind,
     zigzag_numpy,
-    zigzag_polars,
     zigzag_peaks_valleys,
+    zigzag_polars,
 )
 
 
@@ -32,14 +33,15 @@ def _peaks_of(x, **kwargs) -> np.ndarray:
     """Peaks of a single series via zigzag_peaks_valleys."""
     x = np.asarray(x, dtype=np.float64)
     peaks, _ = zigzag_peaks_valleys(
-        x, x,
-        prominence_peak=kwargs.get('prom', 0.0),
+        x,
+        x,
+        prominence_peak=kwargs.get("prom", 0.0),
         prominence_valley=0.0,
-        distance=kwargs.get('dist', 1),
-        width=kwargs.get('width'),
-        wlen=kwargs.get('wlen'),
-        rel_height=kwargs.get('rel_height', 0.5),
-        plateau_size=kwargs.get('ps'),
+        distance=kwargs.get("dist", 1),
+        width=kwargs.get("width"),
+        wlen=kwargs.get("wlen"),
+        rel_height=kwargs.get("rel_height", 0.5),
+        plateau_size=kwargs.get("ps"),
     )
     return peaks
 
@@ -48,14 +50,15 @@ def _valleys_of(x, **kwargs) -> np.ndarray:
     """Valleys of a single series via zigzag_peaks_valleys."""
     x = np.asarray(x, dtype=np.float64)
     _, valleys = zigzag_peaks_valleys(
-        x, x,
+        x,
+        x,
         prominence_peak=0.0,
-        prominence_valley=kwargs.get('prom', 0.0),
-        distance=kwargs.get('dist', 1),
-        width=kwargs.get('width'),
-        wlen=kwargs.get('wlen'),
-        rel_height=kwargs.get('rel_height', 0.5),
-        plateau_size=kwargs.get('ps'),
+        prominence_valley=kwargs.get("prom", 0.0),
+        distance=kwargs.get("dist", 1),
+        width=kwargs.get("width"),
+        wlen=kwargs.get("wlen"),
+        rel_height=kwargs.get("rel_height", 0.5),
+        plateau_size=kwargs.get("ps"),
     )
     return valleys
 
@@ -79,9 +82,10 @@ def test_zigzag_peaks_scipy_parity_no_plateau_size(walk: np.ndarray) -> None:
 
 
 @pytest.mark.trend
-@pytest.mark.parametrize('ps', [1, 2, 3, 5])
+@pytest.mark.parametrize("ps", [1, 2, 3, 5])
 def test_zigzag_peaks_scipy_parity_plateau_size(
-    walk: np.ndarray, ps: int,
+    walk: np.ndarray,
+    ps: int,
 ) -> None:
     """plateau_size semantics match scipy (midpoint, min run length)."""
     ours = _peaks_of(walk, ps=ps)
@@ -114,7 +118,7 @@ def test_zigzag_distance_scipy_parity(walk: np.ndarray) -> None:
 
 
 @pytest.mark.trend
-@pytest.mark.parametrize('dist', [2, 3, 7, 15, 40])
+@pytest.mark.parametrize("dist", [2, 3, 7, 15, 40])
 def test_zigzag_distance_property(walk: np.ndarray, dist: int) -> None:
     """All surviving peaks are at least `dist` bars apart."""
     peaks = _peaks_of(walk, dist=dist)
@@ -151,20 +155,26 @@ def test_zigzag_plateau_next_to_higher_bar_is_peak() -> None:
 
 
 @pytest.mark.trend
-@pytest.mark.parametrize('x', [
-    [3.0, 2.0, 2.0, 2.0, 1.0],   # higher bar on the left
-    [0.0, 2.0, 2.0, 2.0, 3.0],   # higher bar on the right
-])
+@pytest.mark.parametrize(
+    "x",
+    [
+        [3.0, 2.0, 2.0, 2.0, 1.0],  # higher bar on the left
+        [0.0, 2.0, 2.0, 2.0, 3.0],  # higher bar on the right
+    ],
+)
 def test_zigzag_plateau_below_neighbour_is_not_peak(x: list) -> None:
     """Regression: plateau lower than an adjacent bar was a false positive."""
     np.testing.assert_array_equal(_peaks_of(np.array(x), ps=1), [])
 
 
 @pytest.mark.trend
-@pytest.mark.parametrize('x', [
-    [2.0, 2.0, 2.0, 1.0, 0.0],   # plateau touches the start
-    [0.0, 1.0, 2.0, 2.0, 2.0],   # plateau touches the end
-])
+@pytest.mark.parametrize(
+    "x",
+    [
+        [2.0, 2.0, 2.0, 1.0, 0.0],  # plateau touches the start
+        [0.0, 1.0, 2.0, 2.0, 2.0],  # plateau touches the end
+    ],
+)
 def test_zigzag_plateau_at_edge_is_not_peak(x: list) -> None:
     """Regression: edge plateau was a false positive (no lower neighbour)."""
     np.testing.assert_array_equal(_peaks_of(np.array(x), ps=1), [])
@@ -185,8 +195,9 @@ def test_zigzag_simple_alternating_series() -> None:
     """Alternating highs/lows give alternating peaks and valleys."""
     high = np.array([1.0, 3.0, 1.0, 4.0, 1.0, 2.0, 1.0])
     low = np.array([1.0, 0.5, 0.0, 0.5, 0.0, 0.5, 1.0])
-    peaks, valleys = zigzag_numpy(high, low, prominence_peak=0.0,
-                                  prominence_valley=0.0, distance=1)
+    peaks, valleys = zigzag_numpy(
+        high, low, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
     np.testing.assert_array_equal(peaks, [1, 3, 5])
     np.testing.assert_array_equal(valleys, [2, 4])
 
@@ -195,8 +206,9 @@ def test_zigzag_simple_alternating_series() -> None:
 def test_zigzag_monotonic_series_has_no_extremes() -> None:
     """Strictly increasing / decreasing series: no peaks, no valleys."""
     x = np.arange(20, dtype=np.float64)
-    peaks, valleys = zigzag_numpy(x, x, prominence_peak=0.0,
-                                  prominence_valley=0.0, distance=1)
+    peaks, valleys = zigzag_numpy(
+        x, x, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
     assert peaks.size == 0
     assert valleys.size == 0
 
@@ -205,8 +217,9 @@ def test_zigzag_monotonic_series_has_no_extremes() -> None:
 def test_zigzag_constant_series_has_no_extremes() -> None:
     """All-equal series: no peaks, no valleys (flat is not a maximum)."""
     x = np.full(20, 5.0)
-    peaks, valleys = zigzag_numpy(x, x, prominence_peak=0.0,
-                                  prominence_valley=0.0, distance=1)
+    peaks, valleys = zigzag_numpy(
+        x, x, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
     assert peaks.size == 0
     assert valleys.size == 0
 
@@ -220,13 +233,18 @@ def test_zigzag_strict_ieee_matches_scipy(walk: np.ndarray) -> None:
     our simplified width metric is not scipy-exact by design and is
     covered by property tests instead.)
     """
-    for kwargs in ({}, {'prom': 2.0}, {'dist': 10}, {'ps': 1},
-                   {'prom': 1.0, 'dist': 5}):
+    for kwargs in (
+        {},
+        {"prom": 2.0},
+        {"dist": 10},
+        {"ps": 1},
+        {"prom": 1.0, "dist": 5},
+    ):
         ours = _peaks_of(walk, **kwargs)
         ref_kwargs = {
-            'prominence': kwargs.get('prom'),
-            'distance': kwargs.get('dist'),
-            'plateau_size': kwargs.get('ps'),
+            "prominence": kwargs.get("prom"),
+            "distance": kwargs.get("dist"),
+            "plateau_size": kwargs.get("ps"),
         }
         ref_kwargs = {k: v for k, v in ref_kwargs.items() if v is not None}
         ref = find_peaks(walk, **ref_kwargs)[0]
@@ -301,7 +319,7 @@ def test_zigzag_wlen_limits_prominence_window() -> None:
     drops to 10 - 6 = 4.
     """
     x = np.array([0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 8.5, 7.0, 5.5, 4.0])
-    assert _peaks_of(x, prom=5.0).size == 1     # full window: survives
+    assert _peaks_of(x, prom=5.0).size == 1  # full window: survives
     assert _peaks_of(x, prom=5.0, wlen=5).size == 0  # narrow: filtered out
 
 
@@ -314,12 +332,14 @@ def test_zigzag_numpy_rejects_nan() -> None:
     x = np.arange(10.0)
     x_nan = x.copy()
     x_nan[3] = np.nan
-    with pytest.raises(ValueError, match='high.*NaN'):
-        zigzag_numpy(x_nan, x, prominence_peak=0.0, prominence_valley=0.0,
-                     distance=1)
-    with pytest.raises(ValueError, match='low.*NaN'):
-        zigzag_numpy(x, x_nan, prominence_peak=0.0, prominence_valley=0.0,
-                     distance=1)
+    with pytest.raises(ValueError, match="high.*NaN"):
+        zigzag_numpy(
+            x_nan, x, prominence_peak=0.0, prominence_valley=0.0, distance=1
+        )
+    with pytest.raises(ValueError, match="low.*NaN"):
+        zigzag_numpy(
+            x, x_nan, prominence_peak=0.0, prominence_valley=0.0, distance=1
+        )
 
 
 @pytest.mark.trend
@@ -328,21 +348,24 @@ def test_zigzag_numpy_rejects_inf() -> None:
     x = np.arange(10.0)
     x_inf = x.copy()
     x_inf[3] = np.inf
-    with pytest.raises(ValueError, match='Inf'):
-        zigzag_numpy(x_inf, x, prominence_peak=0.0, prominence_valley=0.0,
-                     distance=1)
-    with pytest.raises(ValueError, match='Inf'):
-        zigzag_numpy(x, x_inf, prominence_peak=0.0, prominence_valley=0.0,
-                     distance=1)
+    with pytest.raises(ValueError, match="Inf"):
+        zigzag_numpy(
+            x_inf, x, prominence_peak=0.0, prominence_valley=0.0, distance=1
+        )
+    with pytest.raises(ValueError, match="Inf"):
+        zigzag_numpy(
+            x, x_inf, prominence_peak=0.0, prominence_valley=0.0, distance=1
+        )
 
 
 @pytest.mark.trend
 def test_zigzag_numpy_rejects_length_mismatch() -> None:
     """Regression: different lengths of high/low were not validated."""
     x = np.arange(10.0)
-    with pytest.raises(ValueError, match='same length'):
-        zigzag_numpy(x, x[:5], prominence_peak=0.0, prominence_valley=0.0,
-                     distance=1)
+    with pytest.raises(ValueError, match="same length"):
+        zigzag_numpy(
+            x, x[:5], prominence_peak=0.0, prominence_valley=0.0, distance=1
+        )
 
 
 @pytest.mark.trend
@@ -350,8 +373,11 @@ def test_zigzag_numpy_short_series_returns_empty() -> None:
     """Series shorter than 3 bars gracefully return empty index arrays."""
     for n in (0, 1, 2):
         peaks, valleys = zigzag_numpy(
-            np.ones(n), np.ones(n),
-            prominence_peak=0.0, prominence_valley=0.0, distance=1,
+            np.ones(n),
+            np.ones(n),
+            prominence_peak=0.0,
+            prominence_valley=0.0,
+            distance=1,
         )
         assert peaks.size == 0 and valleys.size == 0
 
@@ -361,8 +387,9 @@ def test_zigzag_numpy_result_dtypes_and_sorted() -> None:
     """Results are int64 arrays sorted ascending."""
     rng = np.random.default_rng(3)
     x = np.round(np.cumsum(rng.normal(0, 1, 200)), 1)
-    peaks, valleys = zigzag_numpy(x, x, prominence_peak=0.0,
-                                  prominence_valley=0.0, distance=1)
+    peaks, valleys = zigzag_numpy(
+        x, x, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
     assert peaks.dtype == np.int64 and valleys.dtype == np.int64
     assert (np.diff(peaks) > 0).all()
     assert (np.diff(valleys) > 0).all()
@@ -373,8 +400,9 @@ def test_zigzag_numpy_accepts_non_contiguous_input() -> None:
     """Non-contiguous (strided) arrays are handled via ascontiguousarray."""
     x = np.arange(40.0)[::2]  # stride 2, non-contiguous
     x[10] = 100.0  # guaranteed interior peak
-    peaks, valleys = zigzag_numpy(x, x, prominence_peak=0.0,
-                                  prominence_valley=0.0, distance=1)
+    peaks, valleys = zigzag_numpy(
+        x, x, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
     assert 10 in peaks
     assert peaks.size >= 1
 
@@ -396,10 +424,12 @@ def test_zigzag_peaks_valleys_none_sentinels() -> None:
 @pytest.mark.trend
 def test_zigzag_ind_matches_numpy(walk: np.ndarray) -> None:
     """zigzag_ind on numpy input matches zigzag_numpy."""
-    ind_res = zigzag_ind(walk, walk, prominence_peak=0.0,
-                         prominence_valley=0.0, distance=1)
-    numpy_res = zigzag_numpy(walk, walk, prominence_peak=0.0,
-                             prominence_valley=0.0, distance=1)
+    ind_res = zigzag_ind(
+        walk, walk, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
+    numpy_res = zigzag_numpy(
+        walk, walk, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
     np.testing.assert_array_equal(ind_res[0], numpy_res[0])
     np.testing.assert_array_equal(ind_res[1], numpy_res[1])
 
@@ -407,11 +437,16 @@ def test_zigzag_ind_matches_numpy(walk: np.ndarray) -> None:
 @pytest.mark.trend
 def test_zigzag_ind_accepts_polars_series(walk: np.ndarray) -> None:
     """zigzag_ind accepts pl.Series and matches numpy input."""
-    series_res = zigzag_ind(pl.Series(walk), pl.Series(walk),
-                            prominence_peak=0.0, prominence_valley=0.0,
-                            distance=1)
-    numpy_res = zigzag_numpy(walk, walk, prominence_peak=0.0,
-                             prominence_valley=0.0, distance=1)
+    series_res = zigzag_ind(
+        pl.Series(walk),
+        pl.Series(walk),
+        prominence_peak=0.0,
+        prominence_valley=0.0,
+        distance=1,
+    )
+    numpy_res = zigzag_numpy(
+        walk, walk, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
     np.testing.assert_array_equal(series_res[0], numpy_res[0])
     np.testing.assert_array_equal(series_res[1], numpy_res[1])
 
@@ -435,37 +470,45 @@ def df_ohlc_small() -> pl.DataFrame:
     close = np.round(np.cumsum(rng.normal(0, 1, 120)), 1)
     high = close + np.abs(rng.normal(0, 0.5, 120))
     low = close - np.abs(rng.normal(0, 0.5, 120))
-    return pl.DataFrame({'high': high, 'low': low, 'close': close})
+    return pl.DataFrame({"high": high, "low": low, "close": close})
 
 
 @pytest.mark.trend
-def test_zigzag_polars_adds_boolean_columns(df_ohlc_small: pl.DataFrame) -> None:
+def test_zigzag_polars_adds_boolean_columns(
+    df_ohlc_small: pl.DataFrame,
+) -> None:
     """is_peak/is_valley columns are added, boolean, full length."""
-    result = zigzag_polars(df_ohlc_small, prominence_peak=0.0,
-                           prominence_valley=0.0, distance=1)
-    assert 'is_peak' in result.columns
-    assert 'is_valley' in result.columns
+    result = zigzag_polars(
+        df_ohlc_small, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
+    assert "is_peak" in result.columns
+    assert "is_valley" in result.columns
     assert result.height == df_ohlc_small.height
-    assert result['is_peak'].dtype == pl.Boolean
-    assert result['is_valley'].dtype == pl.Boolean
-    assert result['is_peak'].sum() > 0
-    assert result['is_valley'].sum() > 0
+    assert result["is_peak"].dtype == pl.Boolean
+    assert result["is_valley"].dtype == pl.Boolean
+    assert result["is_peak"].sum() > 0
+    assert result["is_valley"].sum() > 0
 
 
 @pytest.mark.trend
 def test_zigzag_polars_matches_numpy(df_ohlc_small: pl.DataFrame) -> None:
     """Boolean masks mark exactly the indices returned by zigzag_numpy."""
-    result = zigzag_polars(df_ohlc_small, prominence_peak=0.0,
-                           prominence_valley=0.0, distance=1)
+    result = zigzag_polars(
+        df_ohlc_small, prominence_peak=0.0, prominence_valley=0.0, distance=1
+    )
     peak_idx, valley_idx = zigzag_numpy(
-        df_ohlc_small['high'].to_numpy(),
-        df_ohlc_small['low'].to_numpy(),
-        prominence_peak=0.0, prominence_valley=0.0, distance=1,
+        df_ohlc_small["high"].to_numpy(),
+        df_ohlc_small["low"].to_numpy(),
+        prominence_peak=0.0,
+        prominence_valley=0.0,
+        distance=1,
     )
     np.testing.assert_array_equal(
-        np.flatnonzero(result['is_peak'].to_numpy()), peak_idx)
+        np.flatnonzero(result["is_peak"].to_numpy()), peak_idx
+    )
     np.testing.assert_array_equal(
-        np.flatnonzero(result['is_valley'].to_numpy()), valley_idx)
+        np.flatnonzero(result["is_valley"].to_numpy()), valley_idx
+    )
 
 
 @pytest.mark.trend
@@ -476,24 +519,30 @@ def test_zigzag_polars_does_not_mutate_input(
     before = df_ohlc_small.columns
     zigzag_polars(df_ohlc_small)
     assert df_ohlc_small.columns == before
-    assert 'is_peak' not in df_ohlc_small.columns
+    assert "is_peak" not in df_ohlc_small.columns
 
 
 @pytest.mark.trend
 def test_zigzag_polars_suffix(df_ohlc_small: pl.DataFrame) -> None:
     """Suffix is appended to the new column names."""
-    result = zigzag_polars(df_ohlc_small, suffix='_zz')
-    assert 'is_peak_zz' in result.columns
-    assert 'is_valley_zz' in result.columns
-    assert 'is_peak' not in result.columns
+    result = zigzag_polars(df_ohlc_small, suffix="_zz")
+    assert "is_peak_zz" in result.columns
+    assert "is_valley_zz" in result.columns
+    assert "is_peak" not in result.columns
 
 
 @pytest.mark.trend
-def test_zigzag_polars_custom_column_names(df_ohlc_small: pl.DataFrame) -> None:
+def test_zigzag_polars_custom_column_names(
+    df_ohlc_small: pl.DataFrame,
+) -> None:
     """Custom high/low column names are honoured."""
-    renamed = df_ohlc_small.rename({'high': 'h', 'low': 'l'})
+    renamed = df_ohlc_small.rename({"high": "h", "low": "l"})
     result = zigzag_polars(
-        renamed, high_col='h', low_col='l',
-        prominence_peak=0.0, prominence_valley=0.0, distance=1,
+        renamed,
+        high_col="h",
+        low_col="l",
+        prominence_peak=0.0,
+        prominence_valley=0.0,
+        distance=1,
     )
-    assert 'is_peak' in result.columns
+    assert "is_peak" in result.columns

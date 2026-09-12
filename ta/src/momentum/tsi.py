@@ -23,8 +23,8 @@ IEEE 754 notes
 import numpy as np
 import polars as pl
 
-from ..overlap.ema import ema_ind
 from .._array_ops import _apply_offset_fillna
+from ..overlap.ema import ema_ind
 
 
 def _ema_from_first_valid(x: np.ndarray, length: int) -> np.ndarray:

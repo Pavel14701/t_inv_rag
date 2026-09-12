@@ -11,17 +11,19 @@ Tests cover:
 - Structural guarantees: same rows, same order, all level columns present
 """
 
-import pytest
-import numpy as np
-import polars as pl
 from datetime import datetime, timedelta
 
-from ...overlap.pivots import pivots_ind, _pivot_woodie, _pivot_demark
+import numpy as np
+import polars as pl
+import pytest
+
+from ta.src.overlap.pivots import _pivot_demark, _pivot_woodie, pivots_ind
 
 
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
+
 
 def make_hourly_df(n: int = 24 * 10, seed: int = 0) -> pl.DataFrame:
     """Hourly OHLC DataFrame covering `n` hours starting 2024-01-01."""
@@ -31,23 +33,28 @@ def make_hourly_df(n: int = 24 * 10, seed: int = 0) -> pl.DataFrame:
     high = np.maximum(open_, close) + np.abs(rng.normal(0, 0.5, n))
     low = np.minimum(open_, close) - np.abs(rng.normal(0, 0.5, n))
     dates = [datetime(2024, 1, 1) + timedelta(hours=i) for i in range(n)]
-    return pl.DataFrame({
-        'date': dates, 'open': open_, 'high': high, 'low': low, 'close': close,
-    })
+    return pl.DataFrame(
+        {
+            "date": dates,
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+        }
+    )
 
 
 def day_window(df: pl.DataFrame, suffix: str, day: int = 2) -> pl.DataFrame:
     """Rows of the pivots result inside calendar day `day` (2024-01-DD)."""
     start = datetime(2024, 1, day)
     end = start + timedelta(days=1)
-    return df.filter(
-        (pl.col('date') >= start) & (pl.col('date') < end)
-    )
+    return df.filter((pl.col("date") >= start) & (pl.col("date") < end))
 
 
 # -----------------------------------------------------------------------------
 # Core numba formula tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_pivot_woodie_formula() -> None:
@@ -79,9 +86,9 @@ def test_pivot_demark_branches() -> None:
     l = np.array([9.0, 9.0, 10.0])
     c = np.array([10.0, 10.5, 11.0])
     tp, s1, s2, s3, s4, r1, r2, r3, r4 = _pivot_demark(o, h, l, c)
-    assert tp[0] == 0.25 * (11 + 9 + 2 * 10.0)     # open == close
-    assert tp[1] == 0.25 * (2 * 11 + 9 + 10.5)     # close > open
-    assert tp[2] == 0.25 * (13 + 2 * 10 + 11)      # close < open
+    assert tp[0] == 0.25 * (11 + 9 + 2 * 10.0)  # open == close
+    assert tp[1] == 0.25 * (2 * 11 + 9 + 10.5)  # close > open
+    assert tp[2] == 0.25 * (13 + 2 * 10 + 11)  # close < open
     assert s1[0] == 2 * tp[0] - 11.0
     assert r1[0] == 2 * tp[0] - 9.0
     # Demark has no S2..S4/R2..R4: they must be NaN.
@@ -92,7 +99,8 @@ def test_pivot_demark_branches() -> None:
 @pytest.mark.overlap
 def test_pivot_fibonacci_missing_levels() -> None:
     """Fibonacci has no S4/R4: they must be NaN."""
-    from ...overlap.pivots import _pivot_fibonacci
+    from ta.src.overlap.pivots import _pivot_fibonacci
+
     h = np.array([12.0])
     l = np.array([9.0])
     c = np.array([10.5])
@@ -112,7 +120,8 @@ def test_pivot_fibonacci_missing_levels() -> None:
 @pytest.mark.overlap
 def test_pivot_camarilla_formula() -> None:
     """Camarilla levels are close +/- k * (H - L)."""
-    from ...overlap.pivots import _pivot_camarilla
+    from ta.src.overlap.pivots import _pivot_camarilla
+
     h = np.array([12.0])
     l = np.array([9.0])
     c = np.array([10.5])
@@ -130,31 +139,38 @@ def test_pivot_camarilla_formula() -> None:
 # pivots_ind integration tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_pivots_ind_traditional_reference() -> None:
     """Daily traditional pivots: TP=(H+L+C)/3, S1=2TP-H, R1=2TP-L of the
     *previous* day's aggregate; constant within the current day.
     """
     df = make_hourly_df()
-    result = pivots_ind(df, method='traditional', anchor='D')
-    day1 = df.filter(pl.col('date') < datetime(2024, 1, 2))
-    h0 = day1['high'].max()
-    l0 = day1['low'].min()
-    c0 = day1['close'][-1]
+    result = pivots_ind(df, method="traditional", anchor="D")
+    day1 = df.filter(pl.col("date") < datetime(2024, 1, 2))
+    h0 = day1["high"].max()
+    l0 = day1["low"].min()
+    c0 = day1["close"][-1]
     tp = (h0 + l0 + c0) / 3
     rng = h0 - l0
-    win = day_window(result, 'TRAD')
-    p = win['PIVOTS_TRAD_D_P'].to_numpy()
-    s1 = win['PIVOTS_TRAD_D_S1'].to_numpy()
-    s2 = win['PIVOTS_TRAD_D_S2'].to_numpy()
-    s3 = win['PIVOTS_TRAD_D_S3'].to_numpy()
-    r1 = win['PIVOTS_TRAD_D_R1'].to_numpy()
-    r2 = win['PIVOTS_TRAD_D_R2'].to_numpy()
-    r3 = win['PIVOTS_TRAD_D_R3'].to_numpy()
+    win = day_window(result, "TRAD")
+    p = win["PIVOTS_TRAD_D_P"].to_numpy()
+    s1 = win["PIVOTS_TRAD_D_S1"].to_numpy()
+    s2 = win["PIVOTS_TRAD_D_S2"].to_numpy()
+    s3 = win["PIVOTS_TRAD_D_S3"].to_numpy()
+    r1 = win["PIVOTS_TRAD_D_R1"].to_numpy()
+    r2 = win["PIVOTS_TRAD_D_R2"].to_numpy()
+    r3 = win["PIVOTS_TRAD_D_R3"].to_numpy()
     # Constant (no lookahead / no mid-period flip) and equal to reference.
-    for arr, ref in ((p, tp), (s1, 2 * tp - h0), (s2, tp - rng),
-                     (s3, tp - 2 * rng), (r1, 2 * tp - l0),
-                     (r2, tp + rng), (r3, tp + 2 * rng)):
+    for arr, ref in (
+        (p, tp),
+        (s1, 2 * tp - h0),
+        (s2, tp - rng),
+        (s3, tp - 2 * rng),
+        (r1, 2 * tp - l0),
+        (r2, tp + rng),
+        (r3, tp + 2 * rng),
+    ):
         assert np.allclose(arr, ref)
     # All finite (first day has a previous aggregate? no: first *shifted*
     # pivot date is 2024-01-02, so day-2 bars see day-1 pivots).
@@ -165,9 +181,9 @@ def test_pivots_ind_traditional_reference() -> None:
 def test_pivots_ind_first_day_has_no_pivot() -> None:
     """Bars of day 1 have no previous daily aggregate -> null pivots."""
     df = make_hourly_df()
-    result = pivots_ind(df, method='traditional', anchor='D')
-    first = result.filter(pl.col('date') < datetime(2024, 1, 2))
-    assert first['PIVOTS_TRAD_D_P'].is_null().all()
+    result = pivots_ind(df, method="traditional", anchor="D")
+    first = result.filter(pl.col("date") < datetime(2024, 1, 2))
+    assert first["PIVOTS_TRAD_D_P"].is_null().all()
 
 
 @pytest.mark.overlap
@@ -175,23 +191,27 @@ def test_pivots_ind_all_methods_produce_columns() -> None:
     """Every method produces P, S1..S4, R1..R4 columns without errors."""
     df = make_hourly_df(n=48)
     expected_suffixes = {
-        'traditional': 'TRAD', 'fibonacci': 'FIBO', 'woodie': 'WOOD',
-        'classic': 'CLAS', 'demark': 'DEMA', 'camarilla': 'CAMA',
+        "traditional": "TRAD",
+        "fibonacci": "FIBO",
+        "woodie": "WOOD",
+        "classic": "CLAS",
+        "demark": "DEMA",
+        "camarilla": "CAMA",
     }
     for method, sfx in expected_suffixes.items():
-        result = pivots_ind(df, method=method, anchor='D')
-        for level in ('P', 'S1', 'S2', 'S3', 'S4', 'R1', 'R2', 'R3', 'R4'):
-            assert f'PIVOTS_{sfx}_D_{level}' in result.columns, (method, level)
+        result = pivots_ind(df, method=method, anchor="D")
+        for level in ("P", "S1", "S2", "S3", "S4", "R1", "R2", "R3", "R4"):
+            assert f"PIVOTS_{sfx}_D_{level}" in result.columns, (method, level)
 
 
 @pytest.mark.overlap
 def test_pivots_ind_woodie_uses_open() -> None:
     """Woodie pivot differs from traditional because it weights the open."""
     df = make_hourly_df(n=48)
-    wood = pivots_ind(df, method='woodie', anchor='D')
-    trad = pivots_ind(df, method='traditional', anchor='D')
-    w = day_window(wood, 'WOOD')['PIVOTS_WOOD_D_P'].to_numpy()
-    t = day_window(trad, 'TRAD')['PIVOTS_TRAD_D_P'].to_numpy()
+    wood = pivots_ind(df, method="woodie", anchor="D")
+    trad = pivots_ind(df, method="traditional", anchor="D")
+    w = day_window(wood, "WOOD")["PIVOTS_WOOD_D_P"].to_numpy()
+    t = day_window(trad, "TRAD")["PIVOTS_TRAD_D_P"].to_numpy()
     assert not np.allclose(w, t)
 
 
@@ -199,19 +219,19 @@ def test_pivots_ind_woodie_uses_open() -> None:
 def test_pivots_ind_support_resistance_ordering() -> None:
     """S4 <= S3 <= S2 <= S1 <= P <= R1 <= R2 <= R3 <= R4 (where defined)."""
     df = make_hourly_df()
-    result = pivots_ind(df, method='classic', anchor='D')
-    win = day_window(result, 'CLAS')
-    p = win['PIVOTS_CLAS_D_P'].to_numpy()
+    result = pivots_ind(df, method="classic", anchor="D")
+    win = day_window(result, "CLAS")
+    p = win["PIVOTS_CLAS_D_P"].to_numpy()
     levels = [
-        win['PIVOTS_CLAS_D_S4'].to_numpy(),
-        win['PIVOTS_CLAS_D_S3'].to_numpy(),
-        win['PIVOTS_CLAS_D_S2'].to_numpy(),
-        win['PIVOTS_CLAS_D_S1'].to_numpy(),
+        win["PIVOTS_CLAS_D_S4"].to_numpy(),
+        win["PIVOTS_CLAS_D_S3"].to_numpy(),
+        win["PIVOTS_CLAS_D_S2"].to_numpy(),
+        win["PIVOTS_CLAS_D_S1"].to_numpy(),
         p,
-        win['PIVOTS_CLAS_D_R1'].to_numpy(),
-        win['PIVOTS_CLAS_D_R2'].to_numpy(),
-        win['PIVOTS_CLAS_D_R3'].to_numpy(),
-        win['PIVOTS_CLAS_D_R4'].to_numpy(),
+        win["PIVOTS_CLAS_D_R1"].to_numpy(),
+        win["PIVOTS_CLAS_D_R2"].to_numpy(),
+        win["PIVOTS_CLAS_D_R3"].to_numpy(),
+        win["PIVOTS_CLAS_D_R4"].to_numpy(),
     ]
     for lo, hi in zip(levels, levels[1:]):
         assert np.all(lo <= hi + 1e-9)
@@ -221,24 +241,24 @@ def test_pivots_ind_support_resistance_ordering() -> None:
 def test_pivots_ind_unknown_method() -> None:
     """Unknown method raises ValueError listing valid options."""
     df = make_hourly_df(n=10)
-    with pytest.raises(ValueError, match='Unknown pivot method'):
-        pivots_ind(df, method='nope')
+    with pytest.raises(ValueError, match="Unknown pivot method"):
+        pivots_ind(df, method="nope")
 
 
 @pytest.mark.overlap
 def test_pivots_ind_weekly_anchor() -> None:
     """Weekly anchor resamples and fills pivots across the week."""
     df = make_hourly_df(n=24 * 15)
-    result = pivots_ind(df, method='traditional', anchor='W')
-    assert 'PIVOTS_TRAD_W_P' in result.columns
-    p = result['PIVOTS_TRAD_W_P'].drop_nulls()
+    result = pivots_ind(df, method="traditional", anchor="W")
+    assert "PIVOTS_TRAD_W_P" in result.columns
+    p = result["PIVOTS_TRAD_W_P"].drop_nulls()
     assert len(p) > 0
     # Within a single week the pivot is constant (no lookahead).
     week2 = result.filter(
-        (pl.col('date') >= datetime(2024, 1, 8))
-        & (pl.col('date') < datetime(2024, 1, 15))
+        (pl.col("date") >= datetime(2024, 1, 8))
+        & (pl.col("date") < datetime(2024, 1, 15))
     )
-    vals = week2['PIVOTS_TRAD_W_P'].to_numpy()
+    vals = week2["PIVOTS_TRAD_W_P"].to_numpy()
     assert np.isfinite(vals).all()
     assert np.allclose(vals, vals[0])
 
@@ -247,11 +267,11 @@ def test_pivots_ind_weekly_anchor() -> None:
 def test_pivots_ind_preserves_rows_and_order() -> None:
     """Result has the same rows in the same order as the input."""
     df = make_hourly_df()
-    result = pivots_ind(df, method='classic', anchor='D')
+    result = pivots_ind(df, method="classic", anchor="D")
     assert len(result) == len(df)
-    assert (result['date'].to_numpy() == df['date'].to_numpy()).all()
+    assert (result["date"].to_numpy() == df["date"].to_numpy()).all()
     # Original price columns are unchanged.
-    for col in ('open', 'high', 'low', 'close'):
+    for col in ("open", "high", "low", "close"):
         assert_allclose_np(result[col].to_numpy(), df[col].to_numpy())
 
 
@@ -263,14 +283,25 @@ def assert_allclose_np(a: np.ndarray, b: np.ndarray) -> None:
 @pytest.mark.overlap
 def test_pivots_ind_custom_column_names() -> None:
     """Non-default OHLC/date column names are respected."""
-    df = make_hourly_df(n=48).rename({
-        'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c', 'date': 'ts',
-    })
-    result = pivots_ind(
-        df, open_col='o', high_col='h', low_col='l', close_col='c',
-        date_col='ts', method='traditional', anchor='D',
+    df = make_hourly_df(n=48).rename(
+        {
+            "open": "o",
+            "high": "h",
+            "low": "l",
+            "close": "c",
+            "date": "ts",
+        }
     )
-    assert 'PIVOTS_TRAD_D_P' in result.columns
-    p = result['PIVOTS_TRAD_D_P'].drop_nulls()
+    result = pivots_ind(
+        df,
+        open_col="o",
+        high_col="h",
+        low_col="l",
+        close_col="c",
+        date_col="ts",
+        method="traditional",
+        anchor="D",
+    )
+    assert "PIVOTS_TRAD_D_P" in result.columns
+    p = result["PIVOTS_TRAD_D_P"].drop_nulls()
     assert len(p) > 0
-

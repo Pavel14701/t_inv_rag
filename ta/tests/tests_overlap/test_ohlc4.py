@@ -9,19 +9,21 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, extreme)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.ohlc4 import ohlc4_numpy, ohlc4_ind, ohlc4_polars
-from ..._array_ops import _apply_offset_fillna
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.overlap.ohlc4 import ohlc4_ind, ohlc4_numpy, ohlc4_polars
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation
 # -----------------------------------------------------------------------------
+
 
 def _ohlc4_reference(
     open_: npt.NDArray[np.float64],
@@ -50,6 +52,7 @@ def _make_ohlc(
 # -----------------------------------------------------------------------------
 # Basic tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_ohlc4_against_reference(
@@ -109,7 +112,10 @@ def test_ohlc4_input_types() -> None:
     r32 = ohlc4_numpy(o32, o32 + 1, o32 - 1, o32 + 0.5)
     assert r32.dtype == np.float64
     r_list = ohlc4_ind(
-        [10.0, 11.0], [11.0, 12.0], [9.0, 10.0], [10.5, 11.5],
+        [10.0, 11.0],
+        [11.0, 12.0],
+        [9.0, 10.0],
+        [10.5, 11.5],
     )
     assert_allclose(r_list, [10.125, 11.125], rtol=1e-12)
     o = np.array([10.0, 11.0])
@@ -122,14 +128,17 @@ def test_ohlc4_2d_input_raises() -> None:
     """2D input must not silently produce wrong results."""
     with pytest.raises(Exception):
         ohlc4_numpy(
-            np.ones((3, 3)), np.ones((3, 3)),
-            np.ones((3, 3)), np.ones((3, 3)),
+            np.ones((3, 3)),
+            np.ones((3, 3)),
+            np.ones((3, 3)),
+            np.ones((3, 3)),
         )
 
 
 # -----------------------------------------------------------------------------
 # Universal wrapper tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_ohlc4_ind_matches_numpy(
@@ -157,18 +166,19 @@ def test_ohlc4_ind_with_pl_series(
 # Polars integration tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_ohlc4_polars_basic(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """ohlc4_polars returns a DataFrame with a correct OHLC4 column."""
     o, h, l, c = _make_ohlc(prices_random_walk)
-    df = pl.DataFrame({'open': o, 'high': h, 'low': l, 'close': c})
+    df = pl.DataFrame({"open": o, "high": h, "low": l, "close": c})
     result = ohlc4_polars(df)
     assert isinstance(result, pl.DataFrame)
-    assert 'OHLC4' in result.columns
-    assert result['OHLC4'].dtype == pl.Float64
-    assert_allclose(result['OHLC4'].to_numpy(), _ohlc4_reference(o, h, l, c))
+    assert "OHLC4" in result.columns
+    assert result["OHLC4"].dtype == pl.Float64
+    assert_allclose(result["OHLC4"].to_numpy(), _ohlc4_reference(o, h, l, c))
 
 
 @pytest.mark.overlap
@@ -177,13 +187,17 @@ def test_ohlc4_polars_custom_cols(
 ) -> None:
     """Non-default column names and custom output column are respected."""
     o, h, l, c = _make_ohlc(prices_random_walk)
-    df = pl.DataFrame({'o': o, 'h': h, 'l': l, 'c': c})
+    df = pl.DataFrame({"o": o, "h": h, "l": l, "c": c})
     result = ohlc4_polars(
-        df, open_col='o', high_col='h', low_col='l', close_col='c',
-        output_col='AVG',
+        df,
+        open_col="o",
+        high_col="h",
+        low_col="l",
+        close_col="c",
+        output_col="AVG",
     )
-    assert 'AVG' in result.columns
-    assert_allclose(result['AVG'].to_numpy(), _ohlc4_reference(o, h, l, c))
+    assert "AVG" in result.columns
+    assert_allclose(result["AVG"].to_numpy(), _ohlc4_reference(o, h, l, c))
 
 
 @pytest.mark.overlap
@@ -192,19 +206,20 @@ def test_ohlc4_polars_with_offset_fillna(
 ) -> None:
     """ohlc4_polars applies offset and fillna."""
     o, h, l, c = _make_ohlc(prices_random_walk)
-    df = pl.DataFrame({'open': o, 'high': h, 'low': l, 'close': c})
+    df = pl.DataFrame({"open": o, "high": h, "low": l, "close": c})
     offset = 3
     fillna = 0.0
     base = ohlc4_numpy(o, h, l, c)
     expected = _apply_offset_fillna(base, offset, fillna)
     result = ohlc4_polars(df, offset=offset, fillna=fillna)
-    assert_allclose(result['OHLC4'].to_numpy(), expected, rtol=1e-12)
-    assert (result['OHLC4'].to_numpy()[:offset] == fillna).all()
+    assert_allclose(result["OHLC4"].to_numpy(), expected, rtol=1e-12)
+    assert (result["OHLC4"].to_numpy()[:offset] == fillna).all()
 
 
 # -----------------------------------------------------------------------------
 # IEEE 754 compliance tests (using fixtures from conftest.py)
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_ohlc4_with_nan() -> None:
@@ -253,19 +268,20 @@ def test_ohlc4_extreme_values() -> None:
 @pytest.mark.overlap
 def test_ohlc4_polars_with_nan(df_random_walk: pl.DataFrame) -> None:
     """Polars integration propagates NaN correctly."""
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     o, h, l, c = _make_ohlc(close)
     o = o.copy()
     o[5] = np.nan
-    df = df_random_walk.with_columns([
-        pl.Series('open', o),
-        pl.Series('high', h),
-        pl.Series('low', l),
-        pl.Series('close', c),
-    ])
+    df = df_random_walk.with_columns(
+        [
+            pl.Series("open", o),
+            pl.Series("high", h),
+            pl.Series("low", l),
+            pl.Series("close", c),
+        ]
+    )
     result = ohlc4_polars(df)
-    vals = result['OHLC4'].to_numpy()
+    vals = result["OHLC4"].to_numpy()
     assert np.isfinite(vals[:5]).all()
     assert np.isnan(vals[5])
     assert np.isfinite(vals[6:]).all()
-

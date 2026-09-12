@@ -4,20 +4,22 @@ This module tests reading and writing of Parquet files for features, labels,
 and order blocks, as well as the merge function for features and labels.
 """
 
-import pytest
-import polars as pl
-import numpy as np
-from pathlib import Path
 import tempfile
 
-from ..io import (
+from pathlib import Path
+
+import numpy as np
+import polars as pl
+import pytest
+
+from ai.src.datatypes import OrderBlock
+from ai.src.io import (
     load_features_parquet,
     load_labels_parquet,
-    save_labels_parquet,
     load_order_blocks_parquet,
     merge_features_labels,
+    save_labels_parquet,
 )
-from ..datatypes import OrderBlock
 
 
 @pytest.mark.unit
@@ -36,7 +38,7 @@ def test_load_features_parquet(sample_dataframe: pl.DataFrame) -> None:
 
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir) / 'features.parquet'
+        tmp_path = Path(tmpdir) / "features.parquet"
         sample_dataframe.write_parquet(tmp_path)
         df_loaded = load_features_parquet(str(tmp_path))
         assert df_loaded.shape == sample_dataframe.shape
@@ -58,21 +60,22 @@ def test_load_labels_parquet(sample_dataframe: pl.DataFrame) -> None:
         - 'action' and 'outcome' columns are present.
 
     """
-    df_labels = pl.DataFrame({
-        'bar_index': sample_dataframe['bar_index'],
-        'action': np.random.choice(
-            [-100, 0, 1, 2],
-            size=len(sample_dataframe)
-        ),
-        'outcome': np.random.randn(len(sample_dataframe)),
-    })
+    df_labels = pl.DataFrame(
+        {
+            "bar_index": sample_dataframe["bar_index"],
+            "action": np.random.choice(
+                [-100, 0, 1, 2], size=len(sample_dataframe)
+            ),
+            "outcome": np.random.randn(len(sample_dataframe)),
+        }
+    )
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir) / 'labels.parquet'
+        tmp_path = Path(tmpdir) / "labels.parquet"
         df_labels.write_parquet(tmp_path)
         df_loaded = load_labels_parquet(str(tmp_path))
         assert df_loaded.shape == df_labels.shape
-        assert 'action' in df_loaded.columns
-        assert 'outcome' in df_loaded.columns
+        assert "action" in df_loaded.columns
+        assert "outcome" in df_loaded.columns
 
 
 @pytest.mark.unit
@@ -87,26 +90,27 @@ def test_save_labels_parquet(sample_dataframe: pl.DataFrame) -> None:
         - All values in 'action' and 'outcome' columns match.
 
     """
-    df_labels = pl.DataFrame({
-        'bar_index': sample_dataframe['bar_index'],
-        'action': np.random.choice(
-            [-100, 0, 1, 2],
-            size=len(sample_dataframe)
-        ),
-        'outcome': np.random.randn(len(sample_dataframe)),
-    })
+    df_labels = pl.DataFrame(
+        {
+            "bar_index": sample_dataframe["bar_index"],
+            "action": np.random.choice(
+                [-100, 0, 1, 2], size=len(sample_dataframe)
+            ),
+            "outcome": np.random.randn(len(sample_dataframe)),
+        }
+    )
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir) / 'labels.parquet'
+        tmp_path = Path(tmpdir) / "labels.parquet"
         save_labels_parquet(df_labels, str(tmp_path))
         df_loaded = pl.read_parquet(str(tmp_path))
         assert df_loaded.shape == df_labels.shape
-        assert (df_loaded['action'] == df_labels['action']).all()
-        assert (df_loaded['outcome'] == df_labels['outcome']).all()
+        assert (df_loaded["action"] == df_labels["action"]).all()
+        assert (df_loaded["outcome"] == df_labels["outcome"]).all()
 
 
 @pytest.mark.unit
 def test_load_order_blocks_parquet(
-    sample_order_blocks: list[OrderBlock]
+    sample_order_blocks: list[OrderBlock],
 ) -> None:
     """Test that order blocks can be saved to and loaded from a Parquet file.
 
@@ -121,25 +125,27 @@ def test_load_order_blocks_parquet(
 
     """
     # Convert OrderBlock list to DataFrame
-    df_obs = pl.DataFrame([
-        {
-            'id': ob.id,
-            'block_type': ob.block_type,
-            'start': ob.start,
-            'break_': ob.break_,
-            'retest': ob.retest,
-            'zone_low': ob.zone_low,
-            'zone_high': ob.zone_high,
-            'strength': ob.strength,
-            'structure_label': ob.structure_label,
-            'trend_direction': ob.trend_direction,
-            'start_idx': ob.start_idx,
-            'end_idx': ob.end_idx,
-        }
-        for ob in sample_order_blocks
-    ])
+    df_obs = pl.DataFrame(
+        [
+            {
+                "id": ob.id,
+                "block_type": ob.block_type,
+                "start": ob.start,
+                "break_": ob.break_,
+                "retest": ob.retest,
+                "zone_low": ob.zone_low,
+                "zone_high": ob.zone_high,
+                "strength": ob.strength,
+                "structure_label": ob.structure_label,
+                "trend_direction": ob.trend_direction,
+                "start_idx": ob.start_idx,
+                "end_idx": ob.end_idx,
+            }
+            for ob in sample_order_blocks
+        ]
+    )
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir) / 'order_blocks.parquet'
+        tmp_path = Path(tmpdir) / "order_blocks.parquet"
         df_obs.write_parquet(tmp_path)
         loaded_obs = load_order_blocks_parquet(str(tmp_path))
         assert len(loaded_obs) == len(sample_order_blocks)
@@ -149,8 +155,10 @@ def test_load_order_blocks_parquet(
             and loaded_obs[i].zone_low == sample_order_blocks[i].zone_low
             and loaded_obs[i].zone_high == sample_order_blocks[i].zone_high
             and loaded_obs[i].strength == sample_order_blocks[i].strength
-            and loaded_obs[i].structure_label == sample_order_blocks[i].structure_label  # noqa: E501
-            and loaded_obs[i].trend_direction == sample_order_blocks[i].trend_direction  # noqa: E501
+            and loaded_obs[i].structure_label
+            == sample_order_blocks[i].structure_label  # noqa: E501
+            and loaded_obs[i].trend_direction
+            == sample_order_blocks[i].trend_direction  # noqa: E501
             and loaded_obs[i].start_idx == sample_order_blocks[i].start_idx
             and loaded_obs[i].end_idx == sample_order_blocks[i].end_idx
             for i in range(len(sample_order_blocks))
@@ -174,18 +182,18 @@ def test_merge_features_labels(sample_dataframe: pl.DataFrame) -> None:
 
     """
     df_feat = sample_dataframe.select(
-        ['open', 'high', 'low', 'close', 'volume', 'bar_index']
+        ["open", "high", "low", "close", "volume", "bar_index"]
     )
-    df_lbl = sample_dataframe.select(['bar_index']).with_columns([
-        pl.Series(
-            'action',
-            np.random.choice([-100, 0, 1, 2], len(sample_dataframe))
-        ),
-        pl.Series(
-            'outcome', np.random.randn(len(sample_dataframe))
-        ),
-    ])
+    df_lbl = sample_dataframe.select(["bar_index"]).with_columns(
+        [
+            pl.Series(
+                "action",
+                np.random.choice([-100, 0, 1, 2], len(sample_dataframe)),
+            ),
+            pl.Series("outcome", np.random.randn(len(sample_dataframe))),
+        ]
+    )
     df_merged = merge_features_labels(df_feat, df_lbl)
-    assert 'action' in df_merged.columns
-    assert 'outcome' in df_merged.columns
+    assert "action" in df_merged.columns
+    assert "outcome" in df_merged.columns
     assert len(df_merged) == len(df_feat)

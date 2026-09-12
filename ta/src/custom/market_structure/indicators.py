@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..._array_ops import _rolling_max_numba, _rolling_min_numba
 from ...momentum.macd import macd_ind
 from ...momentum.rsi import rsi_ind
 from ...overlap.sma import sma_ind
 from ...trend.adx import adx_ind
 from ...volatility.atr import atr_ind
-from ..._array_ops import _rolling_max_numba, _rolling_min_numba
-
 from .config import OrderBlockConfig
 
 

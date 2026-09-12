@@ -17,15 +17,16 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.ichimoku import (
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.overlap.ichimoku import (
     _midprice_multi_numba,
     _shift_forward,
     ichimoku_core_numba,
     ichimoku_ind,
 )
-from ..._array_ops import _apply_offset_fillna
 
 
 # -----------------------------------------------------------------------------
@@ -50,12 +51,12 @@ def _make_ohlc_df(
 ) -> pl.DataFrame:
     """Build a Polars DataFrame with high/low/close (and optional dates)."""
     high, low = _make_ohlc(close, seed)
-    data = {'high': high, 'low': low, 'close': close}
+    data = {"high": high, "low": low, "close": close}
     if with_dates:
-        data['date'] = pl.date_range(
+        data["date"] = pl.date_range(
             date(2020, 1, 1),
             date(2020, 1, 1) + timedelta(days=len(close) - 1),
-            '1d',
+            "1d",
             eager=True,
         )
     return pl.DataFrame(data)
@@ -73,8 +74,8 @@ def _midprice_reference(
     n = len(high)
     out = np.full(n, np.nan, dtype=np.float64)
     for i in range(length - 1, n):
-        wh = high[i - length + 1:i + 1]
-        wl = low[i - length + 1:i + 1]
+        wh = high[i - length + 1 : i + 1]
+        wl = low[i - length + 1 : i + 1]
         if np.isnan(wh).any() or np.isnan(wl).any():
             continue
         out[i] = (np.max(wh) + np.min(wl)) * 0.5
@@ -233,9 +234,7 @@ def test_core_chikou_is_close_shifted_back() -> None:
     close = np.linspace(10.0, 60.0, 50)
     high, low = _make_ohlc(close)
     kijun = 5
-    _, _, _, _, chikou = ichimoku_core_numba(
-        high, low, close, 2, kijun, 8
-    )
+    _, _, _, _, chikou = ichimoku_core_numba(high, low, close, 2, kijun, 8)
     assert chikou is not None
     assert_allclose(chikou[:-kijun], close[kijun:])
     assert np.isnan(chikou[-kijun:]).all()
@@ -246,9 +245,7 @@ def test_core_no_chikou() -> None:
     """include_chikou=False or lookahead=False -> chikou is None."""
     close = np.linspace(1.0, 30.0, 30)
     high, low = _make_ohlc(close)
-    res1 = ichimoku_core_numba(
-        high, low, close, 2, 3, 5, include_chikou=False
-    )
+    res1 = ichimoku_core_numba(high, low, close, 2, 3, 5, include_chikou=False)
     res2 = ichimoku_core_numba(
         high, low, close, 2, 3, 5, include_chikou=True, lookahead=False
     )
@@ -272,9 +269,9 @@ def test_core_invalid_periods() -> None:
     """Periods < 1 raise ValueError."""
     close = np.linspace(1.0, 30.0, 30)
     high, low = _make_ohlc(close)
-    with pytest.raises(ValueError, match='must all be >= 1'):
+    with pytest.raises(ValueError, match="must all be >= 1"):
         ichimoku_core_numba(high, low, close, 0, 3, 5)
-    with pytest.raises(ValueError, match='must all be >= 1'):
+    with pytest.raises(ValueError, match="must all be >= 1"):
         ichimoku_core_numba(high, low, close, 3, -1, 5)
 
 
@@ -283,7 +280,7 @@ def test_core_length_mismatch() -> None:
     """Mismatched array lengths raise ValueError."""
     close = np.linspace(1.0, 30.0, 30)
     high, low = _make_ohlc(close)
-    with pytest.raises(ValueError, match='same length'):
+    with pytest.raises(ValueError, match="same length"):
         ichimoku_core_numba(high, low, close[:-1], 2, 3, 5)
 
 
@@ -302,11 +299,11 @@ def test_ind_columns_and_values(
         df, date_col=None, tenkan=tenkan, kijun=kijun, senkou=senkou
     )
     expected_cols = [
-        f'ITS_{tenkan}',
-        f'IKS_{kijun}',
-        f'ISA_{tenkan}',
-        f'ISB_{senkou}',
-        f'ICS_{kijun}',
+        f"ITS_{tenkan}",
+        f"IKS_{kijun}",
+        f"ISA_{tenkan}",
+        f"ISB_{senkou}",
+        f"ICS_{kijun}",
     ]
     for col in expected_cols:
         assert col in hist.columns
@@ -314,50 +311,56 @@ def test_ind_columns_and_values(
     assert len(hist) == len(df)
 
     t_ref, k_ref, a_ref, b_ref, c_ref = _ichimoku_reference(
-        df['high'].to_numpy(),
-        df['low'].to_numpy(),
-        df['close'].to_numpy(),
-        tenkan, kijun, senkou,
+        df["high"].to_numpy(),
+        df["low"].to_numpy(),
+        df["close"].to_numpy(),
+        tenkan,
+        kijun,
+        senkou,
     )
     # Tenkan / Kijun are not shifted
     assert_allclose(
-        hist[f'ITS_{tenkan}'].to_numpy(), t_ref, rtol=1e-12, equal_nan=True
+        hist[f"ITS_{tenkan}"].to_numpy(), t_ref, rtol=1e-12, equal_nan=True
     )
     assert_allclose(
-        hist[f'IKS_{kijun}'].to_numpy(), k_ref, rtol=1e-12, equal_nan=True
+        hist[f"IKS_{kijun}"].to_numpy(), k_ref, rtol=1e-12, equal_nan=True
     )
     # Senkou spans are shifted forward by kijun
     assert_allclose(
-        hist[f'ISA_{tenkan}'].to_numpy()[kijun:],
+        hist[f"ISA_{tenkan}"].to_numpy()[kijun:],
         a_ref[:-kijun],
         rtol=1e-12,
         equal_nan=True,
     )
     assert_allclose(
-        hist[f'ISB_{senkou}'].to_numpy()[kijun:],
+        hist[f"ISB_{senkou}"].to_numpy()[kijun:],
         b_ref[:-kijun],
         rtol=1e-12,
         equal_nan=True,
     )
-    assert np.isnan(hist[f'ISA_{tenkan}'].to_numpy()[:kijun]).all()
+    assert np.isnan(hist[f"ISA_{tenkan}"].to_numpy()[:kijun]).all()
     # Chikou is close shifted backward by kijun
     assert_allclose(
-        hist[f'ICS_{kijun}'].to_numpy()[:-kijun],
+        hist[f"ICS_{kijun}"].to_numpy()[:-kijun],
         close[kijun:],
         rtol=1e-12,
         equal_nan=True,
     )
-    assert np.isnan(hist[f'ICS_{kijun}'].to_numpy()[-kijun:]).all()
+    assert np.isnan(hist[f"ICS_{kijun}"].to_numpy()[-kijun:]).all()
 
     # Forward DataFrame: last kijun unshifted span values
     assert len(fwd) == kijun
     assert_allclose(
-        fwd[f'ISA_{tenkan}'].to_numpy(), a_ref[-kijun:],
-        rtol=1e-12, equal_nan=True,
+        fwd[f"ISA_{tenkan}"].to_numpy(),
+        a_ref[-kijun:],
+        rtol=1e-12,
+        equal_nan=True,
     )
     assert_allclose(
-        fwd[f'ISB_{senkou}'].to_numpy(), b_ref[-kijun:],
-        rtol=1e-12, equal_nan=True,
+        fwd[f"ISB_{senkou}"].to_numpy(),
+        b_ref[-kijun:],
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -369,15 +372,13 @@ def test_ind_forward_with_dates(
     close = prices_random_walk
     df = _make_ohlc_df(close, with_dates=True)
     kijun = 5
-    _, fwd = ichimoku_ind(
-        df, tenkan=3, kijun=kijun, senkou=8, date_col='date'
-    )
-    assert 'date' in fwd.columns
-    assert fwd['date'].dtype == pl.Date
+    _, fwd = ichimoku_ind(df, tenkan=3, kijun=kijun, senkou=8, date_col="date")
+    assert "date" in fwd.columns
+    assert fwd["date"].dtype == pl.Date
     assert len(fwd) == kijun
-    last_date = df['date'].item(-1)
-    assert fwd['date'].item(0) == last_date + timedelta(days=1)
-    assert fwd['date'].item(-1) == last_date + timedelta(days=kijun)
+    last_date = df["date"].item(-1)
+    assert fwd["date"].item(0) == last_date + timedelta(days=1)
+    assert fwd["date"].item(-1) == last_date + timedelta(days=kijun)
 
 
 @pytest.mark.overlap
@@ -386,16 +387,14 @@ def test_ind_forward_non_temporal_date_col(
 ) -> None:
     """Non-temporal date column falls back to an integer index (bug fix)."""
     close = prices_random_walk
-    df = _make_ohlc_df(close).with_row_index('date')
+    df = _make_ohlc_df(close).with_row_index("date")
     kijun = 5
-    _, fwd = ichimoku_ind(
-        df, tenkan=3, kijun=kijun, senkou=8, date_col='date'
-    )
+    _, fwd = ichimoku_ind(df, tenkan=3, kijun=kijun, senkou=8, date_col="date")
     # must not raise; integer index starts after the last row
-    assert 'index' in fwd.columns
+    assert "index" in fwd.columns
     assert len(fwd) == kijun
-    assert fwd['index'].item(0) == len(df)
-    assert fwd['index'].item(-1) == len(df) + kijun - 1
+    assert fwd["index"].item(0) == len(df)
+    assert fwd["index"].item(-1) == len(df) + kijun - 1
 
 
 @pytest.mark.overlap
@@ -406,11 +405,9 @@ def test_ind_forward_integer_index_no_date_col(
     close = prices_random_walk
     df = _make_ohlc_df(close)
     kijun = 5
-    _, fwd = ichimoku_ind(
-        df, date_col=None, tenkan=3, kijun=kijun, senkou=8
-    )
-    assert 'index' in fwd.columns
-    assert fwd['index'].item(0) == len(df)
+    _, fwd = ichimoku_ind(df, date_col=None, tenkan=3, kijun=kijun, senkou=8)
+    assert "index" in fwd.columns
+    assert fwd["index"].item(0) == len(df)
 
 
 @pytest.mark.overlap
@@ -427,8 +424,13 @@ def test_ind_offset_fillna(
         df, date_col=None, tenkan=tenkan, kijun=kijun, senkou=senkou
     )
     hist_off, _ = ichimoku_ind(
-        df, date_col=None, tenkan=tenkan, kijun=kijun, senkou=senkou,
-        offset=offset, fillna=fillna,
+        df,
+        date_col=None,
+        tenkan=tenkan,
+        kijun=kijun,
+        senkou=senkou,
+        offset=offset,
+        fillna=fillna,
     )
     for col in hist_base.columns:
         expected = _apply_offset_fillna(
@@ -449,14 +451,18 @@ def test_ind_no_chikou_column(
     close = prices_random_walk
     df = _make_ohlc_df(close)
     hist1, _ = ichimoku_ind(
-        df, date_col=None, tenkan=3, kijun=5, senkou=8,
+        df,
+        date_col=None,
+        tenkan=3,
+        kijun=5,
+        senkou=8,
         include_chikou=False,
     )
     hist2, _ = ichimoku_ind(
         df, date_col=None, tenkan=3, kijun=5, senkou=8, lookahead=False
     )
-    assert 'ICS_5' not in hist1.columns
-    assert 'ICS_5' not in hist2.columns
+    assert "ICS_5" not in hist1.columns
+    assert "ICS_5" not in hist2.columns
 
 
 @pytest.mark.overlap
@@ -465,14 +471,24 @@ def test_ind_custom_column_names(
 ) -> None:
     """Custom high/low/close column names are respected."""
     close = prices_random_walk
-    df = _make_ohlc_df(close).rename({
-        'high': 'H', 'low': 'L', 'close': 'C',
-    })
-    hist, _ = ichimoku_ind(
-        df, high_col='H', low_col='L', close_col='C',
-        date_col=None, tenkan=3, kijun=5, senkou=8,
+    df = _make_ohlc_df(close).rename(
+        {
+            "high": "H",
+            "low": "L",
+            "close": "C",
+        }
     )
-    assert 'ITS_3' in hist.columns
+    hist, _ = ichimoku_ind(
+        df,
+        high_col="H",
+        low_col="L",
+        close_col="C",
+        date_col=None,
+        tenkan=3,
+        kijun=5,
+        senkou=8,
+    )
+    assert "ITS_3" in hist.columns
     assert len(hist) == len(df)
 
 
@@ -483,9 +499,9 @@ def test_ind_validation_errors(
     """Invalid periods, mismatched columns and short data raise ValueError."""
     close = prices_random_walk
     df = _make_ohlc_df(close)
-    with pytest.raises(ValueError, match='must all be >= 1'):
+    with pytest.raises(ValueError, match="must all be >= 1"):
         ichimoku_ind(df, tenkan=0, kijun=5, senkou=8)
-    with pytest.raises(ValueError, match='too short'):
+    with pytest.raises(ValueError, match="too short"):
         ichimoku_ind(df.head(5), tenkan=3, kijun=5, senkou=8)
 
 
@@ -497,7 +513,7 @@ def test_ind_nan_policy_raise(
     close = prices_random_walk.copy()
     close[10] = np.nan
     df = _make_ohlc_df(close)
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         ichimoku_ind(df, tenkan=3, kijun=5, senkou=8)
 
 
@@ -510,11 +526,11 @@ def test_ind_nan_policy_ffill(
     close[10] = np.nan
     df = _make_ohlc_df(close)
     hist, _ = ichimoku_ind(
-        df, date_col=None, tenkan=3, kijun=5, senkou=8, nan_policy='ffill'
+        df, date_col=None, tenkan=3, kijun=5, senkou=8, nan_policy="ffill"
     )
     assert len(hist) == len(df)
     # after warmup all values must be finite
-    assert np.isfinite(hist['ITS_3'].to_numpy()[2:]).all()
+    assert np.isfinite(hist["ITS_3"].to_numpy()[2:]).all()
 
 
 @pytest.mark.overlap
@@ -526,9 +542,9 @@ def test_ind_nan_policy_ignore_propagates(
     close[10] = np.nan
     df = _make_ohlc_df(close)
     hist, _ = ichimoku_ind(
-        df, date_col=None, tenkan=3, kijun=5, senkou=8, nan_policy='ignore'
+        df, date_col=None, tenkan=3, kijun=5, senkou=8, nan_policy="ignore"
     )
-    its = hist['ITS_3'].to_numpy()
+    its = hist["ITS_3"].to_numpy()
     # windows covering index 10 (length 3): results at 10, 11, 12 are NaN
     assert np.isnan(its[10:13]).all()
     assert np.isfinite(its[13:]).all()
@@ -542,21 +558,21 @@ def test_ind_with_inf(prices_with_inf: npt.NDArray[np.float64]) -> None:
     """Input Inf is replaced with NaN and handled per nan_policy."""
     df = _make_ohlc_df(prices_with_inf)
     # 'raise' -> Inf becomes NaN -> raises
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         ichimoku_ind(df, tenkan=2, kijun=3, senkou=4)
     # 'ffill' -> works fine
     hist, _ = ichimoku_ind(
-        df, date_col=None, tenkan=2, kijun=3, senkou=4, nan_policy='ffill'
+        df, date_col=None, tenkan=2, kijun=3, senkou=4, nan_policy="ffill"
     )
     assert len(hist) == len(df)
-    assert np.isfinite(hist['ITS_2'].to_numpy()[1:]).all()
+    assert np.isfinite(hist["ITS_2"].to_numpy()[1:]).all()
 
 
 @pytest.mark.overlap
 def test_ind_empty(prices_empty: npt.NDArray[np.float64]) -> None:
     """Empty input raises (series too short)."""
     df = _make_ohlc_df(prices_empty)
-    with pytest.raises(ValueError, match='too short'):
+    with pytest.raises(ValueError, match="too short"):
         ichimoku_ind(df, tenkan=2, kijun=3, senkou=4)
 
 
@@ -564,11 +580,16 @@ def test_ind_empty(prices_empty: npt.NDArray[np.float64]) -> None:
 def test_ind_all_nan(prices_all_nan: npt.NDArray[np.float64]) -> None:
     """All-NaN input: 'raise' raises, fillna fills everything."""
     df = _make_ohlc_df(prices_all_nan)
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         ichimoku_ind(df, tenkan=2, kijun=3, senkou=4)
     hist, _ = ichimoku_ind(
-        df, date_col=None, tenkan=2, kijun=3, senkou=4,
-        nan_policy='ignore', fillna=0.0,
+        df,
+        date_col=None,
+        tenkan=2,
+        kijun=3,
+        senkou=4,
+        nan_policy="ignore",
+        fillna=0.0,
     )
     for col in hist.columns:
         assert (hist[col].to_numpy() == 0.0).all()
@@ -581,8 +602,12 @@ def test_ind_extreme_values(
     """Extreme values (1e300, 1e-300) must not crash."""
     df = _make_ohlc_df(prices_extreme)
     hist, _ = ichimoku_ind(
-        df, date_col=None, tenkan=2, kijun=3, senkou=4,
-        nan_policy='ignore',
+        df,
+        date_col=None,
+        tenkan=2,
+        kijun=3,
+        senkou=4,
+        nan_policy="ignore",
     )
     assert hist is not None
     assert len(hist) == len(df)
@@ -595,9 +620,9 @@ def test_ind_with_nan_fixture(
     """The NaN fixture propagates through the indicator without crashing."""
     df = _make_ohlc_df(prices_with_nan)
     hist, _ = ichimoku_ind(
-        df, date_col=None, tenkan=2, kijun=3, senkou=4, nan_policy='ignore'
+        df, date_col=None, tenkan=2, kijun=3, senkou=4, nan_policy="ignore"
     )
-    its = hist['ITS_2'].to_numpy()
+    its = hist["ITS_2"].to_numpy()
     # NaN at index 5 affects windows ending at 5 and 6
     assert np.isnan(its[5:7]).all()
     assert np.isfinite(its[7:]).all()

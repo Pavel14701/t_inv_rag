@@ -7,19 +7,20 @@ EntryExitTransformer pipeline.
 
 import pytest
 import torch
+
 from torch import Tensor
 
-from ..contracts import (
+from ai.src.contracts import (
+    validate_action_targets,
     validate_batch,
-    validate_prices,
     validate_indicators,
+    validate_order_blocks,
+    validate_outcome_targets,
+    validate_prices,
     validate_signals,
     validate_tp_sl,
-    validate_order_blocks,
-    validate_action_targets,
-    validate_outcome_targets,
 )
-from ..datatypes import OrderBlock
+from ai.src.datatypes import OrderBlock
 
 
 @pytest.mark.unit
@@ -44,12 +45,12 @@ def test_validate_prices(sample_batch: tuple) -> None:
     # Should pass
     validate_prices(prices, n_price_feats)
     # Wrong last dim
-    with pytest.raises(ValueError, match='last dim must be'):
+    with pytest.raises(ValueError, match="last dim must be"):
         validate_prices(prices, n_price_feats + 1)
     # NaN
     prices_nan = prices.clone()
-    prices_nan[0, 0, 0] = float('nan')
-    with pytest.raises(ValueError, match='NaN or Inf'):
+    prices_nan[0, 0, 0] = float("nan")
+    with pytest.raises(ValueError, match="NaN or Inf"):
         validate_prices(prices_nan, n_price_feats)
     # Non-positive (warns, not raises)
     prices_neg = prices.clone()
@@ -78,7 +79,7 @@ def test_validate_indicators(sample_batch: tuple) -> None:
     # Pass
     validate_indicators(indicators, n_ind_feats)
     # Wrong dim
-    with pytest.raises(ValueError, match='last dim must be'):
+    with pytest.raises(ValueError, match="last dim must be"):
         validate_indicators(indicators, n_ind_feats + 1)
     # Zero features but non-zero tensor (warn)
     validate_indicators(indicators, 0)  # should warn
@@ -102,7 +103,7 @@ def test_validate_signals(sample_batch: tuple) -> None:
     signals: Tensor = sample_batch[2]
     n_sig_feats: int = signals.shape[-1]
     validate_signals(signals, n_sig_feats)
-    with pytest.raises(ValueError, match='last dim must be'):
+    with pytest.raises(ValueError, match="last dim must be"):
         validate_signals(signals, n_sig_feats + 1)
 
 
@@ -120,11 +121,11 @@ def test_validate_tp_sl() -> None:
     """
     B, T = 2, 10  # noqa: N806
     tp: Tensor = torch.rand(B, T, 1) * 100 + 50  # from 50 to 150
-    sl: Tensor = torch.rand(B, T, 1) * 50        # from 0 to 50
+    sl: Tensor = torch.rand(B, T, 1) * 50  # from 0 to 50
     validate_tp_sl(tp, sl)  # should pass
     # Negative values
     tp_neg: Tensor = -torch.abs(tp)
-    with pytest.raises(ValueError, match='positive'):
+    with pytest.raises(ValueError, match="positive"):
         validate_tp_sl(tp_neg, sl)
 
 
@@ -154,11 +155,11 @@ def test_validate_order_blocks(
     # Pass
     validate_order_blocks(ob_list, batch_size, seq_len)
     # Wrong batch size
-    with pytest.raises(ValueError, match='batch size'):
+    with pytest.raises(ValueError, match="batch size"):
         validate_order_blocks(ob_list, batch_size + 1, seq_len)
     # Invalid object (not a list)
     with pytest.raises(TypeError):
-        validate_order_blocks([1, 2], batch_size, seq_len)  # type: ignore[list-item]  # noqa: E501
+        validate_order_blocks([1, 2], batch_size, seq_len)  # type: ignore[list-item]
 
 
 @pytest.mark.unit
@@ -183,7 +184,7 @@ def test_validate_action_targets(sample_batch: tuple) -> None:
     # Invalid value
     action_invalid = action_tgt.clone()
     action_invalid[0, 0] = 5.0
-    with pytest.raises(ValueError, match='invalid values'):
+    with pytest.raises(ValueError, match="invalid values"):
         validate_action_targets(action_invalid)
 
 
@@ -207,16 +208,16 @@ def test_validate_outcome_targets(sample_batch: tuple) -> None:
     """
     outcome_tgt: Tensor = sample_batch[7]
     # Binary mode
-    validate_outcome_targets(outcome_tgt, 'binary')
+    validate_outcome_targets(outcome_tgt, "binary")
     # Invalid finite values
     outcome_invalid = outcome_tgt.clone()
     outcome_invalid[0, 0] = 3.0
-    with pytest.raises(ValueError, match='invalid finite values'):
-        validate_outcome_targets(outcome_invalid, 'binary')
+    with pytest.raises(ValueError, match="invalid finite values"):
+        validate_outcome_targets(outcome_invalid, "binary")
     # Regression mode: should not raise, only warn
     outcome_big = outcome_tgt.clone()
     outcome_big[0, 0] = 1e7
-    validate_outcome_targets(outcome_big, 'regression')  # warns
+    validate_outcome_targets(outcome_big, "regression")  # warns
 
 
 @pytest.mark.integration
@@ -244,7 +245,7 @@ def test_validate_batch(sample_batch: tuple) -> None:
         new_tp: Tensor = close + torch.abs(torch.randn_like(close)) * 2 + 1
         new_sl: Tensor = torch.maximum(
             close - torch.abs(torch.randn_like(close)) * 2 - 1,
-            torch.ones_like(close)
+            torch.ones_like(close),
         )
         batch[3] = new_tp.unsqueeze(-1)
         batch[4] = new_sl.unsqueeze(-1)
@@ -258,5 +259,5 @@ def test_validate_batch(sample_batch: tuple) -> None:
         n_price_feats=sample_batch[0].shape[2],
         n_ind_feats=sample_batch[1].shape[2],
         n_sig_feats=sample_batch[2].shape[2],
-        outcome_mode='binary'
+        outcome_mode="binary",
     )

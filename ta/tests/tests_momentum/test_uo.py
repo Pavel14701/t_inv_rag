@@ -4,10 +4,11 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...external import talib, talib_available
-from ...momentum.uo import _uo_numba, uo_ind, uo_numpy, uo_polars
+from ta.src.external import talib, talib_available
+from ta.src.momentum.uo import _uo_numba, uo_ind, uo_numpy, uo_polars
 
 
 @pytest.fixture
@@ -31,14 +32,13 @@ def _uo_reference(
     bp = np.full(n, np.nan)
     tr = np.full(n, np.nan)
     bp[1:] = close[1:] - np.minimum(low[1:], close[:-1])
-    tr[1:] = (np.maximum(high[1:], close[:-1])
-              - np.minimum(low[1:], close[:-1]))
+    tr[1:] = np.maximum(high[1:], close[:-1]) - np.minimum(low[1:], close[:-1])
     out = np.full(n, np.nan)
     for i in range(slow, n):
         avgs = []
         for length in (fast, medium, slow):
-            s_bp = bp[i - length + 1:i + 1].sum()
-            s_tr = tr[i - length + 1:i + 1].sum()
+            s_bp = bp[i - length + 1 : i + 1].sum()
+            s_tr = tr[i - length + 1 : i + 1].sum()
             avgs.append(np.nan if s_tr == 0.0 else s_bp / s_tr)
         out[i] = 100.0 * (4 * avgs[0] + 2 * avgs[1] + avgs[2]) / 7.0
     return out
@@ -62,7 +62,7 @@ def test_uo_warmup_and_bounds(ohlc) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 def test_uo_matches_talib(ohlc) -> None:
     high, low, close = ohlc
     expected = talib.ULTOSC(
@@ -73,7 +73,7 @@ def test_uo_matches_talib(ohlc) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 def test_uo_native_matches_talib_custom_periods(ohlc) -> None:
     high, low, close = ohlc
     expected = talib.ULTOSC(
@@ -122,13 +122,18 @@ def test_uo_nan_propagation(ohlc) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.parametrize('fast, medium, slow', [(0, 14, 28), (7, 0, 28),
-                                                (7, 14, 0)])
+@pytest.mark.parametrize(
+    "fast, medium, slow", [(0, 14, 28), (7, 0, 28), (7, 14, 0)]
+)
 def test_uo_invalid_params(fast: int, medium: int, slow: int) -> None:
     with pytest.raises(ValueError):
         uo_numpy(
-            np.arange(40.0), np.arange(40.0), np.arange(40.0),
-            fast=fast, medium=medium, slow=slow,
+            np.arange(40.0),
+            np.arange(40.0),
+            np.arange(40.0),
+            fast=fast,
+            medium=medium,
+            slow=slow,
         )
 
 
@@ -157,7 +162,9 @@ def test_uo_ind_numpy_and_series(ohlc) -> None:
     expected = uo_numpy(high, low, close, use_talib=False)
     from_arrays = uo_ind(high, low, close, use_talib=False)
     from_series = uo_ind(
-        pl.Series(high), pl.Series(low), pl.Series(close),
+        pl.Series(high),
+        pl.Series(low),
+        pl.Series(close),
         use_talib=False,
     )
     assert_allclose(from_arrays, expected, rtol=1e-12, equal_nan=True)
@@ -166,15 +173,17 @@ def test_uo_ind_numpy_and_series(ohlc) -> None:
 
 @pytest.mark.momentum
 def test_uo_polars(df_ohlc: pl.DataFrame) -> None:
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
     expected = uo_numpy(high, low, close, use_talib=False)
     result = uo_polars(df_ohlc, use_talib=False)
-    assert 'UO_7_14_28' in result.columns
+    assert "UO_7_14_28" in result.columns
     assert_allclose(
-        result['UO_7_14_28'].to_numpy(), expected,
-        rtol=1e-12, equal_nan=True,
+        result["UO_7_14_28"].to_numpy(),
+        expected,
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -192,6 +201,8 @@ def test_uo_kernel_bitwise_vs_numpy(ohlc) -> None:
     high, low, close = ohlc
     result = uo_numpy(high, low, close, use_talib=False)
     assert_allclose(
-        _uo_numba(high, low, close, 7, 14, 28), result,
-        rtol=1e-15, equal_nan=True,
+        _uo_numba(high, low, close, 7, 14, 28),
+        result,
+        rtol=1e-15,
+        equal_nan=True,
     )

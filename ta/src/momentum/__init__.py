@@ -10,23 +10,29 @@ from .cg import cg_ind, cg_polars
 from .cmo import cmo_ind, cmo_polars
 from .coppock import coppock_ind, coppock_polars
 from .crsi import crsi_ind, crsi_polars
+
 # from .cti import cti_ind, cti_polars
 # from .dm import dm_ind, dm_polars
 from .er import er_ind, er_polars
+
 # from .eri import eri_ind, eri_polars
 from .fisher import fisher_ind, fisher_polars
+
 # from .exhc import exhc_ind, exhc_polars
 # from .inertia import inertia_ind, inertia_polars
 # from .kdj import kdj_ind, kdj_polars
 from .kst import kst_ind, kst_polars
 from .macd import macd_ind
+
 # from .mom import mom_ind, mom_polars
 from .pgo import pgo_ind, pgo_polars
 from .ppo import ppo_ind, ppo_polars
 from .psl import psl_ind, psl_polars
+
 # from .qqe import qqe
 from .roc import roc_ind, roc_polars
 from .rsi import rsi_ind, rsi_polars
+
 # from .rsx import rsx
 # from .rvgi import rvgi
 # from .slope import slope
@@ -39,10 +45,12 @@ from .stoch import stoch_ind, stoch_polars
 from .stochf import stochf_ind, stochf_polars
 from .stochrsi import stochrsi_ind, stochrsi_polars
 from .tmo import tmo_ind, tmo_polars
+
 # from .trix import trix
 from .tsi import tsi_ind, tsi_polars
 from .uo import uo_ind, uo_polars
 from .willr import willr_ind, willr_polars
+
 
 __all__ = [
     'ao_ind', 'ao_polars',

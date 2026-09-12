@@ -4,21 +4,16 @@ version = "0.1.0"
 description = "Strategy layer: PriceDataFramePolars, strategy format and registry (TZ-02)"
 requires-python = ">=3.12"
 dependencies = [
-    # pandas-ta убран: пакет несовместим с numba>=0.66 и недоступен на зеркале.
-    # Легаси-адаптеры infrastructure/indicators на pandas_ta — в зоне TZ-02
-    # (перевод на каузальные ядра ta/).
-    "numpy>=2.0",
-    "pandas>=2.2",
+    # pandas / pandas-ta удалены из проекта (TZ-14): легаси-адаптеры
+    # infrastructure/indicators, дублировавшие ta/, ликвидированы.
+    # Индикаторы — только каузальные ядра dte-ta; формат Strategy — TZ-02.
     "polars>=1.42.1",
-    "scipy>=1.14",
-    "ta-lib>=0.7.0",
 ]
 
 [dependency-groups]
 dev = [
     "pytest==9.1.1",
     "pytest-mock>=3.15.1",
-    "pandas-stubs>=2.3.2.250926",
 ]
 
 [tool.uv]

@@ -15,10 +15,11 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...momentum.crsi import crsi_ind, crsi_numpy, crsi_polars
-from ...momentum.rsi import rsi_ind
+from ta.src.momentum.crsi import crsi_ind, crsi_numpy, crsi_polars
+from ta.src.momentum.rsi import rsi_ind
 
 
 def _percent_rank(close: npt.NDArray[np.float64], length: int) -> np.ndarray:
@@ -41,9 +42,7 @@ def test_crsi_matches_formula(
     result = crsi_numpy(
         close, rsi_length, streak_length, rank_length, use_talib=False
     )
-    rsi_price = np.asarray(
-        rsi_ind(close, length=rsi_length, use_talib=False)
-    )
+    rsi_price = np.asarray(rsi_ind(close, length=rsi_length, use_talib=False))
     # Streak reference
     streak = np.zeros(len(close))
     for i in range(1, len(close)):
@@ -79,7 +78,10 @@ def test_crsi_warmup_nan(
 ) -> None:
     """NaN until the percent rank component warms up (rank_length - 1)."""
     result = crsi_numpy(
-        prices_random_walk, rsi_length=3, streak_length=2, rank_length=100,
+        prices_random_walk,
+        rsi_length=3,
+        streak_length=2,
+        rank_length=100,
         use_talib=False,
     )
     assert np.isnan(result[:99]).all()
@@ -91,11 +93,11 @@ def test_crsi_validation_raises(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """rsi_length < 1, streak_length < 1, rank_length < 2 are rejected."""
-    with pytest.raises(ValueError, match='rsi_length must be >= 1'):
+    with pytest.raises(ValueError, match="rsi_length must be >= 1"):
         crsi_numpy(prices_random_walk, rsi_length=0, use_talib=False)
-    with pytest.raises(ValueError, match='streak_length must be >= 1'):
+    with pytest.raises(ValueError, match="streak_length must be >= 1"):
         crsi_numpy(prices_random_walk, streak_length=0, use_talib=False)
-    with pytest.raises(ValueError, match='rank_length must be >= 2'):
+    with pytest.raises(ValueError, match="rank_length must be >= 2"):
         crsi_numpy(prices_random_walk, rank_length=1, use_talib=False)
 
 
@@ -106,9 +108,9 @@ def test_crsi_nan_policy(
     """NaN input raises by default; ffill produces finite results."""
     close = prices_random_walk.copy()
     close[10] = np.nan
-    with pytest.raises(ValueError, match='Input contains NaN'):
-        crsi_numpy(close, use_talib=False, nan_policy='raise')
-    result = crsi_numpy(close, use_talib=False, nan_policy='ffill')
+    with pytest.raises(ValueError, match="Input contains NaN"):
+        crsi_numpy(close, use_talib=False, nan_policy="raise")
+    result = crsi_numpy(close, use_talib=False, nan_policy="ffill")
     assert np.isfinite(result[99:]).all()
 
 
@@ -118,14 +120,22 @@ def test_crsi_offset_fillna(
 ) -> None:
     """Offset shifts and fillna replaces ALL NaN (incl. warm-up)."""
     rank_length = 100
-    r0 = crsi_numpy(prices_random_walk, rank_length=rank_length,
-                    use_talib=False)
-    r2 = crsi_numpy(prices_random_walk, rank_length=rank_length, offset=2,
-                    fillna=0.0, use_talib=False)
+    r0 = crsi_numpy(
+        prices_random_walk, rank_length=rank_length, use_talib=False
+    )
+    r2 = crsi_numpy(
+        prices_random_walk,
+        rank_length=rank_length,
+        offset=2,
+        fillna=0.0,
+        use_talib=False,
+    )
     assert r2[0] == 0.0 and r2[1] == 0.0
     assert_allclose(
-        r2[rank_length + 1 :], r0[rank_length - 1 : -2],
-        rtol=1e-12, equal_nan=True,
+        r2[rank_length + 1 :],
+        r0[rank_length - 1 : -2],
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -133,11 +143,13 @@ def test_crsi_offset_fillna(
 def test_crsi_polars_basic(df_ohlc: pl.DataFrame) -> None:
     """crsi_polars default column is CRSI_{rsi}_{streak}_{rank}."""
     result = crsi_polars(df_ohlc, use_talib=False)
-    assert 'CRSI_3_2_100' in result.columns
-    assert result['CRSI_3_2_100'].dtype == pl.Float64
+    assert "CRSI_3_2_100" in result.columns
+    assert result["CRSI_3_2_100"].dtype == pl.Float64
     assert len(result) == len(df_ohlc)
     expected = crsi_numpy(
-        df_ohlc['close'].to_numpy(), use_talib=False,
+        df_ohlc["close"].to_numpy(),
+        use_talib=False,
     )
-    assert_allclose(result['CRSI_3_2_100'].to_numpy(), expected,
-                    equal_nan=True)
+    assert_allclose(
+        result["CRSI_3_2_100"].to_numpy(), expected, equal_nan=True
+    )

@@ -11,32 +11,34 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, short, all-NaN, extreme)
 """
 
-import pytest
+from math import comb
+
 import numpy as np
 import numpy.typing as npt
 import polars as pl
-from numpy.testing import assert_allclose
-from math import comb
+import pytest
 
-from ...overlap.pwma import (
+from numpy.testing import assert_allclose
+
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.overlap.pwma import (
     _pascal_weights,
     _pwma_numba_core,
-    pwma_numba,
     pwma_ind,
+    pwma_numba,
     pwma_polars,
 )
-from ..._array_ops import _apply_offset_fillna
 
 
 # -----------------------------------------------------------------------------
 # Reference implementations
 # -----------------------------------------------------------------------------
 
+
 def _pascal_weights_reference(length: int) -> np.ndarray:
     """Normalized binomial coefficients of Pascal row (length-1)."""
     w = np.array(
-        [comb(length - 1, k) for k in range(length)],
-        dtype=np.float64
+        [comb(length - 1, k) for k in range(length)], dtype=np.float64
     )
     return w / w.sum()
 
@@ -52,13 +54,14 @@ def _pwma_reference(
         return out
     w = _pascal_weights_reference(length)
     for i in range(length - 1, n):
-        out[i] = float(np.dot(close[i - length + 1:i + 1], w))
+        out[i] = float(np.dot(close[i - length + 1 : i + 1], w))
     return out
 
 
 # -----------------------------------------------------------------------------
 # Weights tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_pascal_weights_match_binomials() -> None:
@@ -73,8 +76,9 @@ def test_pascal_weights_match_binomials() -> None:
 def test_pascal_weights_symmetric() -> None:
     """Pascal rows are symmetric: asc and desc weights are identical."""
     for length in (2, 3, 5, 8, 13):
-        assert np.array_equal(_pascal_weights(length, True),
-                              _pascal_weights(length, False))
+        assert np.array_equal(
+            _pascal_weights(length, True), _pascal_weights(length, False)
+        )
 
 
 @pytest.mark.overlap
@@ -91,6 +95,7 @@ def test_pascal_weights_cached_readonly() -> None:
 # Core / pwma_numba tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_pwma_numba_core_against_reference(
     prices_random_walk: npt.NDArray[np.float64],
@@ -98,13 +103,12 @@ def test_pwma_numba_core_against_reference(
     """Compare the numba core with the pure-Python reference."""
     for length in (2, 5, 10):
         result = _pwma_numba_core(
-            prices_random_walk,
-            _pascal_weights(length, True)
+            prices_random_walk, _pascal_weights(length, True)
         )
         expected = _pwma_reference(prices_random_walk, length)
         assert result.shape == prices_random_walk.shape
         assert_allclose(result, expected, rtol=1e-12, equal_nan=True)
-        assert np.isnan(result[:length - 1]).all()
+        assert np.isnan(result[: length - 1]).all()
 
 
 @pytest.mark.overlap
@@ -113,9 +117,11 @@ def test_pwma_hand_computed() -> None:
     close = np.arange(1.0, 7.0)  # 1..6
     result = pwma_numba(close, length=3)
     # out[i] = (close[i-2] + 2*close[i-1] + close[i]) / 4
-    assert_allclose(result[2:], [(1 + 4 + 3) / 4, (2 + 6 + 4) / 4,
-                                 (3 + 8 + 5) / 4, (4 + 10 + 6) / 4],
-                    rtol=1e-12)
+    assert_allclose(
+        result[2:],
+        [(1 + 4 + 3) / 4, (2 + 6 + 4) / 4, (3 + 8 + 5) / 4, (4 + 10 + 6) / 4],
+        rtol=1e-12,
+    )
     assert np.isnan(result[:2]).all()
 
 
@@ -139,7 +145,7 @@ def test_pwma_constant_series() -> None:
 def test_pwma_asc_desc_identical(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
-    """asc flag is a no-op: symmetric weights give identical output."""  # noqa: D403
+    """asc flag is a no-op: symmetric weights give identical output."""
     ra = pwma_numba(prices_random_walk, length=8, asc=True)
     rb = pwma_numba(prices_random_walk, length=8, asc=False)
     mask = ~np.isnan(ra)
@@ -163,9 +169,9 @@ def test_pwma_offset_fillna() -> None:
 def test_pwma_invalid_length() -> None:
     """Length < 1 must raise ValueError, never corrupt the output."""
     close = np.array([10.0, 11.0, 12.0])
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         pwma_numba(close, length=0)
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         pwma_numba(close, length=-2)
 
 
@@ -184,6 +190,7 @@ def test_pwma_input_types() -> None:
 # -----------------------------------------------------------------------------
 # Universal wrapper tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_pwma_ind_matches_numba(
@@ -205,6 +212,7 @@ def test_pwma_ind_with_pl_series(
     expected = pwma_numba(prices_random_walk, length=10)
     assert_allclose(result, expected, rtol=1e-12)
 
+
 # -----------------------------------------------------------------------------
 # Polars integration tests
 # -----------------------------------------------------------------------------
@@ -216,21 +224,23 @@ def test_pwma_polars_basic(df_random_walk: pl.DataFrame) -> None:
     length = 10
     result = pwma_polars(df_random_walk, length=length)
     assert isinstance(result, pl.DataFrame)
-    assert f'PWMA_{length}' in result.columns
-    close_arr = df_random_walk['close'].to_numpy()
+    assert f"PWMA_{length}" in result.columns
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _pwma_reference(close_arr, length)
     mask = ~np.isnan(expected)
     assert_allclose(
-        result[f'PWMA_{length}'].to_numpy()[mask], expected[mask], rtol=1e-12,
+        result[f"PWMA_{length}"].to_numpy()[mask],
+        expected[mask],
+        rtol=1e-12,
     )
 
 
 @pytest.mark.overlap
 def test_pwma_polars_custom_output_col(df_random_walk) -> None:
     """Custom output column name is respected."""
-    result = pwma_polars(df_random_walk, length=5, output_col='PWMA')
-    assert 'PWMA' in result.columns
-    assert result['PWMA'].dtype == pl.Float64
+    result = pwma_polars(df_random_walk, length=5, output_col="PWMA")
+    assert "PWMA" in result.columns
+    assert result["PWMA"].dtype == pl.Float64
 
 
 @pytest.mark.overlap
@@ -238,11 +248,11 @@ def test_pwma_polars_custom_close_col(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """pwma_polars with a non-default close column name."""
-    df = pl.DataFrame({'price': prices_random_walk})
-    result = pwma_polars(df, close_col='price', length=10, output_col='PWMA')
+    df = pl.DataFrame({"price": prices_random_walk})
+    result = pwma_polars(df, close_col="price", length=10, output_col="PWMA")
     expected = _pwma_reference(prices_random_walk, 10)
     mask = ~np.isnan(expected)
-    assert_allclose(result['PWMA'].to_numpy()[mask], expected[mask])
+    assert_allclose(result["PWMA"].to_numpy()[mask], expected[mask])
 
 
 @pytest.mark.overlap
@@ -250,19 +260,23 @@ def test_pwma_polars_with_offset_fillna(df_random_walk) -> None:
     """pwma_polars applies offset and fillna."""
     offset = 2
     fillna = 0.0
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     base = pwma_numba(close_arr, length=5, offset=0, fillna=None)
     expected = _apply_offset_fillna(base, offset, fillna)
     result = pwma_polars(
-        df_random_walk, length=5, offset=offset, fillna=fillna,
-        output_col='PWMA',
+        df_random_walk,
+        length=5,
+        offset=offset,
+        fillna=fillna,
+        output_col="PWMA",
     )
-    assert_allclose(result['PWMA'].to_numpy(), expected, rtol=1e-12)
+    assert_allclose(result["PWMA"].to_numpy(), expected, rtol=1e-12)
 
 
 # -----------------------------------------------------------------------------
 # IEEE 754 compliance tests (using fixtures from conftest.py)
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_pwma_with_nan(prices_with_nan) -> None:
@@ -320,15 +334,18 @@ def test_pwma_extreme_values(prices_extreme) -> None:
 @pytest.mark.overlap
 def test_pwma_polars_with_nan(df_random_walk: pl.DataFrame) -> None:
     """Polars integration propagates NaN correctly."""
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
-    df_with_nan = df_random_walk.with_columns(pl.Series('close', close_arr))
+    df_with_nan = df_random_walk.with_columns(pl.Series("close", close_arr))
     result = pwma_polars(
-        df_with_nan, length=3, output_col='PWMA',
+        df_with_nan,
+        length=3,
+        output_col="PWMA",
     )
-    vals = result['PWMA'].to_numpy()
+    vals = result["PWMA"].to_numpy()
     nb = pwma_numba(close_arr, length=3)
     assert np.array_equal(
-        np.nan_to_num(vals, nan=-999.0), np.nan_to_num(nb, nan=-999.0),
+        np.nan_to_num(vals, nan=-999.0),
+        np.nan_to_num(nb, nan=-999.0),
     )
     assert np.isfinite(vals[8:]).all()

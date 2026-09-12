@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ..config import (  # noqa: TID100 - package-relative for pytest isolation
+from ai.src.config import (
     AIConfig,
     RiskConfig,
     load_config,
@@ -22,12 +22,17 @@ def test_defaults_equal_legacy_hardcode():
     assert abs(r.min_rr - 1 / 3) < 1e-4
     assert r.min_rr == 1 / 3  # exact, not a rounded 0.3333
     assert (r.commission_pct, r.slippage_pct, r.max_bars_hold) == (
-        0.001, 0.0005, 20,
+        0.001,
+        0.0005,
+        20,
     )
     assert r.use_r_multiple is False
     m = cfg.model
     assert (m.seq_len, m.hidden_size, m.num_layers, m.num_heads) == (
-        128, 128, 4, 8,
+        128,
+        128,
+        4,
+        8,
     )
     assert m.close_idx == 3
     t = cfg.training
@@ -35,32 +40,34 @@ def test_defaults_equal_legacy_hardcode():
     assert (t.lambda_outcome, t.lambda_pattern) == (0.3, 0.1)
     assert (t.val_split, t.patience) == (0.2, 3)
     assert (t.num_rounds, t.action_threshold, t.outcome_threshold) == (
-        3, 0.9, 0.8,
+        3,
+        0.9,
+        0.8,
     )
 
 
 def test_load_from_yaml_overrides(tmp_path):
     """Unknown keys are ignored; known keys override defaults."""
-    yml = tmp_path / 'ai.yaml'
+    yml = tmp_path / "ai.yaml"
     yml.write_text(
-        'seed: 7\n'
-        'risk:\n'
-        '  tp_atr_multiplier: 3.0\n'
-        '  unknown_key: 1\n'
-        'compute:\n'
-        '  train_backend: cpu\n',
-        encoding='utf-8',
+        "seed: 7\n"
+        "risk:\n"
+        "  tp_atr_multiplier: 3.0\n"
+        "  unknown_key: 1\n"
+        "compute:\n"
+        "  train_backend: cpu\n",
+        encoding="utf-8",
     )
     cfg = load_config(yml)
     assert cfg.seed == 7
     assert cfg.risk.tp_atr_multiplier == 3.0
     assert cfg.risk.sl_atr_multiplier == 1.5  # default preserved
-    assert cfg.compute.train_backend == 'cpu'
+    assert cfg.compute.train_backend == "cpu"
 
 
 def test_missing_file_returns_defaults(tmp_path):
     """Absent YAML yields pure defaults."""
-    cfg = load_config(tmp_path / 'nope.yaml')
+    cfg = load_config(tmp_path / "nope.yaml")
     assert isinstance(cfg, AIConfig)
     assert cfg.seed == 42
 
@@ -68,8 +75,8 @@ def test_missing_file_returns_defaults(tmp_path):
 def test_risk_kwargs_mapping():
     """Mapping preserves config values into kwargs dict."""
     kw = risk_kwargs(RiskConfig(max_bars_hold=5))
-    assert kw['max_bars_hold'] == 5
-    assert kw['commission_pct'] == 0.001
+    assert kw["max_bars_hold"] == 5
+    assert kw["commission_pct"] == 0.001
 
 
 def test_set_seed_reproducible():
@@ -90,9 +97,9 @@ def test_shipped_yaml_equals_dataclass_defaults():
     the effective configuration, so every section must compare exactly.
 
     """
-    repo_yaml = Path(__file__).resolve().parents[3] / 'configs' / 'ai.yaml'
+    repo_yaml = Path(__file__).resolve().parents[3] / "configs" / "ai.yaml"
     if not repo_yaml.exists():
-        pytest.skip('configs/ai.yaml not present')
+        pytest.skip("configs/ai.yaml not present")
     cfg = load_config(repo_yaml)
     defaults = AIConfig()
     assert cfg.seed == defaults.seed

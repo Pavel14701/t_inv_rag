@@ -3,14 +3,20 @@
 test sma template (offset, fillna, nan_policy, backend, polars, IEEE).
 """
 
-import pytest
 import numpy as np
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.trima import trima_numba, trima_talib, trima_ind, trima_polars
-from ..._array_ops import _apply_offset_fillna
-from ...external import talib_available
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.external import talib_available
+from ta.src.overlap.trima import (
+    trima_ind,
+    trima_numba,
+    trima_polars,
+    trima_talib,
+)
 
 
 def _sma_np(arr: np.ndarray, w: int) -> np.ndarray:
@@ -41,13 +47,13 @@ def _trima_reference(close: np.ndarray, length: int) -> np.ndarray:
     if length % 2 == 1:
         h = (length + 1) // 2
         sma1 = _sma_np(close, h)
-        sma2_tail = _sma_np(sma1[h - 1:], h)
-        trima[length - 1:] = sma2_tail[h - 1:]
+        sma2_tail = _sma_np(sma1[h - 1 :], h)
+        trima[length - 1 :] = sma2_tail[h - 1 :]
     else:
         h = length // 2
         sma1 = _sma_np(close, h)
-        sma2_tail = _sma_np(sma1[h - 1:], h + 1)
-        trima[length - 1:] = sma2_tail[h:]
+        sma2_tail = _sma_np(sma1[h - 1 :], h + 1)
+        trima[length - 1 :] = sma2_tail[h:]
     return trima
 
 
@@ -60,7 +66,7 @@ def test_trima_numba_basic() -> None:
         expected = _trima_reference(close, length)
         assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
         # warmup is the first length-1 values
-        assert np.isnan(result[:length - 1]).all()
+        assert np.isnan(result[: length - 1]).all()
 
 
 @pytest.mark.overlap
@@ -79,8 +85,8 @@ def test_trima_numba_nan_policy_raise() -> None:
     """nan_policy='raise' raises on NaN input."""
     close = np.linspace(10.0, 120.0, 40)
     close[15] = np.nan
-    with pytest.raises(ValueError, match='contains NaN'):
-        trima_numba(close, length=5, nan_policy='raise')
+    with pytest.raises(ValueError, match="contains NaN"):
+        trima_numba(close, length=5, nan_policy="raise")
 
 
 @pytest.mark.overlap
@@ -92,7 +98,7 @@ def test_trima_numba_nan_policy_ffill() -> None:
     for i in range(1, len(filled)):
         if np.isnan(filled[i]):
             filled[i] = filled[i - 1]
-    result = trima_numba(close, length=5, nan_policy='ffill')
+    result = trima_numba(close, length=5, nan_policy="ffill")
     expected = _trima_reference(filled, 5)
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
 
@@ -100,7 +106,7 @@ def test_trima_numba_nan_policy_ffill() -> None:
 @pytest.mark.overlap
 def test_trima_numba_invalid_length() -> None:
     """Length < 1 raises ValueError."""
-    with pytest.raises(ValueError, match='length must be'):
+    with pytest.raises(ValueError, match="length must be"):
         trima_numba(np.array([1.0, 2.0, 3.0]), length=0)
 
 
@@ -113,7 +119,7 @@ def test_trima_ind_uses_numba() -> None:
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
 
 
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 @pytest.mark.overlap
 def test_trima_ind_uses_talib() -> None:
     """trima_ind with TA-Lib matches trima_talib on a clean series."""
@@ -128,11 +134,11 @@ def test_trima_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """trima_polars returns a DataFrame with the TRIMA column."""
     length = 5
     result = trima_polars(df_random_walk, length=length, use_talib=False)
-    col = f'TRIMA_{length}'
+    col = f"TRIMA_{length}"
     assert col in result.columns
     assert len(result) == len(df_random_walk)
     vals = result[col].to_numpy()
-    expected = _trima_reference(df_random_walk['close'].to_numpy(), length)
+    expected = _trima_reference(df_random_walk["close"].to_numpy(), length)
     assert_allclose(vals, expected, rtol=1e-9, equal_nan=True)
 
 
@@ -143,19 +149,19 @@ def test_trima_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
     result = trima_polars(
         df_random_walk, length=length, offset=1, fillna=0.0, use_talib=False
     )
-    close = df_random_walk['close'].to_numpy()
-    expected = _apply_offset_fillna(
-        _trima_reference(close, length), 1, 0.0
+    close = df_random_walk["close"].to_numpy()
+    expected = _apply_offset_fillna(_trima_reference(close, length), 1, 0.0)
+    assert_allclose(
+        result["TRIMA_5"].to_numpy(), expected, rtol=1e-9, equal_nan=True
     )
-    assert_allclose(result['TRIMA_5'].to_numpy(), expected,
-                    rtol=1e-9, equal_nan=True)
 
 
 # ---- IEEE 754 ----
 
+
 def test_trima_with_nan(prices_with_nan):
-    """NaN only poisons TRIMA windows containing it (ignore)."""  # noqa: D403
-    result = trima_numba(prices_with_nan, length=3, nan_policy='ignore')
+    """NaN only poisons TRIMA windows containing it (ignore)."""
+    result = trima_numba(prices_with_nan, length=3, nan_policy="ignore")
     expected = _trima_reference(prices_with_nan, 3)
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
     assert np.isnan(result[:2]).all()
@@ -165,7 +171,7 @@ def test_trima_with_nan(prices_with_nan):
 
 def test_trima_with_inf(prices_with_inf):
     """Inf is replaced with NaN, so behaves like NaN."""
-    result = trima_numba(prices_with_inf, length=3, nan_policy='ignore')
+    result = trima_numba(prices_with_inf, length=3, nan_policy="ignore")
     cleaned = prices_with_inf.copy()
     cleaned[~np.isfinite(cleaned)] = np.nan
     expected = _trima_reference(cleaned, 3)
@@ -175,17 +181,17 @@ def test_trima_with_inf(prices_with_inf):
 
 def test_trima_empty(prices_empty):
     """Empty input returns an empty array (or NaN pattern) without crash."""
-    result = trima_numba(prices_empty, length=3, nan_policy='ignore')
+    result = trima_numba(prices_empty, length=3, nan_policy="ignore")
     assert result is not None
 
 
 def test_trima_all_nan(prices_all_nan):
     """All-NaN input stays all-NaN under 'ignore'."""
-    result = trima_numba(prices_all_nan, length=3, nan_policy='ignore')
+    result = trima_numba(prices_all_nan, length=3, nan_policy="ignore")
     assert np.isnan(result).all()
 
 
 def test_trima_extreme_values(prices_extreme):
     """Extreme values must not crash."""
-    result = trima_numba(prices_extreme, length=10, nan_policy='ignore')
+    result = trima_numba(prices_extreme, length=10, nan_policy="ignore")
     assert result is not None

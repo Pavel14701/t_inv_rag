@@ -12,11 +12,11 @@ Tests cover:
 
 import time
 
-import pytest
 import numpy as np
 import polars as pl
+import pytest
 
-from ...candle.renko import _renko_nb, renko, renko_polars
+from ta.src.candle.renko import _renko_nb, renko, renko_polars
 
 
 RENKO_TEST_CASES = [
@@ -25,50 +25,50 @@ RENKO_TEST_CASES = [
         [100.0, 102.0, 104.0, 106.0, 108.0],
         2.0,
         [0, 1, 1, 1, 1],
-        'uptrend one brick per step',
+        "uptrend one brick per step",
     ),
     (
         [100.0, 98.0, 96.0, 94.0, 92.0],
         2.0,
         [0, -1, -1, -1, -1],
-        'downtrend one brick per step',
+        "downtrend one brick per step",
     ),
     (
         [100.0, 103.0, 101.0, 104.0, 98.0],
         2.0,
         [0, 1, 0, 1, -1],
-        'mixed up/down movements',
+        "mixed up/down movements",
     ),
     (
         [100.0, 100.5, 101.0, 99.5],
         2.0,
         [0, 0, 0, 0],
-        'no movement within box size',
+        "no movement within box size",
     ),
     (
         [100.0, 102.5, 104.0, 106.0],
         2.0,
         [0, 1, 1, 1],
-        'partial up move (102.5 crosses 102)',
+        "partial up move (102.5 crosses 102)",
     ),
     (
         [100.0, 97.0, 95.0, 93.0],
         2.0,
         [0, -1, -1, -1],
-        'partial down move (97.0 crosses 98)',
+        "partial down move (97.0 crosses 98)",
     ),
     (
         [100.0, 104.0, 96.0, 100.0],
         2.0,
         [0, 1, -1, 1],
-        'up then down then back to anchor',
+        "up then down then back to anchor",
     ),
 ]
 
 
 @pytest.mark.unit
 @pytest.mark.candle
-@pytest.mark.parametrize('prices, box_size, expected, desc', RENKO_TEST_CASES)
+@pytest.mark.parametrize("prices, box_size, expected, desc", RENKO_TEST_CASES)
 def test_renko_nb_parametrized(
     prices: list[float],
     box_size: float,
@@ -80,15 +80,13 @@ def test_renko_nb_parametrized(
     expected_arr = np.array(expected, dtype=np.int8)
     result = _renko_nb(prices_arr, box_size)
     np.testing.assert_array_equal(
-        result,
-        expected_arr,
-        err_msg=f'Failed for: {desc}'
+        result, expected_arr, err_msg=f"Failed for: {desc}"
     )
 
 
 @pytest.mark.unit
 @pytest.mark.candle
-@pytest.mark.parametrize('prices, box_size, expected, desc', RENKO_TEST_CASES)
+@pytest.mark.parametrize("prices, box_size, expected, desc", RENKO_TEST_CASES)
 def test_renko_parametrized(
     prices: list[float],
     box_size: float,
@@ -100,15 +98,13 @@ def test_renko_parametrized(
     expected_arr = np.array(expected, dtype=np.float64)
     result = renko(prices_arr, box_size)
     np.testing.assert_allclose(
-        result,
-        expected_arr,
-        err_msg=f'Failed for: {desc}'
+        result, expected_arr, err_msg=f"Failed for: {desc}"
     )
 
 
 @pytest.mark.unit
 @pytest.mark.candle
-@pytest.mark.parametrize('prices, box_size, expected, desc', RENKO_TEST_CASES)
+@pytest.mark.parametrize("prices, box_size, expected, desc", RENKO_TEST_CASES)
 def test_renko_polars_series_parametrized(
     prices: list[float],
     box_size: float,
@@ -120,9 +116,7 @@ def test_renko_polars_series_parametrized(
     expected_arr = np.array(expected, dtype=np.float64)
     result = renko(s, box_size)
     np.testing.assert_allclose(
-        result,
-        expected_arr,
-        err_msg=f'Failed for: {desc}'
+        result, expected_arr, err_msg=f"Failed for: {desc}"
     )
 
 
@@ -186,11 +180,11 @@ def test_renko_polars_df_uptrend(
     box_size: float,
 ) -> None:
     """Test renko_polars on a DataFrame with uptrend."""
-    result_df = renko_polars(df_uptrend, price_col='close', box_size=box_size)
-    assert 'RENKO' in result_df.columns
+    result_df = renko_polars(df_uptrend, price_col="close", box_size=box_size)
+    assert "RENKO" in result_df.columns
     assert len(result_df) == len(df_uptrend)
     # Check that the column is float64
-    assert result_df['RENKO'].dtype == pl.Float64
+    assert result_df["RENKO"].dtype == pl.Float64
 
 
 @pytest.mark.unit
@@ -201,14 +195,12 @@ def test_renko_polars_df_random_walk(
 ) -> None:
     """Test renko_polars on a random walk DataFrame."""
     result_df = renko_polars(
-        df_random_walk,
-        price_col='close',
-        box_size=box_size
+        df_random_walk, price_col="close", box_size=box_size
     )
-    assert 'RENKO' in result_df.columns
+    assert "RENKO" in result_df.columns
     assert len(result_df) == len(df_random_walk)
     # There should be some non-zero values (some bricks)
-    assert np.any(result_df['RENKO'].to_numpy() != 0)
+    assert np.any(result_df["RENKO"].to_numpy() != 0)
 
 
 @pytest.mark.unit
@@ -271,18 +263,14 @@ def test_renko_fillna() -> None:
 @pytest.mark.candle
 def test_renko_polars() -> None:
     """Test renko_polars adds a column with correct values."""
-    df = pl.DataFrame({'close': [100.0, 103.0, 101.0, 104.0, 98.0]})
+    df = pl.DataFrame({"close": [100.0, 103.0, 101.0, 104.0, 98.0]})
     result_df = renko_polars(
-        df,
-        price_col='close',
-        box_size=2.0,
-        output_col='RENKO'
+        df, price_col="close", box_size=2.0, output_col="RENKO"
     )
-    assert 'RENKO' in result_df.columns
+    assert "RENKO" in result_df.columns
     expected_values = [0.0, 1.0, 0.0, 1.0, -1.0]
     np.testing.assert_allclose(
-        result_df['RENKO'].to_numpy(),
-        np.array(expected_values)
+        result_df["RENKO"].to_numpy(), np.array(expected_values)
     )
 
 
@@ -290,14 +278,18 @@ def test_renko_polars() -> None:
 @pytest.mark.candle
 def test_renko_polars_with_offset_and_fillna() -> None:
     """Test renko_polars with offset and fillna parameters."""
-    df = pl.DataFrame({'close': [100.0, 102.0, 104.0, 106.0]})
+    df = pl.DataFrame({"close": [100.0, 102.0, 104.0, 106.0]})
     result_df = renko_polars(
-        df, price_col='close', box_size=2.0,
-        offset=1, fillna=0.0, output_col='RENKO'
+        df,
+        price_col="close",
+        box_size=2.0,
+        offset=1,
+        fillna=0.0,
+        output_col="RENKO",
     )
-    assert 'RENKO' in result_df.columns
+    assert "RENKO" in result_df.columns
     assert len(result_df) == len(df)
-    assert not np.isnan(result_df['RENKO'].to_numpy()).any()
+    assert not np.isnan(result_df["RENKO"].to_numpy()).any()
 
 
 @pytest.mark.performance
@@ -346,6 +338,7 @@ def test_renko_nb_vs_python() -> None:
                 anchor -= box_size
                 out[i] = -1.0
         return out
+
     # Measure Python
     start = time.perf_counter()
     _ = renko_python(prices, box_size)
@@ -357,6 +350,4 @@ def test_renko_nb_vs_python() -> None:
     nb_time = time.perf_counter() - start
     # Numba should be at least 2x faster on large arrays
     if py_time > 0.01 and nb_time > 0.0:
-        assert nb_time < py_time * 0.5, (
-            'Numba version should be faster'
-        )
+        assert nb_time < py_time * 0.5, "Numba version should be faster"

@@ -3,9 +3,10 @@
 """
 
 import numpy as np
+
 from numpy.testing import assert_array_equal
 
-from ....candle.cdl_xsidegap3methods import _cdl_xsidegap3methods_nb
+from ta.src.candle.cdl_xsidegap3methods import _cdl_xsidegap3methods_nb
 
 
 def test_cdl_xsidegap3methods_upside():

@@ -11,24 +11,26 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, extreme)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.jma import (
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.overlap.jma import (
     _jma_numba_core,
-    jma_numba,
     jma_ind,
+    jma_numba,
     jma_polars,
 )
-from ..._array_ops import _apply_offset_fillna
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation (pure Python)
 # -----------------------------------------------------------------------------
+
 
 def _jma_reference(
     close: npt.NDArray[np.float64],
@@ -101,7 +103,7 @@ def _jma_reference(
             r_volty = limit
         else:
             r_volty = d_volty
-        power = r_volty ** pow1
+        power = r_volty**pow1
         kv = bet ** np.sqrt(power)
         if del1 > 0.0:
             u_band = price
@@ -111,13 +113,13 @@ def _jma_reference(
             l_band = price
         else:
             l_band = price - kv * del2
-        alpha = beta ** power
+        alpha = beta**power
         ma1 = (1.0 - alpha) * price + alpha * ma1
         det0 = (1.0 - beta) * (price - ma1) + beta * det0
         ma2 = ma1 + pr * det0
-        det1 = (
-            (ma2 - jma[i - 1]) * (1.0 - alpha) * (1.0 - alpha)
-        ) + (alpha * alpha * det1)
+        det1 = ((ma2 - jma[i - 1]) * (1.0 - alpha) * (1.0 - alpha)) + (
+            alpha * alpha * det1
+        )
         jma[i] = jma[i - 1] + det1
     for i in range(length - 1):
         jma[i] = np.nan
@@ -127,6 +129,7 @@ def _jma_reference(
 # -----------------------------------------------------------------------------
 # Tests for _jma_numba_core
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_jma_core_against_reference(
@@ -153,13 +156,14 @@ def test_jma_core_warmup_nan(
     """First length-1 values are NaN, the rest are finite."""
     length = 7
     result = _jma_numba_core(prices_random_walk, length, 0.0)
-    assert np.isnan(result[:length - 1]).all()
-    assert np.isfinite(result[length - 1:]).all()
+    assert np.isnan(result[: length - 1]).all()
+    assert np.isfinite(result[length - 1 :]).all()
 
 
 # -----------------------------------------------------------------------------
 # Tests for jma_numba
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_jma_numba_against_reference(
@@ -190,7 +194,7 @@ def test_jma_numba_phase_effects(
 def test_jma_numba_invalid_length() -> None:
     """Length below 1 raises ValueError."""
     close = np.arange(1.0, 11.0)
-    with pytest.raises(ValueError, match='must be >= 1'):
+    with pytest.raises(ValueError, match="must be >= 1"):
         jma_numba(close, length=0)
 
 
@@ -213,6 +217,7 @@ def test_jma_numba_offset_fillna(
 # Tests for jma_ind (universal wrapper)
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_jma_ind_with_pl_series(
     prices_random_walk: npt.NDArray[np.float64],
@@ -228,17 +233,18 @@ def test_jma_ind_with_pl_series(
 # Tests for jma_polars (DataFrame integration)
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_jma_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """Test jma_polars adds a column correctly."""
-    result_df = jma_polars(df_random_walk, length=7, output_col='JMA')
-    assert 'JMA' in result_df.columns
-    assert result_df['JMA'].dtype == pl.Float64
+    result_df = jma_polars(df_random_walk, length=7, output_col="JMA")
+    assert "JMA" in result_df.columns
+    assert result_df["JMA"].dtype == pl.Float64
     assert len(result_df) == len(df_random_walk)
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _jma_reference(close_arr, 7, 0.0)
     assert_allclose(
-        result_df['JMA'].to_numpy(), expected, rtol=1e-8, equal_nan=True
+        result_df["JMA"].to_numpy(), expected, rtol=1e-8, equal_nan=True
     )
 
 
@@ -246,15 +252,16 @@ def test_jma_polars_basic(df_random_walk: pl.DataFrame) -> None:
 def test_jma_polars_default_output_col() -> None:
     """Test default output column name."""
     df = pl.DataFrame(
-        {'close': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]}
+        {"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]}
     )
     result_df = jma_polars(df, length=7)
-    assert 'JMA_7_0.0' in result_df.columns
+    assert "JMA_7_0.0" in result_df.columns
 
 
 # -----------------------------------------------------------------------------
 # IEEE 754 compliance tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_jma_numba_nan_policy_raise() -> None:
@@ -263,7 +270,7 @@ def test_jma_numba_nan_policy_raise() -> None:
         [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
         dtype=np.float64,
     )
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         jma_numba(data, length=3)
 
 
@@ -274,16 +281,16 @@ def test_jma_numba_nan_policy_ffill() -> None:
         [1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
         dtype=np.float64,
     )
-    result = jma_numba(data, length=3, nan_policy='ffill')
+    result = jma_numba(data, length=3, nan_policy="ffill")
     assert np.isfinite(result[2:]).all()
 
 
 @pytest.mark.overlap
 def test_jma_numba_with_inf(prices_with_inf):
     """Inf in input is replaced with NaN, so it behaves like NaN."""
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         jma_numba(prices_with_inf)
-    result = jma_numba(prices_with_inf, length=5, nan_policy='ffill')
+    result = jma_numba(prices_with_inf, length=5, nan_policy="ffill")
     assert np.isfinite(result[4:]).all()
 
 
@@ -297,10 +304,10 @@ def test_jma_numba_empty(prices_empty):
 @pytest.mark.overlap
 def test_jma_numba_all_nan(prices_all_nan):
     """All NaNs -> all NaNs (or fillna if provided)."""
-    result = jma_numba(prices_all_nan, length=5, nan_policy='ignore')
+    result = jma_numba(prices_all_nan, length=5, nan_policy="ignore")
     assert np.isnan(result[4:]).all()
     result_fill = jma_numba(
-        prices_all_nan, length=5, fillna=0.0, nan_policy='ignore'
+        prices_all_nan, length=5, fillna=0.0, nan_policy="ignore"
     )
     assert (result_fill == 0.0).all()
 
@@ -308,5 +315,5 @@ def test_jma_numba_all_nan(prices_all_nan):
 @pytest.mark.overlap
 def test_jma_numba_extreme_values(prices_extreme):
     """Extreme values (1e300, 1e-300) must not crash."""
-    result = jma_numba(prices_extreme, length=5, nan_policy='ignore')
+    result = jma_numba(prices_extreme, length=5, nan_policy="ignore")
     assert result is not None

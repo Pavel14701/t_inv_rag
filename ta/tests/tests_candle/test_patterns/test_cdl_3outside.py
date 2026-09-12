@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Tests for Three Outside Up/Down (cdl_3outside)."""
 
+from ta.src.candle.cdl_3outside import cdl_3outside, cdl_3outside_polars
+
 from ._helpers import pattern_suite
-from ....candle.cdl_3outside import cdl_3outside, cdl_3outside_polars
+
 
 # bearish candle, bullish engulfing, bullish continuation
 BULL = [
@@ -18,15 +20,17 @@ BEAR = [
     (99.7, 100.2, 98.5, 98.5),
 ]
 
-globals().update(pattern_suite(
-    name='cdl_3outside',
-    fn=cdl_3outside,
-    polars_fn=cdl_3outside_polars,
-    output_col='CDL_3OUTSIDE',
-    bull=BULL,
-    bear=BEAR,
-    bull_value=1.0,
-    bear_value=-1.0,
-    talib_values=(0.0, 1.0, -1.0),
-    extra={'strict': False},
-))
+globals().update(
+    pattern_suite(
+        name="cdl_3outside",
+        fn=cdl_3outside,
+        polars_fn=cdl_3outside_polars,
+        output_col="CDL_3OUTSIDE",
+        bull=BULL,
+        bear=BEAR,
+        bull_value=1.0,
+        bear_value=-1.0,
+        talib_values=(0.0, 1.0, -1.0),
+        extra={"strict": False},
+    )
+)

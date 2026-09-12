@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
 """Unit tests for rolling quantile (QTL) module."""
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...statistics.quantile import quantile_numba, quantile_ind, quantile_polars
+from ta.src.statistics.quantile import (
+    quantile_ind,
+    quantile_numba,
+    quantile_polars,
+)
 
 
 @pytest.mark.statistics
-def test_quantile_numba_basic(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_quantile_numba_basic(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test quantile_numba with q=0.5 (median)."""
     close = prices_random_walk
     length = 30
@@ -20,7 +27,7 @@ def test_quantile_numba_basic(prices_random_walk: npt.NDArray[np.float64]) -> No
     assert result.shape == close.shape
     assert result.dtype == np.float64
     assert np.isnan(result[: length - 1]).all()
-    assert np.isfinite(result[length - 1:]).all()
+    assert np.isfinite(result[length - 1 :]).all()
 
 
 @pytest.mark.statistics
@@ -43,12 +50,16 @@ def test_quantile_numba_q_values() -> None:
 
 
 @pytest.mark.statistics
-def test_quantile_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_quantile_numba_offset_fillna(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test offset and fillna."""
     close = prices_random_walk
     length = 30
     result_no_offset = quantile_numba(close, length=length, q=0.5, offset=0)
-    result_offset = quantile_numba(close, length=length, q=0.5, offset=1, fillna=0.0)
+    result_offset = quantile_numba(
+        close, length=length, q=0.5, offset=1, fillna=0.0
+    )
 
     assert result_offset[0] == 0.0
     # fillna also replaces the warm-up NaNs of the shifted series
@@ -58,7 +69,9 @@ def test_quantile_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64
 
 
 @pytest.mark.statistics
-def test_quantile_ind_with_pl_series(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_quantile_ind_with_pl_series(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test quantile_ind with Polars Series input."""
     s = pl.Series(prices_random_walk)
     length = 30
@@ -68,7 +81,7 @@ def test_quantile_ind_with_pl_series(prices_random_walk: npt.NDArray[np.float64]
     assert result.shape == (len(prices_random_walk),)
     assert result.dtype == np.float64
     assert np.isnan(result[: length - 1]).all()
-    assert np.isfinite(result[length - 1:]).all()
+    assert np.isfinite(result[length - 1 :]).all()
 
 
 @pytest.mark.statistics
@@ -78,57 +91,66 @@ def test_quantile_polars_basic(df_random_walk: pl.DataFrame) -> None:
     q = 0.5
     result_series = quantile_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
         q=q,
-        output_col='QTL',
+        output_col="QTL",
     )
 
     assert isinstance(result_series, pl.Series)
-    assert result_series.name == 'QTL'
+    assert result_series.name == "QTL"
     assert len(result_series) == len(df_random_walk)
     assert result_series.dtype == pl.Float64
 
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = quantile_numba(close_arr, length=length, q=q)
-    assert_allclose(result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True)
+    assert_allclose(
+        result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True
+    )
 
 
 @pytest.mark.statistics
 def test_quantile_polars_default_output_col() -> None:
     """Test default output column name."""
-    df = pl.DataFrame({'close': [1.0, 2.0, 3.0, 4.0, 5.0]})
+    df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0]})
     length = 3
     q = 0.5
-    result_series = quantile_polars(df, close_col='close', length=length, q=q)
-    assert result_series.name == f'QTL_{length}_{q}'
+    result_series = quantile_polars(df, close_col="close", length=length, q=q)
+    assert result_series.name == f"QTL_{length}_{q}"
 
 
 @pytest.mark.statistics
-def test_quantile_polars_with_offset_fillna(df_random_walk: pl.DataFrame) -> None:
+def test_quantile_polars_with_offset_fillna(
+    df_random_walk: pl.DataFrame,
+) -> None:
     """Test quantile_polars with offset and fillna."""
     length = 30
     q = 0.5
     result_series = quantile_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
         q=q,
         offset=1,
         fillna=0.0,
-        output_col='QTL',
+        output_col="QTL",
     )
 
     assert result_series[0] == 0.0
 
-    close_arr = df_random_walk['close'].to_numpy()
-    expected = quantile_numba(close_arr, length=length, q=q, offset=1, fillna=0.0)
-    assert_allclose(result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True)
+    close_arr = df_random_walk["close"].to_numpy()
+    expected = quantile_numba(
+        close_arr, length=length, q=q, offset=1, fillna=0.0
+    )
+    assert_allclose(
+        result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True
+    )
 
 
 # -----------------------------------------------------------------------------
 # IEEE-754 corner-case tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.statistics
 def test_quantile_numba_numpy_parity(
@@ -141,7 +163,7 @@ def test_quantile_numba_numpy_parity(
         result = quantile_numba(close, length=length, q=q)
         for i in range(length - 1, len(close), 11):
             window = close[i - length + 1 : i + 1]
-            expected = np.quantile(window, q, method='nearest')
+            expected = np.quantile(window, q, method="nearest")
             assert_allclose(result[i], expected, rtol=1e-12)
 
 
@@ -168,7 +190,7 @@ def test_quantile_numba_inf_is_nan_and_recovers() -> None:
 @pytest.mark.statistics
 def test_quantile_numba_invalid_length_raises() -> None:
     """Passing length < 1 raises ValueError."""
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         quantile_numba(np.array([1.0, 2.0, 3.0]), length=0)
 
 
@@ -176,7 +198,7 @@ def test_quantile_numba_invalid_length_raises() -> None:
 def test_quantile_numba_invalid_q_raises() -> None:
     """Passing q outside [0, 1] raises ValueError."""
     prices = np.array([1.0, 2.0, 3.0])
-    with pytest.raises(ValueError, match='q must be between 0 and 1'):
+    with pytest.raises(ValueError, match="q must be between 0 and 1"):
         quantile_numba(prices, length=2, q=-0.1)
-    with pytest.raises(ValueError, match='q must be between 0 and 1'):
+    with pytest.raises(ValueError, match="q must be between 0 and 1"):
         quantile_numba(prices, length=2, q=1.1)

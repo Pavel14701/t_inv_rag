@@ -11,19 +11,21 @@ Tests cover:
 - IEEE 754 compliance (empty, short, all-NaN, extreme)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.rma import _rma_numba_core, rma_numba, rma_ind, rma_polars
-from ..._array_ops import _apply_offset_fillna
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.overlap.rma import _rma_numba_core, rma_ind, rma_numba, rma_polars
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation
 # -----------------------------------------------------------------------------
+
 
 def _rma_reference(
     arr: npt.NDArray[np.float64],
@@ -45,6 +47,7 @@ def _rma_reference(
 # Core tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_rma_numba_core_against_reference(
     prices_random_walk: npt.NDArray[np.float64],
@@ -55,7 +58,7 @@ def test_rma_numba_core_against_reference(
         expected = _rma_reference(prices_random_walk, length)
         assert result.shape == prices_random_walk.shape
         assert_allclose(result, expected, rtol=1e-12, equal_nan=True)
-        assert np.isnan(result[:length - 1]).all()
+        assert np.isnan(result[: length - 1]).all()
 
 
 @pytest.mark.overlap
@@ -71,10 +74,11 @@ def test_rma_hand_computed() -> None:
     """Hand-computed values for length=3."""
     close = np.arange(1.0, 9.0)
     result = rma_numba(close, 3)
-    assert result[2] == 2.0                     # SMA(1,2,3)
+    assert result[2] == 2.0  # SMA(1,2,3)
     assert result[3] == pytest.approx(2.0 + (4.0 - 2.0) / 3)
-    assert result[4] == pytest.approx(2.0 + (4.0 - 2.0) / 3 + (5.0 - 2.666666) / 3,
-                                      rel=1e-5)
+    assert result[4] == pytest.approx(
+        2.0 + (4.0 - 2.0) / 3 + (5.0 - 2.666666) / 3, rel=1e-5
+    )
 
 
 @pytest.mark.overlap
@@ -128,19 +132,20 @@ def test_rma_matches_ewm_asymptotically() -> None:
 # nan_policy tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_rma_nan_policy_raise() -> None:
     """nan_policy='raise' raises on NaN input."""
     arr = np.array([1.0, 2.0, np.nan, 4.0, 5.0])
-    with pytest.raises(ValueError, match='contains NaN'):
-        rma_numba(arr, 2, nan_policy='raise')
+    with pytest.raises(ValueError, match="contains NaN"):
+        rma_numba(arr, 2, nan_policy="raise")
 
 
 @pytest.mark.overlap
 def test_rma_nan_policy_ignore() -> None:
     """nan_policy='ignore': NaN poisons the recursion from its position."""
     arr = np.array([1.0, 2.0, np.nan, 4.0, 5.0])
-    result = rma_numba(arr, 2, nan_policy='ignore')
+    result = rma_numba(arr, 2, nan_policy="ignore")
     assert np.isfinite(result[1])
     assert np.isnan(result[2:]).all()
 
@@ -149,7 +154,7 @@ def test_rma_nan_policy_ignore() -> None:
 def test_rma_nan_policy_ffill() -> None:
     """nan_policy='ffill' fills gaps and keeps RMA finite afterwards."""
     arr = np.array([1.0, 2.0, np.nan, 4.0, 5.0])
-    result = rma_numba(arr, 2, nan_policy='ffill')
+    result = rma_numba(arr, 2, nan_policy="ffill")
     expected = _rma_reference(np.array([1.0, 2.0, 2.0, 4.0, 5.0]), 2)
     assert_allclose(result, expected, rtol=1e-12)
 
@@ -158,7 +163,7 @@ def test_rma_nan_policy_ffill() -> None:
 def test_rma_nan_policy_bfill() -> None:
     """nan_policy='bfill' fills gaps from the right."""
     arr = np.array([1.0, 2.0, np.nan, 4.0, 5.0])
-    result = rma_numba(arr, 2, nan_policy='bfill')
+    result = rma_numba(arr, 2, nan_policy="bfill")
     expected = _rma_reference(np.array([1.0, 2.0, 4.0, 4.0, 5.0]), 2)
     assert_allclose(result, expected, rtol=1e-12)
 
@@ -167,7 +172,7 @@ def test_rma_nan_policy_bfill() -> None:
 def test_rma_nan_policy_both_fills_leading_nan() -> None:
     """nan_policy='both' also fills leading NaNs (ffill cannot)."""
     arr = np.array([np.nan, 2.0, 3.0, 4.0, 5.0])
-    result = rma_numba(arr, 2, nan_policy='both')
+    result = rma_numba(arr, 2, nan_policy="both")
     expected = _rma_reference(np.array([2.0, 2.0, 3.0, 4.0, 5.0]), 2)
     assert_allclose(result, expected, rtol=1e-12)
 
@@ -176,17 +181,17 @@ def test_rma_nan_policy_both_fills_leading_nan() -> None:
 def test_rma_unknown_nan_policy() -> None:
     """Unknown nan_policy raises ValueError listing valid options."""
     arr = np.array([1.0, 2.0, np.nan])
-    with pytest.raises(ValueError, match='Unknown nan_policy'):
-        rma_numba(arr, 2, nan_policy='invalid')
+    with pytest.raises(ValueError, match="Unknown nan_policy"):
+        rma_numba(arr, 2, nan_policy="invalid")
 
 
 @pytest.mark.overlap
 def test_rma_invalid_length() -> None:
     """Length < 1 raises ValueError."""
     close = np.array([10.0, 11.0, 12.0])
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         rma_numba(close, length=0)
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         rma_numba(close, length=-1)
 
 
@@ -219,6 +224,7 @@ def test_rma_input_types() -> None:
 # Universal wrapper tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_rma_ind_matches_numba(
     prices_random_walk: npt.NDArray[np.float64],
@@ -244,17 +250,20 @@ def test_rma_ind_with_pl_series(
 # Polars integration tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_rma_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """rma_polars returns a DataFrame with a correct RMA column."""
     length = 10
-    result = rma_polars(df_random_walk, col='close', length=length)
+    result = rma_polars(df_random_walk, col="close", length=length)
     assert isinstance(result, pl.DataFrame)
-    assert f'RMA_{length}' in result.columns
-    close_arr = df_random_walk['close'].to_numpy()
+    assert f"RMA_{length}" in result.columns
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _rma_reference(close_arr, length)
     assert_allclose(
-        result[f'RMA_{length}'].to_numpy(), expected, rtol=1e-12,
+        result[f"RMA_{length}"].to_numpy(),
+        expected,
+        rtol=1e-12,
         equal_nan=True,
     )
 
@@ -262,10 +271,11 @@ def test_rma_polars_basic(df_random_walk: pl.DataFrame) -> None:
 @pytest.mark.overlap
 def test_rma_polars_custom_output_col(df_random_walk) -> None:
     """Custom output column name is respected."""
-    result = rma_polars(df_random_walk, col='close', length=5,
-                        output_col='RMA')
-    assert 'RMA' in result.columns
-    assert result['RMA'].dtype == pl.Float64
+    result = rma_polars(
+        df_random_walk, col="close", length=5, output_col="RMA"
+    )
+    assert "RMA" in result.columns
+    assert result["RMA"].dtype == pl.Float64
 
 
 @pytest.mark.overlap
@@ -273,11 +283,12 @@ def test_rma_polars_custom_col(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """rma_polars with a non-default column name."""
-    df = pl.DataFrame({'price': prices_random_walk})
-    result = rma_polars(df, col='price', length=10, output_col='RMA')
+    df = pl.DataFrame({"price": prices_random_walk})
+    result = rma_polars(df, col="price", length=10, output_col="RMA")
     expected = _rma_reference(prices_random_walk, 10)
-    assert_allclose(result['RMA'].to_numpy(), expected, rtol=1e-12,
-                    equal_nan=True)
+    assert_allclose(
+        result["RMA"].to_numpy(), expected, rtol=1e-12, equal_nan=True
+    )
 
 
 @pytest.mark.overlap
@@ -285,7 +296,8 @@ def test_rma_polars_with_offset_fillna(df_random_walk) -> None:
     """rma_polars applies offset and fillna."""
     offset = 2
     fillna = 0.0
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
+
 
 # -----------------------------------------------------------------------------
 # IEEE 754 / edge case tests (using fixtures from conftest.py)
@@ -297,7 +309,7 @@ def test_rma_with_inf(prices_with_inf) -> None:
     """Inf is not NaN: it enters the recursion and then inf - inf -> NaN
     in the very next step (IEEE 754), so NaN starts one step after the Inf.
     """
-    result = rma_numba(prices_with_inf, 3, nan_policy='ignore')
+    result = rma_numba(prices_with_inf, 3, nan_policy="ignore")
     assert result[5] == np.inf
     assert np.isnan(result[6:]).all()
     assert np.isfinite(result[2:5]).all()
@@ -320,31 +332,34 @@ def test_rma_shorter_than_length(prices_short) -> None:
 @pytest.mark.overlap
 def test_rma_all_nan(prices_all_nan) -> None:
     """All NaNs: 'both' fills nothing -> NaNs; fillna=0 replaces them."""
-    result = rma_numba(prices_all_nan, 3, nan_policy='both', fillna=0.0)
+    result = rma_numba(prices_all_nan, 3, nan_policy="both", fillna=0.0)
     assert (result == 0.0).all()
 
 
 @pytest.mark.overlap
 def test_rma_extreme_values(prices_extreme) -> None:
     """Extreme values must not crash."""
-    result = rma_numba(prices_extreme, 3, nan_policy='both')
+    result = rma_numba(prices_extreme, 3, nan_policy="both")
     assert result is not None
 
 
 @pytest.mark.overlap
 def test_rma_polars_with_nan(df_random_walk: pl.DataFrame) -> None:
     """Polars integration with nan_policy='ffill' matches the raw backend."""
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
-    df_with_nan = df_random_walk.with_columns(pl.Series('close', close_arr))
+    df_with_nan = df_random_walk.with_columns(pl.Series("close", close_arr))
     result = rma_polars(
-        df_with_nan, col='close', length=3, nan_policy='ffill',
-        output_col='RMA',
+        df_with_nan,
+        col="close",
+        length=3,
+        nan_policy="ffill",
+        output_col="RMA",
     )
-    vals = result['RMA'].to_numpy()
-    nb = rma_numba(close_arr, 3, nan_policy='ffill')
+    vals = result["RMA"].to_numpy()
+    nb = rma_numba(close_arr, 3, nan_policy="ffill")
     assert np.array_equal(
-        np.nan_to_num(vals, nan=-999.0), np.nan_to_num(nb, nan=-999.0),
+        np.nan_to_num(vals, nan=-999.0),
+        np.nan_to_num(nb, nan=-999.0),
     )
     assert np.isfinite(vals[2:]).all()
-

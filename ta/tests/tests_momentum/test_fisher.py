@@ -4,9 +4,10 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...momentum.fisher import (
+from ta.src.momentum.fisher import (
     _fisher_numba,
     fisher_ind,
     fisher_numpy,
@@ -36,8 +37,8 @@ def _fisher_reference(
     value_prev = 0.0
     started = False
     for i in range(length - 1, n):
-        hh = high[i - length + 1:i + 1].max()
-        ll = low[i - length + 1:i + 1].min()
+        hh = high[i - length + 1 : i + 1].max()
+        ll = low[i - length + 1 : i + 1].min()
         denom = hh - ll
         if denom == 0.0 or np.isnan(denom):
             if started:
@@ -104,8 +105,10 @@ def test_fisher_large_move_sign(ohlc) -> None:
 def test_fisher_kernel_vs_numpy(ohlc) -> None:
     high, low, close = ohlc
     hlc3 = (high + low + close) / 3.0
-    hh = np.array([high[max(0, i - 8):i + 1].max() for i in range(len(high))])
-    ll = np.array([low[max(0, i - 8):i + 1].min() for i in range(len(low))])
+    hh = np.array(
+        [high[max(0, i - 8) : i + 1].max() for i in range(len(high))]
+    )
+    ll = np.array([low[max(0, i - 8) : i + 1].min() for i in range(len(low))])
     fisher, _ = fisher_numpy(high, low, close, length=9)
     assert_array_equal(_fisher_numba(hlc3, hh, ll, 9), fisher)
 
@@ -113,7 +116,7 @@ def test_fisher_kernel_vs_numpy(ohlc) -> None:
 @pytest.mark.momentum
 def test_fisher_invalid_length(ohlc) -> None:
     high, low, close = ohlc
-    with pytest.raises(ValueError, match='length'):
+    with pytest.raises(ValueError, match="length"):
         fisher_numpy(high, low, close, length=0)
 
 
@@ -129,8 +132,7 @@ def test_fisher_empty_input() -> None:
 def test_fisher_offset_fillna(ohlc) -> None:
     high, low, close = ohlc
     base, _ = fisher_numpy(high, low, close, length=9)
-    shifted, _ = fisher_numpy(high, low, close, length=9,
-                              offset=3, fillna=0.0)
+    shifted, _ = fisher_numpy(high, low, close, length=9, offset=3, fillna=0.0)
     # fillna replaces both shifted-in positions and warm-up NaNs.
     expected = np.where(np.isnan(base), 0.0, base)
     assert_array_equal(shifted[:3], np.zeros(3))
@@ -153,18 +155,18 @@ def test_fisher_ind_numpy_and_series(ohlc) -> None:
 
 @pytest.mark.momentum
 def test_fisher_polars(df_ohlc: pl.DataFrame) -> None:
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
     fisher, signal = fisher_numpy(high, low, close, length=9)
     result = fisher_polars(df_ohlc, length=9)
-    assert 'FISHERT_9' in result.columns
-    assert 'FISHERTs_9' in result.columns
+    assert "FISHERT_9" in result.columns
+    assert "FISHERTs_9" in result.columns
     assert_allclose(
-        result['FISHERT_9'].to_numpy(), fisher, rtol=1e-12, equal_nan=True
+        result["FISHERT_9"].to_numpy(), fisher, rtol=1e-12, equal_nan=True
     )
     assert_allclose(
-        result['FISHERTs_9'].to_numpy(), signal, rtol=1e-12, equal_nan=True
+        result["FISHERTs_9"].to_numpy(), signal, rtol=1e-12, equal_nan=True
     )
 
 

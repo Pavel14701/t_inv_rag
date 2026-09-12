@@ -13,14 +13,15 @@ import polars as pl
 
 from .provider import _COLUMN_ALIASES
 
+
 _DATE_CANDIDATES = ('date', 'time', 'datetime', 'timestamp')
 
 
 def normalize(df: pl.DataFrame) -> pl.DataFrame:
-    """Привести кадр к унифицированным именам OHLCV + date.
+    """Normalize a frame to unified OHLCV + date names.
 
-    Принимает как legacy-схему ``PriceDataFramePolars``
-    (``open_price`` и т.д.), так и унифицированную TZ-02.
+    Accepts both the legacy ``PriceDataFramePolars`` schema
+    (``open_price`` etc.) and the unified TZ-02 one.
 
     """
     rename: dict[str, str] = {}
@@ -47,7 +48,7 @@ def normalize(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def load_synthetic(n_bars: int = 1000, seed: int = 42) -> pl.DataFrame:
-    """Синтетический GBM-ряд с трендовыми режимами (для тестов)."""
+    """Synthetic GBM series with trend regimes (for tests)."""
     rng = np.random.default_rng(seed)
     drift = np.concatenate([
         np.full(n_bars // 3, 0.0005),
@@ -76,12 +77,12 @@ def load_synthetic(n_bars: int = 1000, seed: int = 42) -> pl.DataFrame:
 
 
 def load_parquet(path: str) -> pl.DataFrame:
-    """Загрузка кадра из parquet с нормализацией имён."""
+    """Load a frame from parquet with name normalization."""
     return normalize(pl.read_parquet(path))
 
 
 def load_yfinance(ticker: str, period_from: str, period_to: str):
-    """Dev-фолбэк через yfinance (дневные свечи)."""
+    """Dev fallback via yfinance (daily candles)."""
     import yfinance as yf
 
     raw = yf.download(ticker, start=period_from, end=period_to,
@@ -102,9 +103,9 @@ def load_yfinance(ticker: str, period_from: str, period_to: str):
 
 def load_tinvest(ticker: str, period_from: str, period_to: str,
                  interval: str = '1d'):
-    """Основной источник: T-Invest (t_tech.invest). Требует INVEST_TOKEN.
+    """Primary source: T-Invest (t_tech.invest). Requires INVEST_TOKEN.
 
-    Ленивый импорт: пакет торгового API не нужен для dev-прогонов.
+    Lazy import: the trading API package is not needed for dev runs.
 
     """
     import os
@@ -145,7 +146,7 @@ def load_tinvest(ticker: str, period_from: str, period_to: str,
 
 
 def load(source: str, **kwargs) -> pl.DataFrame:
-    """Диспетчер источников."""
+    """Source dispatcher."""
     if source == 'synthetic':
         return load_synthetic(**kwargs)
     if source == 'parquet':

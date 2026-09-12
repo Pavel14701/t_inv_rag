@@ -4,11 +4,12 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...external import talib, talib_available
-from ...momentum.ppo import ppo_ind, ppo_numpy, ppo_polars
-from ...overlap.ema import ema_ind
+from ta.src.external import talib, talib_available
+from ta.src.momentum.ppo import ppo_ind, ppo_numpy, ppo_polars
+from ta.src.overlap.ema import ema_ind
 
 
 @pytest.fixture
@@ -17,23 +18,29 @@ def prices(prices_random_walk: np.ndarray) -> np.ndarray:
 
 
 def _ppo_reference(
-    close: np.ndarray, fast: int = 12, slow: int = 26,
-    signal: int = 9, scalar: float = 100.0,
+    close: np.ndarray,
+    fast: int = 12,
+    slow: int = 26,
+    signal: int = 9,
+    scalar: float = 100.0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Pure numpy PPO reference (EMA seeding identical to ema_ind)."""
-    fast_ema = ema_ind(close, length=fast, use_talib=False,
-                       nan_policy='ignore')
-    slow_ema = ema_ind(close, length=slow, use_talib=False,
-                       nan_policy='ignore')
-    with np.errstate(divide='ignore', invalid='ignore'):
+    fast_ema = ema_ind(
+        close, length=fast, use_talib=False, nan_policy="ignore"
+    )
+    slow_ema = ema_ind(
+        close, length=slow, use_talib=False, nan_policy="ignore"
+    )
+    with np.errstate(divide="ignore", invalid="ignore"):
         line = scalar * (fast_ema - slow_ema) / slow_ema
     filled = line.copy()
     first_valid = np.argmax(~np.isnan(line))
     if not np.isnan(line[first_valid]):
         filled[:first_valid] = line[first_valid]
-    signalma = ema_ind(filled, length=signal, use_talib=False,
-                       nan_policy='ignore')
-    signalma[:slow + signal - 2] = np.nan
+    signalma = ema_ind(
+        filled, length=signal, use_talib=False, nan_policy="ignore"
+    )
+    signalma[: slow + signal - 2] = np.nan
     hist = line - signalma
     return line, signalma, hist
 
@@ -56,7 +63,7 @@ def test_ppo_warmup_nan(prices) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 def test_ppo_line_matches_talib(prices) -> None:
     expected = talib.PPO(prices, 12, 26, 0)
     line, _, _ = ppo_numpy(prices)
@@ -134,8 +141,9 @@ def test_ppo_offset_fillna(prices) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.parametrize('fast, slow, signal', [(0, 26, 9), (12, 0, 9),
-                                                (12, 26, 0)])
+@pytest.mark.parametrize(
+    "fast, slow, signal", [(0, 26, 9), (12, 0, 9), (12, 26, 0)]
+)
 def test_ppo_invalid_params(fast: int, slow: int, signal: int) -> None:
     with pytest.raises(ValueError):
         ppo_numpy(np.arange(50.0), fast=fast, slow=slow, signal=signal)
@@ -154,13 +162,13 @@ def test_ppo_ind_numpy_and_series(prices) -> None:
 
 @pytest.mark.momentum
 def test_ppo_polars(df_random_walk: pl.DataFrame) -> None:
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     line, signalma, hist = ppo_numpy(close)
     result = ppo_polars(df_random_walk)
     for col, exp in (
-        ('PPO_12_26_9', line),
-        ('PPOs_12_26_9', signalma),
-        ('PPOh_12_26_9', hist),
+        ("PPO_12_26_9", line),
+        ("PPOs_12_26_9", signalma),
+        ("PPOh_12_26_9", hist),
     ):
         assert col in result.columns
         assert_allclose(

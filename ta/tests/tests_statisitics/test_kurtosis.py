@@ -5,9 +5,10 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...statistics.kurtosis import (
+from ta.src.statistics.kurtosis import (
     kurtosis_ind,
     kurtosis_numba,
     kurtosis_polars,
@@ -26,7 +27,7 @@ def test_kurtosis_numba_basic(
     assert result.shape == close.shape
     assert result.dtype == np.float64
     assert np.isnan(result[: length - 1]).all()
-    assert np.isfinite(result[length - 1:]).all()
+    assert np.isfinite(result[length - 1 :]).all()
 
 
 @pytest.mark.statistics
@@ -116,7 +117,7 @@ def test_kurtosis_numba_inf_is_nan_and_recovers() -> None:
 def test_kurtosis_numba_length_too_short_raises() -> None:
     """Kurtosis needs length >= 4 (estimator denominator is zero below)."""
     prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-    with pytest.raises(ValueError, match='length must be >= 4'):
+    with pytest.raises(ValueError, match="length must be >= 4"):
         kurtosis_numba(prices, length=3)
 
 
@@ -158,7 +159,7 @@ def test_kurtosis_ind_with_pl_series(
     assert result.shape == (len(prices_random_walk),)
     assert result.dtype == np.float64
     assert np.isnan(result[: length - 1]).all()
-    assert np.isfinite(result[length - 1:]).all()
+    assert np.isfinite(result[length - 1 :]).all()
 
 
 @pytest.mark.statistics
@@ -167,25 +168,27 @@ def test_kurtosis_polars_basic(df_random_walk: pl.DataFrame) -> None:
     length = 30
     result_df = kurtosis_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
-        output_col='KURT',
+        output_col="KURT",
     )
 
-    assert 'KURT' in result_df.columns
+    assert "KURT" in result_df.columns
     assert len(result_df) == len(df_random_walk)
 
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = kurtosis_numba(close_arr, length=length)
     assert_allclose(
-        result_df['KURT'].to_numpy(), expected, rtol=1e-6, equal_nan=True,
+        result_df["KURT"].to_numpy(),
+        expected,
+        rtol=1e-6,
+        equal_nan=True,
     )
 
 
 @pytest.mark.statistics
 def test_kurtosis_polars_default_output_col() -> None:
     """Test default output column name."""
-    df = pl.DataFrame({'close': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
-    result_df = kurtosis_polars(df, close_col='close', length=4)
-    assert 'KURT_4' in result_df.columns
-
+    df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
+    result_df = kurtosis_polars(df, close_col="close", length=4)
+    assert "KURT_4" in result_df.columns

@@ -4,15 +4,16 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...momentum.tsi import (
+from ta.src.momentum.tsi import (
     _double_ema,
     tsi_ind,
     tsi_numpy,
     tsi_polars,
 )
-from ...overlap.ema import ema_ind
+from ta.src.overlap.ema import ema_ind
 
 
 def _tsi_reference(
@@ -33,9 +34,10 @@ def _tsi_reference(
             return out
         filled = x.copy()
         filled[:first_valid] = x[first_valid]
-        res = ema_ind(filled, length=length, use_talib=False,
-                      nan_policy='ignore')
-        res[:first_valid + length - 1] = np.nan
+        res = ema_ind(
+            filled, length=length, use_talib=False, nan_policy="ignore"
+        )
+        res[: first_valid + length - 1] = np.nan
         return res
 
     def double(x: np.ndarray) -> np.ndarray:
@@ -43,7 +45,7 @@ def _tsi_reference(
 
     num = double(mom)
     den = double(np.abs(mom))
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         tsi = 100.0 * num / den
     tsi = np.where(den == 0.0, np.nan, tsi)
     signalma = ema_seed(tsi, signal)
@@ -110,16 +112,20 @@ def test_tsi_signal_is_ema_of_tsi(prices_random_walk) -> None:
     first_valid = np.argmax(~np.isnan(tsi))
     filled = tsi.copy()
     filled[:first_valid] = tsi[first_valid]
-    expected = ema_ind(filled, length=13, use_talib=False,
-                       nan_policy='ignore')
-    expected[:first_valid + 12] = np.nan
+    expected = ema_ind(filled, length=13, use_talib=False, nan_policy="ignore")
+    expected[: first_valid + 12] = np.nan
     assert_allclose(signalma, expected, rtol=1e-12, equal_nan=True)
 
 
 @pytest.mark.momentum
-@pytest.mark.parametrize('kw', [
-    {'long': 0}, {'short': -1}, {'signal': 0},
-])
+@pytest.mark.parametrize(
+    "kw",
+    [
+        {"long": 0},
+        {"short": -1},
+        {"signal": 0},
+    ],
+)
 def test_tsi_invalid_params(kw: dict) -> None:
     with pytest.raises(ValueError):
         tsi_numpy(np.arange(50.0), **kw)
@@ -166,17 +172,19 @@ def test_tsi_ind_numpy_and_series(prices_random_walk) -> None:
 
 @pytest.mark.momentum
 def test_tsi_polars(df_random_walk: pl.DataFrame) -> None:
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     tsi, signalma = tsi_numpy(close)
     result = tsi_polars(df_random_walk)
-    assert 'TSI_25_13' in result.columns
-    assert 'TSIs_25_13' in result.columns
+    assert "TSI_25_13" in result.columns
+    assert "TSIs_25_13" in result.columns
     assert_allclose(
-        result['TSI_25_13'].to_numpy(), tsi, rtol=1e-12, equal_nan=True
+        result["TSI_25_13"].to_numpy(), tsi, rtol=1e-12, equal_nan=True
     )
     assert_allclose(
-        result['TSIs_25_13'].to_numpy(), signalma,
-        rtol=1e-12, equal_nan=True,
+        result["TSIs_25_13"].to_numpy(),
+        signalma,
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 

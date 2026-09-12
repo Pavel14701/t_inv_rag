@@ -15,26 +15,26 @@ historical access, and rising/falling functions.
 from typing import Any
 
 from .ast import (
+    Add,
     ASTNode,
-    Number,
-    Var,
+    Comparison,
+    Div,
+    Falling,
+    HistoricalAccess,
     IndicatorAccess,
     IndicatorWithParams,
-    Comparison,
-    MultiComparison,
+    Let,
     LogicalBinOp,
     LogicalNot,
-    Let,
-    HistoricalAccess,
-    Rising,
-    Falling,
-    Add,
-    Sub,
-    Mul,
-    Div,
     Mod,
+    Mul,
+    MultiComparison,
+    Number,
     Pow,
+    Rising,
+    Sub,
     UnaryMinus,
+    Var,
 )
 from .context import Context
 from .exceptions import EvaluationError

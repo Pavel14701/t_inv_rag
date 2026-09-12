@@ -4,9 +4,9 @@ from typing import cast
 import numpy as np
 import polars as pl
 
+from .._array_ops import _apply_offset_fillna, _handle_nan_policy
 from ..ma import ma_mode
 from ..momentum.rsi import rsi_ind
-from .._array_ops import _apply_offset_fillna, _handle_nan_policy
 
 
 # ----------------------------------------------------------------------

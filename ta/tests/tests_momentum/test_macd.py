@@ -11,11 +11,12 @@ These tests reuse shared fixtures defined in conftest.py:
 All floating-point operations are tested for IEEE 754 compliance
 (no crashes on NaN/Inf, empty arrays, extreme values).
 """
-import pytest
+
 import numpy as np
 import polars as pl
+import pytest
 
-from ...momentum.macd import macd_numpy, macd_ind, macd_polars
+from ta.src.momentum.macd import macd_ind, macd_numpy, macd_polars
 
 
 # MACD parameters used in tests
@@ -29,6 +30,7 @@ START_IDX = SLOW + SIGNAL - 1
 # -----------------------------------------------------------------------------
 # Tests for macd_numpy (NumPy-based core)
 # -----------------------------------------------------------------------------
+
 
 def test_macd_numpy_basic(prices_random_walk):
     """Basic calculation: output shapes match input,
@@ -50,16 +52,19 @@ def test_macd_numpy_with_talib(prices_uptrend):
     try:
         import talib  # noqa: F401
     except ImportError:
-        pytest.skip('TA-Lib not available')
+        pytest.skip("TA-Lib not available")
     macd1, sig1, hist1 = macd_numpy(prices_uptrend, use_talib=True)
     macd2, sig2, hist2 = macd_numpy(prices_uptrend, use_talib=False)
     # Compare only valid (non-NaN) portions
-    np.testing.assert_allclose(macd1[START_IDX:], macd2[START_IDX:],
-                               rtol=1e-6, atol=1e-8)
-    np.testing.assert_allclose(sig1[START_IDX:], sig2[START_IDX:],
-                               rtol=1e-6, atol=1e-8)
-    np.testing.assert_allclose(hist1[START_IDX:], hist2[START_IDX:],
-                               rtol=1e-6, atol=1e-8)
+    np.testing.assert_allclose(
+        macd1[START_IDX:], macd2[START_IDX:], rtol=1e-6, atol=1e-8
+    )
+    np.testing.assert_allclose(
+        sig1[START_IDX:], sig2[START_IDX:], rtol=1e-6, atol=1e-8
+    )
+    np.testing.assert_allclose(
+        hist1[START_IDX:], hist2[START_IDX:], rtol=1e-6, atol=1e-8
+    )
 
 
 def test_macd_numpy_asmode(prices_random_walk):
@@ -75,8 +80,9 @@ def test_macd_numpy_asmode(prices_random_walk):
 
 def test_macd_numpy_offset_fillna(prices_random_walk, offset, fillna):
     """Check that offset and fillna affect only the first N elements."""
-    macd, sig, hist = macd_numpy(prices_random_walk, offset=offset,
-                                 fillna=fillna, use_talib=False)
+    macd, sig, hist = macd_numpy(
+        prices_random_walk, offset=offset, fillna=fillna, use_talib=False
+    )
     # First 'offset' elements must equal fillna
     np.testing.assert_array_equal(macd[:offset], fillna)
     np.testing.assert_array_equal(sig[:offset], fillna)
@@ -128,6 +134,7 @@ def test_macd_numpy_ieee754_extreme():
 # Tests for macd_ind (universal wrapper)
 # -----------------------------------------------------------------------------
 
+
 def test_macd_ind_with_polars_series(prices_random_walk):
     """macd_ind should accept a Polars Series and return NumPy arrays."""
     series = pl.Series(prices_random_walk)
@@ -142,29 +149,30 @@ def test_macd_ind_with_polars_series(prices_random_walk):
 # Tests for macd_polars (Polars DataFrame integration)
 # -----------------------------------------------------------------------------
 
+
 def test_macd_polars_adds_columns(df_random_walk):
     """macd_polars must add new columns to the original DataFrame."""
-    result = macd_polars(df_random_walk, close_col='close')
-    assert 'close' in result.columns
-    assert 'MACD_12_26_9' in result.columns
-    assert 'MACDs_12_26_9' in result.columns
-    assert 'MACDh_12_26_9' in result.columns
+    result = macd_polars(df_random_walk, close_col="close")
+    assert "close" in result.columns
+    assert "MACD_12_26_9" in result.columns
+    assert "MACDs_12_26_9" in result.columns
+    assert "MACDh_12_26_9" in result.columns
     assert len(result) == len(df_random_walk)
 
 
 def test_macd_polars_asmode_suffix(df_random_walk):
     """AS mode and custom suffix must produce correct column names."""
-    result = macd_polars(df_random_walk, asmode=True, suffix='_test')
-    assert 'MACDAS_test' in result.columns
-    assert 'MACDASs_test' in result.columns
-    assert 'MACDASh_test' in result.columns
-    assert 'MACDAS_12_26_9' not in result.columns
+    result = macd_polars(df_random_walk, asmode=True, suffix="_test")
+    assert "MACDAS_test" in result.columns
+    assert "MACDASs_test" in result.columns
+    assert "MACDASh_test" in result.columns
+    assert "MACDAS_12_26_9" not in result.columns
 
 
 def test_macd_polars_with_offset_fillna(df_random_walk, offset, fillna):
     """Integration test: offset and fillna are applied when adding columns."""
     result = macd_polars(df_random_walk, offset=offset, fillna=fillna)
-    col = 'MACD_12_26_9'
+    col = "MACD_12_26_9"
     assert result[col].to_numpy()[:offset].tolist() == [fillna] * offset
     assert not np.all(result[col].to_numpy()[offset:] == fillna)
 
@@ -174,14 +182,15 @@ def test_macd_polars_works_with_different_patterns(
 ):
     """Smoke test: works on various market patterns."""
     for df in (df_uptrend, df_downtrend, df_sideways, df_volatile):
-        result = macd_polars(df, close_col='close')
-        assert 'MACD_12_26_9' in result.columns
+        result = macd_polars(df, close_col="close")
+        assert "MACD_12_26_9" in result.columns
         assert len(result) == len(df)
 
 
 # -----------------------------------------------------------------------------
 # Additional edge-case tests using explicit data
 # -----------------------------------------------------------------------------
+
 
 def test_macd_numpy_all_identical():
     """All prices identical -> MACD, signal, histogram should be zero

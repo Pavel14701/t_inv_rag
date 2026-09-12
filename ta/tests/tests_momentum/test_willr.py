@@ -4,10 +4,11 @@
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...external import talib, talib_available
-from ...momentum.willr import willr_ind, willr_numpy, willr_polars
+from ta.src.external import talib, talib_available
+from ta.src.momentum.willr import willr_ind, willr_numpy, willr_polars
 
 
 @pytest.fixture
@@ -24,8 +25,8 @@ def _willr_reference(
     n = len(close)
     out = np.full(n, np.nan)
     for i in range(length - 1, n):
-        hh = high[i - length + 1:i + 1].max()
-        ll = low[i - length + 1:i + 1].min()
+        hh = high[i - length + 1 : i + 1].max()
+        ll = low[i - length + 1 : i + 1].min()
         denom = hh - ll
         out[i] = np.nan if denom == 0.0 else -100.0 * (hh - close[i]) / denom
     return out
@@ -96,7 +97,7 @@ def test_willr_nan_propagation(ohlc) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 def test_willr_matches_talib(ohlc) -> None:
     high, low, close = ohlc
     expected = talib.WILLR(high, low, close, timeperiod=14)
@@ -105,7 +106,7 @@ def test_willr_matches_talib(ohlc) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 def test_willr_native_matches_talib(ohlc) -> None:
     high, low, close = ohlc
     expected = talib.WILLR(high, low, close, timeperiod=14)
@@ -127,7 +128,7 @@ def test_willr_offset_fillna(ohlc) -> None:
 @pytest.mark.momentum
 def test_willr_invalid_length(ohlc) -> None:
     high, low, close = ohlc
-    with pytest.raises(ValueError, match='length'):
+    with pytest.raises(ValueError, match="length"):
         willr_numpy(high, low, close, length=0)
 
 
@@ -151,16 +152,16 @@ def test_willr_ind_numpy_and_series(ohlc) -> None:
 
 @pytest.mark.momentum
 def test_willr_polars(df_ohlc: pl.DataFrame) -> None:
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
     expected = willr_numpy(high, low, close, length=14)
     result = willr_polars(df_ohlc, length=14)
-    assert 'WILLR_14' in result.columns
+    assert "WILLR_14" in result.columns
     assert_allclose(
-        result['WILLR_14'].to_numpy(), expected, rtol=1e-12, equal_nan=True
+        result["WILLR_14"].to_numpy(), expected, rtol=1e-12, equal_nan=True
     )
-    assert 'WILLR_14' not in df_ohlc.columns
+    assert "WILLR_14" not in df_ohlc.columns
 
 
 @pytest.mark.momentum

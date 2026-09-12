@@ -11,23 +11,25 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, short input)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.swma import (
+from ta.src.overlap.swma import (
     _symmetric_weights,
-    swma_numba,
     swma_ind,
-    swma_polars
+    swma_numba,
+    swma_polars,
 )
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation (pure Python)
 # -----------------------------------------------------------------------------
+
 
 def _swma_reference(
     close: npt.NDArray[np.float64],
@@ -49,6 +51,7 @@ def _swma_reference(
 # Weight generation
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_swma_weights_even_length() -> None:
     """Even length 4 gives symmetric triangle [1,2,2,1]/6."""
@@ -67,7 +70,7 @@ def test_swma_weights_odd_length() -> None:
 
 
 @pytest.mark.overlap
-@pytest.mark.parametrize('length', [1, 2, 3, 4, 5, 10, 11])
+@pytest.mark.parametrize("length", [1, 2, 3, 4, 5, 10, 11])
 def test_swma_weights_normalized_and_symmetric(length: int) -> None:
     """Weights sum to 1 and are palindromic for all lengths."""
     w = _symmetric_weights(length)
@@ -86,9 +89,10 @@ def test_swma_weights_cached() -> None:
 # Core calculation
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_swma_numba_against_reference(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Test swma_numba against the pure Python reference."""
     close = prices_random_walk
@@ -100,19 +104,19 @@ def test_swma_numba_against_reference(
 
 @pytest.mark.overlap
 def test_swma_warmup_nan_window(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """First length-1 values are NaN, the rest are finite."""
     close = prices_random_walk
     length = 10
     result = swma_numba(close, length=length)
-    assert np.isnan(result[:length - 1]).all()
-    assert not np.isnan(result[length - 1:]).any()
+    assert np.isnan(result[: length - 1]).all()
+    assert not np.isnan(result[length - 1 :]).any()
 
 
 @pytest.mark.overlap
 def test_swma_shorter_than_length(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Series shorter than length gives all-NaN output."""
     close = prices_random_walk[:5]
@@ -138,11 +142,11 @@ def test_swma_length_one() -> None:
 
 
 @pytest.mark.overlap
-@pytest.mark.parametrize('length', [0, -3])
+@pytest.mark.parametrize("length", [0, -3])
 def test_swma_invalid_length(length: int) -> None:
     """Length below 1 raises ValueError."""
     close = np.arange(1.0, 11.0)
-    with pytest.raises(ValueError, match='must be >= 1'):
+    with pytest.raises(ValueError, match="must be >= 1"):
         swma_numba(close, length=length)
 
 
@@ -150,9 +154,10 @@ def test_swma_invalid_length(length: int) -> None:
 # Contiguity / read-only inputs
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_swma_non_contiguous_input(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Strided input is accepted and matches the reference on that data
     (a windowed indicator on resampled data is not the resample of the
@@ -166,13 +171,14 @@ def test_swma_non_contiguous_input(
 
 @pytest.mark.overlap
 def test_swma_ind_polars_series(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """swma_ind accepts pl.Series (read-only numpy underneath)."""
     close = prices_random_walk
     r = swma_ind(pl.Series(close), length=10)
     expected = swma_numba(close, length=10)
     assert_allclose(r, expected, rtol=0, atol=0)
+
 
 # -----------------------------------------------------------------------------
 # Offset / fillna
@@ -192,21 +198,21 @@ def test_swma_offset(prices_random_walk: npt.NDArray[np.float64]) -> None:
 
 @pytest.mark.overlap
 def test_swma_fillna_warmup_only(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Fillna replaces only the warm-up NaNs, valid zone is untouched."""
     close = prices_random_walk
     length = 10
     r = swma_numba(close, length=length, fillna=-1.0)
     assert not np.isnan(r).any()
-    assert (r[:length - 1] == -1.0).all()
+    assert (r[: length - 1] == -1.0).all()
     expected = swma_numba(close, length=length)
-    assert_allclose(r[length - 1:], expected[length - 1:], rtol=0, atol=0)
+    assert_allclose(r[length - 1 :], expected[length - 1 :], rtol=0, atol=0)
 
 
 @pytest.mark.overlap
 def test_swma_offset_with_fillna(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Offset NaNs are replaced by fillna."""
     close = prices_random_walk
@@ -219,16 +225,15 @@ def test_swma_offset_with_fillna(
 # Polars integration
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_swma_polars_default_column(df_random_walk: pl.DataFrame) -> None:
     """swma_polars adds an 'SWMA_{length}' column by default."""
     out = swma_polars(df_random_walk, length=10)
-    assert 'SWMA_10' in out.columns
-    expected = _swma_reference(
-        df_random_walk['close'].to_numpy(), length=10
-    )
+    assert "SWMA_10" in out.columns
+    expected = _swma_reference(df_random_walk["close"].to_numpy(), length=10)
     assert_allclose(
-        out['SWMA_10'].to_numpy(), expected, rtol=1e-12, atol=1e-12
+        out["SWMA_10"].to_numpy(), expected, rtol=1e-12, atol=1e-12
     )
     assert len(out) == len(df_random_walk)
 
@@ -236,14 +241,15 @@ def test_swma_polars_default_column(df_random_walk: pl.DataFrame) -> None:
 @pytest.mark.overlap
 def test_swma_polars_custom_column(df_random_walk: pl.DataFrame) -> None:
     """Custom output column name is honoured."""
-    out = swma_polars(df_random_walk, length=5, output_col='MY_SWMA')
-    assert 'MY_SWMA' in out.columns
-    assert 'SWMA_5' not in out.columns
+    out = swma_polars(df_random_walk, length=5, output_col="MY_SWMA")
+    assert "MY_SWMA" in out.columns
+    assert "SWMA_5" not in out.columns
 
 
 # -----------------------------------------------------------------------------
 # IEEE 754 edge cases
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_swma_nan_poisons_window_then_recovers() -> None:

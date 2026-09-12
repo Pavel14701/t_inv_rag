@@ -1,11 +1,11 @@
 """Bar-by-bar DSL provider over a single OHLCV frame (TZ-05).
 
-Прототип ядра TZ-03: compute-once + кэш + O(1) offset-индексация.
-Индикаторы считаются один раз на весь ряд и кэшируются по
-(name, params). Ключевое ограничение: **каузальность** — все
-индикаторы набора (ema, sma, rsi, atr) зависят только от баров
-<= t, поэтому вычисление на полном ряду эквивалентно вычислению
-на срезе [:t+1] (look-ahead невозможен по построению).
+Prototype of the TZ-03 core: compute-once + cache + O(1) offset indexing.
+Indicators are computed once for the whole series and cached by
+(name, params). The key constraint: **causality** — every indicator in
+the set (ema, sma, rsi, atr) depends only on bars <= t, so computing
+over the full series is equivalent to computing over the [:t+1] slice
+(look-ahead is impossible by construction).
 """
 
 from __future__ import annotations
@@ -18,7 +18,8 @@ import polars as pl
 from dsl.exceptions import ProviderError
 from dsl.providers.base import IndicatorProvider
 
-# Маппинг унифицированной схемы (TZ-02) на возможные имена колонок
+
+# Mapping of the unified schema (TZ-02) onto possible column names
 _COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     'open': ('open', 'open_price'),
     'high': ('high', 'high_price'),
@@ -28,8 +29,8 @@ _COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 
-class WarmupNotReady(ProviderError):  # noqa: N818 - доменное имя осмысленнее
-    """Значение индикатора ещё не готово (прогрев / нехватка истории)."""
+class WarmupNotReady(ProviderError):  # noqa: N818 - domain name is clearer
+    """Indicator value is not ready yet (warm-up / insufficient history)."""
 
 
 def _column(df: pl.DataFrame, name: str) -> pl.Series:
@@ -42,7 +43,7 @@ def _column(df: pl.DataFrame, name: str) -> pl.Series:
 
 
 def build_manifest() -> dict[str, Any]:
-    """Манифест доступных в инференсе серий и индикаторов."""
+    """Manifest of series and indicators available at inference."""
     def _params(**kw):
         return {'parameters': kw} if kw else {}
 
@@ -74,13 +75,13 @@ def build_manifest() -> dict[str, Any]:
 
 
 class BarSeriesProvider(IndicatorProvider):
-    """Провайдер-ряд: каузальные индикаторы ta на полном кадре.
+    """Series provider: causal ta indicators over the full frame.
 
     Args:
-        df: Polars DataFrame с колонками OHLCV (унифицированные имена
-            ``open/high/low/close/volume`` или legacy ``*_price``).
-        ta: Модуль ta (для ленивого импорта тяжёлых вычислений).
-        cursor: Индекс «текущего» бара (0-based); двигается движком.
+        df: Polars DataFrame with OHLCV columns (unified names
+            ``open/high/low/close/volume`` or legacy ``*_price``).
+        ta: ta module (for lazy import of heavy computations).
+        cursor: index of the "current" bar (0-based); advanced by the engine.
 
     """
 
@@ -93,12 +94,12 @@ class BarSeriesProvider(IndicatorProvider):
         self._manifest = build_manifest()
 
     def get_manifest(self) -> dict[str, Any]:
-        """Манифест провайдера."""
+        """Provider manifest."""
         return self._manifest
 
     @staticmethod
     def _ta_funcs() -> dict[str, Any]:
-        """Ленивый импорт ta-функций (numba/talib тяжёлые)."""
+        """Lazy import of ta functions (numba/talib are heavy)."""
         from ta.src.momentum.rsi import rsi_ind
         from ta.src.overlap.ema import ema_ind
         from ta.src.overlap.sma import sma_ind
@@ -135,24 +136,24 @@ class BarSeriesProvider(IndicatorProvider):
                     nan_policy='ignore',
                 )
             )
-        else:  # pragma: no cover - манифест запрещает прочие имена
+        else:  # pragma: no cover - manifest forbids other names
             raise ProviderError(f'unknown indicator {indicator!r}')
         arr = np.asarray(arr, dtype=np.float64).ravel()
         self._cache[key] = arr
         return arr
 
-    def resolve(  # noqa: C901 - единая диспетчеризация простая
+    def resolve(
         self,
         indicator: str,
         params: dict[str, Any],
         attributes: list[str],
         offset: int,
     ) -> float:
-        """Значение серии/индикатора на баре ``cursor - offset``.
+        """Value of a series/indicator at bar ``cursor - offset``.
 
         Raises:
-            ProviderError: если бар вне диапазона или значение NaN
-                (прогрев) — движок классифицирует как warmup-пропуск.
+            ProviderError: if the bar is out of range or the value is NaN
+                (warm-up) — the engine classifies it as a warm-up skip.
 
         """
         idx = self.cursor - int(offset)

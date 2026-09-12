@@ -5,9 +5,10 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...volatility.atrs import atrts_numpy, atrts, atrts_polars
+from ta.src.volatility.atrs import atrts, atrts_numpy, atrts_polars
 
 
 def _ohlc_arrays(
@@ -35,7 +36,12 @@ def test_atrts_numpy_basic(
     high, low, close = _ohlc_arrays(prices_random_walk)
     length, ma_length = 14, 20
     atrts = atrts_numpy(
-        high, low, close, length=length, ma_length=ma_length, use_talib=False,
+        high,
+        low,
+        close,
+        length=length,
+        ma_length=ma_length,
+        use_talib=False,
     )
 
     assert atrts.shape == close.shape
@@ -52,23 +58,38 @@ def test_atrts_numpy_initial_value(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """The first stop value is close[k] -+ k_mult * atr[k]."""
-    from ...volatility.atr import atr_ind
-    from ...ma import ma_mode
+    from ta.src.ma import ma_mode
+    from ta.src.volatility.atr import atr_ind
 
     high, low, close = _ohlc_arrays(prices_random_walk)
     length, ma_length, k_mult = 14, 20, 3.0
     atrts = atrts_numpy(
-        high, low, close, length=length, ma_length=ma_length,
-        k=k_mult, mamode='ema', use_talib=False,
+        high,
+        low,
+        close,
+        length=length,
+        ma_length=ma_length,
+        k=k_mult,
+        mamode="ema",
+        use_talib=False,
     )
     k = max(length, ma_length)
     atr = atr_ind(
-        high, low, close, length=length, mamode='ema',
-        use_talib=False, nan_policy='ignore',
+        high,
+        low,
+        close,
+        length=length,
+        mamode="ema",
+        use_talib=False,
+        nan_policy="ignore",
     )
     ma = ma_mode(
-        mamode='ema', source=close, length=ma_length,
-        offset=0, fillna=None, use_talib=False,
+        mamode="ema",
+        source=close,
+        length=ma_length,
+        offset=0,
+        fillna=None,
+        use_talib=False,
     )
     if close[k] > ma[k]:
         expected = close[k] - k_mult * atr[k]
@@ -86,8 +107,14 @@ def test_atrts_numpy_ratchet_monotone_in_trend() -> None:
     high = close + noise
     low = close - noise
     atrts = atrts_numpy(
-        high, low, close, length=5, ma_length=5, k=1.0,
-        mamode='sma', use_talib=False,
+        high,
+        low,
+        close,
+        length=5,
+        ma_length=5,
+        k=1.0,
+        mamode="sma",
+        use_talib=False,
     )
     stops = atrts[5:]
     assert np.isfinite(stops).all()
@@ -101,11 +128,21 @@ def test_atrts_numpy_percent_scale(
     """percent=True rescales the stop line to 100 * atrts / close."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     base = atrts_numpy(
-        high, low, close, length=14, ma_length=20, use_talib=False,
+        high,
+        low,
+        close,
+        length=14,
+        ma_length=20,
+        use_talib=False,
     )
     pct = atrts_numpy(
-        high, low, close, length=14, ma_length=20,
-        use_talib=False, percent=True,
+        high,
+        low,
+        close,
+        length=14,
+        ma_length=20,
+        use_talib=False,
+        percent=True,
     )
     k = 20
     expected = base[k:] * 100.0 / close[k:]
@@ -118,9 +155,9 @@ def test_atrts_numpy_length_too_short_raises(
 ) -> None:
     """Length < 1 and ma_length < 1 are rejected."""
     high, low, close = _ohlc_arrays(prices_random_walk)
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         atrts_numpy(high, low, close, length=0, use_talib=False)
-    with pytest.raises(ValueError, match='ma_length must be >= 1'):
+    with pytest.raises(ValueError, match="ma_length must be >= 1"):
         atrts_numpy(high, low, close, length=14, ma_length=0, use_talib=False)
 
 
@@ -131,7 +168,7 @@ def test_atrts_numpy_nan_raises(
     """NaN input raises via the ATR backend (nan_policy='raise')."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     close[2] = np.nan
-    with pytest.raises(ValueError, match='NaN'):
+    with pytest.raises(ValueError, match="NaN"):
         atrts_numpy(high, low, close, length=14, ma_length=20, use_talib=False)
 
 
@@ -142,8 +179,14 @@ def test_atrts_offset_fillna(
     """Test offset and fillna on the main line."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     atrts = atrts_numpy(
-        high, low, close, length=14, ma_length=20,
-        offset=1, fillna=0.0, use_talib=False,
+        high,
+        low,
+        close,
+        length=14,
+        ma_length=20,
+        offset=1,
+        fillna=0.0,
+        use_talib=False,
     )
     assert atrts[0] == 0.0
 
@@ -155,8 +198,12 @@ def test_atrts_ind_with_pl_series(
     """Test atrts with Polars Series input."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     stop = atrts(
-        pl.Series(high), pl.Series(low), pl.Series(close),
-        length=14, ma_length=20, use_talib=False,
+        pl.Series(high),
+        pl.Series(low),
+        pl.Series(close),
+        length=14,
+        ma_length=20,
+        use_talib=False,
     )
     assert isinstance(stop, np.ndarray)
     assert np.isfinite(stop[20:]).all()
@@ -166,13 +213,16 @@ def test_atrts_ind_with_pl_series(
 def test_atrts_polars_basic(df_ohlc: pl.DataFrame) -> None:
     """Test atrts_polars adds the default column."""
     result_df = atrts_polars(df_ohlc, length=14, ma_length=20, use_talib=False)
-    assert 'ATRTS_14_20_3.0' in result_df.columns
-    assert result_df['ATRTS_14_20_3.0'].dtype == pl.Float64
+    assert "ATRTS_14_20_3.0" in result_df.columns
+    assert result_df["ATRTS_14_20_3.0"].dtype == pl.Float64
     assert len(result_df) == len(df_ohlc)
 
     # Custom output column name.
     custom_df = atrts_polars(
-        df_ohlc, length=14, ma_length=20,
-        use_talib=False, output_col='STOP',
+        df_ohlc,
+        length=14,
+        ma_length=20,
+        use_talib=False,
+        output_col="STOP",
     )
-    assert 'STOP' in custom_df.columns
+    assert "STOP" in custom_df.columns

@@ -19,11 +19,12 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...ma import ma_mode
-from ...momentum.rsi import rsi_ind
-from ...momentum.stochrsi import (
+from ta.src.ma import ma_mode
+from ta.src.momentum.rsi import rsi_ind
+from ta.src.momentum.stochrsi import (
     stochrsi_ind,
     stochrsi_numpy,
     stochrsi_polars,
@@ -36,7 +37,9 @@ def _np(arr: object) -> np.ndarray:
 
 
 def _stoch_reference(
-    close: npt.NDArray[np.float64], rsi_length: int, length: int,
+    close: npt.NDArray[np.float64],
+    rsi_length: int,
+    length: int,
 ) -> np.ndarray:
     """Raw stochastic of RSI: 100 * (rsi - min) / (max - min)."""
     rsi = _np(rsi_ind(close, length=rsi_length, use_talib=False))
@@ -56,17 +59,22 @@ def test_stochrsi_matches_formula(
     close = prices_random_walk
     length, rsi_length, k, d = 14, 14, 3, 3
     stoch_k, stoch_d = stochrsi_numpy(
-        close, length=length, rsi_length=rsi_length, k=k, d=d,
+        close,
+        length=length,
+        rsi_length=rsi_length,
+        k=k,
+        d=d,
         use_talib=False,
     )
     stoch = _stoch_reference(close, rsi_length, length)
-    expected_k = _np(ma_mode('sma', stoch, length=k, nan_policy='ignore'))
-    expected_d = _np(ma_mode('sma', expected_k, length=d,
-                             nan_policy='ignore'))
-    assert_allclose(stoch_k, expected_k, rtol=1e-10, atol=1e-10,
-                    equal_nan=True)
-    assert_allclose(stoch_d, expected_d, rtol=1e-10, atol=1e-10,
-                    equal_nan=True)
+    expected_k = _np(ma_mode("sma", stoch, length=k, nan_policy="ignore"))
+    expected_d = _np(ma_mode("sma", expected_k, length=d, nan_policy="ignore"))
+    assert_allclose(
+        stoch_k, expected_k, rtol=1e-10, atol=1e-10, equal_nan=True
+    )
+    assert_allclose(
+        stoch_d, expected_d, rtol=1e-10, atol=1e-10, equal_nan=True
+    )
 
 
 @pytest.mark.momentum
@@ -80,7 +88,10 @@ def test_stochrsi_warmup_nan(
     """
     rsi_length, length, k = 14, 14, 3
     stoch_k, _ = stochrsi_numpy(
-        prices_random_walk, length=length, rsi_length=rsi_length, k=k,
+        prices_random_walk,
+        length=length,
+        rsi_length=rsi_length,
+        k=k,
         use_talib=False,
     )
     warm = 28
@@ -98,9 +109,8 @@ def test_stochrsi_no_raise_on_warmup(
     raised ValueError for every input.
     """
     with warnings.catch_warnings():
-        warnings.simplefilter('error')
-        stoch_k, stoch_d = stochrsi_numpy(prices_random_walk,
-                                          use_talib=False)
+        warnings.simplefilter("error")
+        stoch_k, stoch_d = stochrsi_numpy(prices_random_walk, use_talib=False)
     assert np.isfinite(stoch_k[28:]).all()
     assert np.isfinite(stoch_d[30:]).all()
 
@@ -128,7 +138,7 @@ def test_stochrsi_validation_raises(
 ) -> None:
     """Periods < 1 are rejected."""
     for kwargs in (dict(length=0), dict(rsi_length=0), dict(k=0), dict(d=0)):
-        with pytest.raises(ValueError, match='must be >= 1'):
+        with pytest.raises(ValueError, match="must be >= 1"):
             stochrsi_numpy(prices_random_walk, **kwargs)
 
 
@@ -138,8 +148,9 @@ def test_stochrsi_trim(
 ) -> None:
     """trim=True shortens both outputs identically, starting at 1st valid."""
     k_full, d_full = stochrsi_numpy(prices_random_walk, use_talib=False)
-    k_trim, d_trim = stochrsi_numpy(prices_random_walk, trim=True,
-                                    use_talib=False)
+    k_trim, d_trim = stochrsi_numpy(
+        prices_random_walk, trim=True, use_talib=False
+    )
     first = int(np.argmax(np.isfinite(d_full)))
     assert len(k_trim) == len(k_full) - first
     assert len(d_trim) == len(d_full) - first
@@ -153,7 +164,10 @@ def test_stochrsi_offset_fillna(
     """Offset shifts and fillna replaces ALL NaN (incl. warm-up)."""
     k0, d0 = stochrsi_numpy(prices_random_walk, use_talib=False)
     k2, d2 = stochrsi_numpy(
-        prices_random_walk, offset=2, fillna=0.0, use_talib=False,
+        prices_random_walk,
+        offset=2,
+        fillna=0.0,
+        use_talib=False,
     )
     assert k2[0] == 0.0 and k2[1] == 0.0
     assert d2[0] == 0.0
@@ -177,13 +191,16 @@ def test_stochrsi_ind_accepts_series(
 def test_stochrsi_polars_basic(df_ohlc: pl.DataFrame) -> None:
     """stochrsi_polars adds STOCHRSIk/STOCHRSId columns."""
     result = stochrsi_polars(df_ohlc, use_talib=False)
-    assert 'STOCHRSIk_14_14_3_3' in result.columns
-    assert 'STOCHRSId_14_14_3_3' in result.columns
+    assert "STOCHRSIk_14_14_3_3" in result.columns
+    assert "STOCHRSId_14_14_3_3" in result.columns
     assert len(result) == len(df_ohlc)
     expected_k, expected_d = stochrsi_numpy(
-        df_ohlc['close'].to_numpy(), use_talib=False,
+        df_ohlc["close"].to_numpy(),
+        use_talib=False,
     )
-    assert_allclose(result['STOCHRSIk_14_14_3_3'].to_numpy(), expected_k,
-                    equal_nan=True)
-    assert_allclose(result['STOCHRSId_14_14_3_3'].to_numpy(), expected_d,
-                    equal_nan=True)
+    assert_allclose(
+        result["STOCHRSIk_14_14_3_3"].to_numpy(), expected_k, equal_nan=True
+    )
+    assert_allclose(
+        result["STOCHRSId_14_14_3_3"].to_numpy(), expected_d, equal_nan=True
+    )

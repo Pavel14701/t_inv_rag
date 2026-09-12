@@ -19,8 +19,13 @@ from pathlib import Path
 
 from .config import ComputeConfig
 
-__all__ = ('DeviceHandle', 'resolve_train_device', 'resolve_infer_device',
-           'export_onnx')
+
+__all__ = (
+    'DeviceHandle',
+    'export_onnx',
+    'resolve_infer_device',
+    'resolve_train_device',
+)
 
 _TRAIN_BACKENDS = ('auto', 'cuda', 'cpu')
 _INFER_BACKENDS = ('auto', 'cuda', 'cpu', 'onnx_directml', 'vulkan')

@@ -3,6 +3,7 @@ import os
 from t_tech.invest import Client
 from t_tech.invest.utils import money_to_decimal
 
+
 TOKEN = os.environ['INVEST_TOKEN']
 
 

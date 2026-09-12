@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+
 from numba import boolean, float64, int64, njit  # type: ignore[attr-defined]
 from numba.typed import List
 

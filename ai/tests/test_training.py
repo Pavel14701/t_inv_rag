@@ -4,31 +4,34 @@ This module tests the core training functions: building loaders from Parquet,
 class weight computation, batch preparation, forward pass, training and
 validation epochs, and the main training loop.
 """
-import pytest
-import torch
-from torch import Tensor
-from torch.utils.data import DataLoader
-import torch.nn as nn
+
+from typing import Any, cast
+
 import numpy as np
 import numpy.typing as npt
 import polars as pl
-from typing import Any, cast
+import pytest
+import torch
+import torch.nn as nn
 
-from ..training import (
-    build_loader_from_parquet,
-    build_unlabeled_loader_from_parquet,
-    _compute_class_weights,
-    _prepare_batch,
-    train_one_round,
-    _split_train_val,
-    self_training_loop,
+from torch import Tensor
+from torch.utils.data import DataLoader
+
+from ai.src.dataset import TradingDataset
+from ai.src.datatypes import OrderBlock
+from ai.src.training import (
     _check_rr_valid,
+    _compute_class_weights,
     _determine_pseudo_outcome,
     _generate_pseudo_labels_batch,
+    _prepare_batch,
+    _split_train_val,
+    build_loader_from_parquet,
+    build_unlabeled_loader_from_parquet,
+    self_training_loop,
+    train_one_round,
 )
-from ..transformer import EntryExitTransformer
-from ..datatypes import OrderBlock
-from ..dataset import TradingDataset
+from ai.src.transformer import EntryExitTransformer
 
 
 @pytest.mark.unit
@@ -73,12 +76,12 @@ def test_prepare_batch(sample_batch: tuple) -> None:
         - 'prices' tensor is on the CPU device.
 
     """
-    device: torch.device = torch.device('cpu')
+    device: torch.device = torch.device("cpu")
     data: dict[str, Any] = _prepare_batch(sample_batch, device)
-    assert 'prices' in data
-    assert 'order_blocks' in data
-    assert isinstance(data['order_blocks'], list)
-    assert data['prices'].device == device
+    assert "prices" in data
+    assert "order_blocks" in data
+    assert isinstance(data["order_blocks"], list)
+    assert data["prices"].device == device
 
 
 @pytest.mark.unit
@@ -101,14 +104,14 @@ def test_build_loader_from_parquet(
 
     """
     loader, df = build_loader_from_parquet(
-        features_path=sample_parquet_files['features_path'],
-        labels_path=sample_parquet_files['labels_path'],
-        order_blocks=sample_parquet_files['order_blocks'],
+        features_path=sample_parquet_files["features_path"],
+        labels_path=sample_parquet_files["labels_path"],
+        order_blocks=sample_parquet_files["order_blocks"],
         seq_len=32,
-        price_cols=['open', 'high', 'low', 'close', 'volume'],
-        ind_cols=['ind1', 'ind2', 'ind3'],
-        sig_cols=['sig1', 'sig2'],
-        tp_sl_cols=['tp', 'sl'],
+        price_cols=["open", "high", "low", "close", "volume"],
+        ind_cols=["ind1", "ind2", "ind3"],
+        sig_cols=["sig1", "sig2"],
+        tp_sl_cols=["tp", "sl"],
         batch_size=4,
         shuffle=False,
     )
@@ -137,15 +140,15 @@ def test_build_unlabeled_loader_from_parquet(
 
     """
     loader = build_unlabeled_loader_from_parquet(
-        features_path=sample_parquet_files['unlabeled_path'],
-        order_blocks=sample_parquet_files['order_blocks'],
+        features_path=sample_parquet_files["unlabeled_path"],
+        order_blocks=sample_parquet_files["order_blocks"],
         seq_len=32,
-        price_cols=['open', 'high', 'low', 'close', 'volume'],
-        ind_cols=['ind1', 'ind2', 'ind3'],
-        sig_cols=['sig1', 'sig2'],
-        tp_sl_cols=['tp', 'sl'],
+        price_cols=["open", "high", "low", "close", "volume"],
+        ind_cols=["ind1", "ind2", "ind3"],
+        sig_cols=["sig1", "sig2"],
+        tp_sl_cols=["tp", "sl"],
         batch_size=4,
-        outcome_mode='binary',
+        outcome_mode="binary",
     )
     assert loader is not None
     batch = next(iter(loader))
@@ -180,16 +183,16 @@ def test_train_one_round(sample_parquet_files: dict[str, Any]) -> None:
         num_layers=1,
         num_heads=2,
     )
-    device: torch.device = torch.device('cpu')
+    device: torch.device = torch.device("cpu")
     loader, df = build_loader_from_parquet(
-        features_path=sample_parquet_files['features_path'],
-        labels_path=sample_parquet_files['labels_path'],
-        order_blocks=sample_parquet_files['order_blocks'],
+        features_path=sample_parquet_files["features_path"],
+        labels_path=sample_parquet_files["labels_path"],
+        order_blocks=sample_parquet_files["order_blocks"],
         seq_len=32,
-        price_cols=['open', 'high', 'low', 'close', 'volume'],
-        ind_cols=['ind1', 'ind2', 'ind3'],
-        sig_cols=['sig1', 'sig2'],
-        tp_sl_cols=['tp', 'sl'],
+        price_cols=["open", "high", "low", "close", "volume"],
+        ind_cols=["ind1", "ind2", "ind3"],
+        sig_cols=["sig1", "sig2"],
+        tp_sl_cols=["tp", "sl"],
         batch_size=2,
         shuffle=False,
     )
@@ -204,7 +207,7 @@ def test_train_one_round(sample_parquet_files: dict[str, Any]) -> None:
         val_loader=val_loader,
         epochs=1,
         device=device,
-        outcome_mode='binary',
+        outcome_mode="binary",
         lambda_outcome=0.3,
         lr=1e-4,
         lambda_pattern=0.0,
@@ -231,9 +234,9 @@ def test_self_training_loop(sample_parquet_files: dict[str, Any]) -> None:
 
     """
     if not torch.cuda.is_available():
-        device = torch.device('cpu')
+        device = torch.device("cpu")
     else:
-        device = torch.device('cuda')
+        device = torch.device("cuda")
     model = EntryExitTransformer(
         n_price_feats=5,
         n_ind_feats=3,
@@ -246,18 +249,18 @@ def test_self_training_loop(sample_parquet_files: dict[str, Any]) -> None:
     # Run self-training with lower thresholds and more epochs
     self_training_loop(
         model=model,
-        features_path=sample_parquet_files['features_path'],
-        labels_path=sample_parquet_files['labels_path'],
-        features_path_unlabeled=sample_parquet_files['unlabeled_path'],
-        order_blocks=sample_parquet_files['order_blocks'],
-        price_cols=['open', 'high', 'low', 'close', 'volume'],
-        ind_cols=['ind1', 'ind2', 'ind3'],
-        sig_cols=['sig1', 'sig2'],
-        tp_sl_cols=['tp', 'sl'],
+        features_path=sample_parquet_files["features_path"],
+        labels_path=sample_parquet_files["labels_path"],
+        features_path_unlabeled=sample_parquet_files["unlabeled_path"],
+        order_blocks=sample_parquet_files["order_blocks"],
+        price_cols=["open", "high", "low", "close", "volume"],
+        ind_cols=["ind1", "ind2", "ind3"],
+        sig_cols=["sig1", "sig2"],
+        tp_sl_cols=["tp", "sl"],
         seq_len=32,
         batch_size=2,
         device=device,
-        outcome_mode='binary',
+        outcome_mode="binary",
         lambda_outcome=0.3,
         lr=1e-3,
         epochs_per_round=5,
@@ -286,66 +289,48 @@ def test_check_rr_valid() -> None:
             price order return False.
     """
     # Long: entry > sl, tp > entry
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=120,
-        sl_price=90,
-        min_rr=0.5
-    ) is True
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=110,
-        sl_price=90,
-        min_rr=0.5
-    ) is True  # RR=1
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=105,
-        sl_price=90,
-        min_rr=0.5
-    ) is True  # RR=0.5 exactly
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=104,
-        sl_price=90,
-        min_rr=0.5
-    ) is False  # RR=0.4
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=120, sl_price=90, min_rr=0.5)
+        is True
+    )
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=110, sl_price=90, min_rr=0.5)
+        is True
+    )  # RR=1
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=105, sl_price=90, min_rr=0.5)
+        is True
+    )  # RR=0.5 exactly
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=104, sl_price=90, min_rr=0.5)
+        is False
+    )  # RR=0.4
 
     # Short: entry < sl, tp < entry
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=80,
-        sl_price=110,
-        min_rr=0.5
-    ) is True  # RR=2
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=95,
-        sl_price=110,
-        min_rr=0.5
-    ) is True   # RR=0.5
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=96,
-        sl_price=110,
-        min_rr=0.5
-    ) is False  # RR=0.4
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=80, sl_price=110, min_rr=0.5)
+        is True
+    )  # RR=2
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=95, sl_price=110, min_rr=0.5)
+        is True
+    )  # RR=0.5
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=96, sl_price=110, min_rr=0.5)
+        is False
+    )  # RR=0.4
 
     # Invalid: sl < entry for short
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=80,
-        sl_price=90,
-        min_rr=0.5
-    ) is False
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=80, sl_price=90, min_rr=0.5)
+        is False
+    )
 
     # Invalid: tp < entry for long (tp should be > entry)
-    assert _check_rr_valid(
-        entry_price=100,
-        tp_price=90,
-        sl_price=80,
-        min_rr=0.5
-    ) is False
+    assert (
+        _check_rr_valid(entry_price=100, tp_price=90, sl_price=80, min_rr=0.5)
+        is False
+    )
 
 
 @pytest.mark.unit
@@ -365,21 +350,21 @@ def test_determine_pseudo_outcome() -> None:
     """
     # Binary mode
     logit = torch.tensor([2.0])  # sigmoid ~0.88
-    assert _determine_pseudo_outcome(logit, 'binary', 0.8) == 1.0
+    assert _determine_pseudo_outcome(logit, "binary", 0.8) == 1.0
     logit = torch.tensor([-2.0])  # sigmoid ~0.12
-    assert _determine_pseudo_outcome(logit, 'binary', 0.8) == 0.0
-    logit = torch.tensor([0.0])   # sigmoid 0.5
-    assert _determine_pseudo_outcome(logit, 'binary', 0.8) is None
+    assert _determine_pseudo_outcome(logit, "binary", 0.8) == 0.0
+    logit = torch.tensor([0.0])  # sigmoid 0.5
+    assert _determine_pseudo_outcome(logit, "binary", 0.8) is None
     # Multiclass
     logit = torch.tensor([3.0, 0.0, 0.0])  # softmax ~ [0.952, 0.024, 0.024]
-    assert _determine_pseudo_outcome(logit, 'multiclass', 0.9) == 0.0
+    assert _determine_pseudo_outcome(logit, "multiclass", 0.9) == 0.0
     logit = torch.tensor([1.0, 0.0, 0.0])  # softmax ~ [0.576, 0.212, 0.212]
-    assert _determine_pseudo_outcome(logit, 'multiclass', 0.6) is None
+    assert _determine_pseudo_outcome(logit, "multiclass", 0.6) is None
     # Regression
     logit = torch.tensor([0.5])
-    assert _determine_pseudo_outcome(logit, 'regression', 0.5) == 0.5
+    assert _determine_pseudo_outcome(logit, "regression", 0.5) == 0.5
     logit = torch.tensor([0.4])
-    assert _determine_pseudo_outcome(logit, 'regression', 0.5) is None
+    assert _determine_pseudo_outcome(logit, "regression", 0.5) is None
 
 
 @pytest.mark.unit
@@ -400,16 +385,27 @@ def test_generate_pseudo_labels_batch() -> None:
     prices[:, :, 3] = 100.0  # close price = 100
     indicators = torch.zeros(B, T, 3)
     signals = torch.zeros(B, T, 2)
-    tp = torch.full((B, T, 1), 120.0)   # TP = 120
-    sl = torch.full((B, T, 1), 90.0)    # SL = 90
+    tp = torch.full((B, T, 1), 120.0)  # TP = 120
+    sl = torch.full((B, T, 1), 90.0)  # SL = 90
     order_blocks: list[list[OrderBlock]] = [[], []]
     action_tgt = torch.full((B, T), -100, dtype=torch.long)
     outcome_tgt = torch.full((B, T), 2.0, dtype=torch.float32)
     pattern_tgt = torch.zeros(B, T, 0)
     start_indices = torch.tensor([0, 10])
     bar_indices = torch.tensor([100, 200])
-    batch = (prices, indicators, signals, tp, sl, order_blocks,
-             action_tgt, outcome_tgt, pattern_tgt, start_indices, bar_indices)
+    batch = (
+        prices,
+        indicators,
+        signals,
+        tp,
+        sl,
+        order_blocks,
+        action_tgt,
+        outcome_tgt,
+        pattern_tgt,
+        start_indices,
+        bar_indices,
+    )
 
     class MockModel(nn.Module):
         def forward(self, prices, indicators, signals, tp, sl, order_blocks):
@@ -423,10 +419,12 @@ def test_generate_pseudo_labels_batch() -> None:
             return action_logits, outcome_logits, pattern_logits
 
     model = MockModel()
-    device = torch.device('cpu')
+    device = torch.device("cpu")
     pseudo_labels = _generate_pseudo_labels_batch(
-        model, batch, device,
-        outcome_mode='binary',
+        model,
+        batch,
+        device,
+        outcome_mode="binary",
         action_threshold=0.5,
         outcome_threshold=0.5,
         min_rr=0.5,
@@ -465,7 +463,7 @@ def test_split_train_val(
 
     """
     data = sample_dataframe.select(
-        ['open', 'high', 'low', 'close', 'volume', 'tp', 'sl']
+        ["open", "high", "low", "close", "volume", "tp", "sl"]
     ).to_numpy()
     n = len(data)
     data = np.hstack([data, np.zeros((n, 3)), np.zeros((n, 2))])
@@ -501,14 +499,14 @@ def test_split_train_val(
     # end strictly before val starts, so the sum may be < total
     assert train_len + val_len <= total_len
     assert val_len == int(total_len * 0.2)
-    expected_train_end = (total_len - int(total_len * 0.2))
+    expected_train_end = total_len - int(total_len * 0.2)
     assert train_len == expected_train_end - (seq_len - 1)
     assert train_len > 0
     train_loader2, val_loader2 = _split_train_val(
         loader, val_split=0, batch_size=2
     )
     assert val_loader2 is None
-    with pytest.raises(ValueError, match='val_split too small'):
+    with pytest.raises(ValueError, match="val_split too small"):
         _split_train_val(loader, val_split=0.001, batch_size=2)
 
     # No leakage: the last training window must end strictly before
@@ -527,7 +525,7 @@ def test_split_train_val(
     assert val_idx == list(range(total_len - len(val_idx), total_len))
 
     # Degenerate case: seq_len too large relative to data
-    with pytest.raises(ValueError, match='no training windows'):
+    with pytest.raises(ValueError, match="no training windows"):
         big_seq_loader: DataLoader[TradingDataset] = DataLoader(
             TradingDataset(
                 data=data,

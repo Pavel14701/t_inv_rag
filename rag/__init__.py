@@ -10,11 +10,12 @@ from .llm import (
     LLMError,
     LLMProvider,
     LLMRouter,
-    OpenAICompatProvider,
     OllamaProvider,
+    OpenAICompatProvider,
     Transport,
     build_router_from_env,
 )
+
 
 __all__ = [
     'AsyncTransport',
@@ -22,8 +23,8 @@ __all__ = [
     'LLMError',
     'LLMProvider',
     'LLMRouter',
-    'OpenAICompatProvider',
     'OllamaProvider',
+    'OpenAICompatProvider',
     'Transport',
     'build_router_from_env',
 ]

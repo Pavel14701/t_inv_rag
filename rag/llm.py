@@ -9,6 +9,7 @@ can serve several tenants pinned to different models at the same time.
 from __future__ import annotations
 
 import os
+
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -127,7 +128,7 @@ class OllamaProvider:
                 ).json()
         except LLMError:
             raise
-        except Exception as exc:  # noqa: BLE001 - wrap transport errors
+        except Exception as exc:
             msg = f'Ollama request failed: {exc}'
             raise LLMError(msg) from exc
         return self._extract(response)
@@ -146,7 +147,7 @@ class OllamaProvider:
                     response = resp.json()
         except LLMError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             msg = f'Ollama async request failed: {exc}'
             raise LLMError(msg) from exc
         return self._extract(response)
@@ -215,7 +216,7 @@ class OpenAICompatProvider:
                 ).json()
         except LLMError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             msg = f'OpenAI-compatible request failed: {exc}'
             raise LLMError(msg) from exc
         return self._extract(response)
@@ -235,7 +236,7 @@ class OpenAICompatProvider:
                     response = resp.json()
         except LLMError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             msg = f'OpenAI-compatible async request failed: {exc}'
             raise LLMError(msg) from exc
         return self._extract(response)

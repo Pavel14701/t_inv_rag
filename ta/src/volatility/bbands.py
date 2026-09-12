@@ -6,9 +6,9 @@ from typing import Optional, cast
 import numpy as np
 import polars as pl
 
+from .._array_ops import _apply_offset_fillna
 from ..ma import ma_mode
 from ..statistics.stdev import stdev_ind
-from .._array_ops import _apply_offset_fillna
 
 
 def bbands_numpy(

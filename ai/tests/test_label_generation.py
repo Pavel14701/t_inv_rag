@@ -2,17 +2,18 @@
 
 from datetime import datetime
 
-import pytest
 import numpy as np
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ..features import (
+from ai.src.datatypes import OrderBlock
+from ai.src.features import (
+    PositionState,
     generate_labels_from_strategy,
     no_position,
-    PositionState
 )
-from ..datatypes import OrderBlock
 
 
 @pytest.mark.unit
@@ -111,7 +112,7 @@ def test_generate_labels_with_r_multiple(
     # Check if there is at least one closed trade with non-NaN outcome
     closed_trades = np.where((action == 2) & (~np.isnan(outcome)))[0]
     if len(closed_trades) == 0:
-        pytest.skip('No closed trades found, skipping outcome check')
+        pytest.skip("No closed trades found, skipping outcome check")
     # Check that outcomes are not NaN for those trades
     assert not np.isnan(outcome[closed_trades]).any()
 
@@ -128,12 +129,12 @@ def _make_exec_df(
     """Build a small DataFrame with fixed TP/SL (+1 / -1 around close)."""
     return pl.DataFrame(
         {
-            'open': open_,
-            'high': high,
-            'low': low,
-            'close': close,
-            'tp': close + 1.0,
-            'sl': close - 1.0,
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "tp": close + 1.0,
+            "sl": close - 1.0,
         }
     )
 
@@ -144,7 +145,7 @@ def _touch_block(
     """Build a demand block spanning the given index range."""
     return OrderBlock(
         id=1,
-        block_type='demand',
+        block_type="demand",
         start=datetime(2024, 1, 1),
         break_=datetime(2024, 1, 2),
         retest=datetime(2024, 1, 3),
@@ -169,7 +170,7 @@ def test_labels_entry_uses_next_bar_open() -> None:
     close = np.full(n, 100.0)
     open_ = np.full(n, 100.0)
     high = np.full(n, 100.6)  # above the zone: no touch by default
-    low = np.full(n, 100.6)   # above SL, below TP: no exit either
+    low = np.full(n, 100.6)  # above SL, below TP: no exit either
     # Decision bar 1: high inside the demand zone (touch)
     high[1] = 100.2
     # Fill at bar 2; TP (101) hit at bar 4
@@ -177,8 +178,11 @@ def test_labels_entry_uses_next_bar_open() -> None:
     df = _make_exec_df(open_, high, low, close)
     block = _touch_block(0, 0, 99.5, 100.5)  # block known before bar 1
     action, outcome = generate_labels_from_strategy(
-        df, [block], use_r_multiple=True,
-        commission_pct=0.001, slippage_pct=0.0005,
+        df,
+        [block],
+        use_r_multiple=True,
+        commission_pct=0.001,
+        slippage_pct=0.0005,
         max_bars_hold=0,
     )
     assert action[1] == 1  # decision bar
@@ -204,8 +208,11 @@ def test_labels_time_exit_after_max_bars_hold() -> None:
     df = _make_exec_df(open_, high, low, close)
     block = _touch_block(0, 0, 99.5, 100.5)
     action, outcome = generate_labels_from_strategy(
-        df, [block], use_r_multiple=True,
-        commission_pct=0.001, slippage_pct=0.0005,
+        df,
+        [block],
+        use_r_multiple=True,
+        commission_pct=0.001,
+        slippage_pct=0.0005,
         max_bars_hold=3,
     )
     assert action[1] == 1
@@ -214,9 +221,7 @@ def test_labels_time_exit_after_max_bars_hold() -> None:
     # Time exit at close 100 (net of slippage): a small loss
     entry = 100.0 * 1.0005
     exit_ = 100.0 * (1.0 - 0.0005)
-    expected_r = (
-        (exit_ - entry) - 0.001 * (entry + exit_)
-    ) / (entry - 99.0)
+    expected_r = ((exit_ - entry) - 0.001 * (entry + exit_)) / (entry - 99.0)
     assert_allclose(outcome[1], expected_r, rtol=1e-6)
     assert expected_r < 0  # costs make the flat trade a loss
 
@@ -234,7 +239,9 @@ def test_labels_no_decision_on_last_bar() -> None:
     df = _make_exec_df(open_, high, low, close)
     block = _touch_block(0, 4, 99.5, 100.5)  # block known before bar 5
     action, outcome = generate_labels_from_strategy(
-        df, [block], max_bars_hold=0,
+        df,
+        [block],
+        max_bars_hold=0,
     )
     assert not (action == 1).any()
     assert not (action == 2).any()
@@ -257,7 +264,10 @@ def test_labels_tie_break_is_pessimistic() -> None:
     df = _make_exec_df(open_, high, low, close)
     block = _touch_block(0, 0, 99.5, 100.5)
     action, outcome = generate_labels_from_strategy(
-        df, [block], use_r_multiple=False, max_bars_hold=0,
+        df,
+        [block],
+        use_r_multiple=False,
+        max_bars_hold=0,
     )
     assert action[1] == 1
     assert action[2] == 2  # exit on the fill bar itself

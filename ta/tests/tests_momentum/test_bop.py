@@ -17,10 +17,11 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...external import talib_available
-from ...momentum.bop import bop_ind, bop_numpy, bop_polars, bop_talib
+from ta.src.external import talib_available
+from ta.src.momentum.bop import bop_ind, bop_numpy, bop_polars, bop_talib
 
 
 @pytest.fixture
@@ -53,14 +54,15 @@ def test_bop_numpy_matches_formula(ohlc_arrays) -> None:
 
 
 @pytest.mark.momentum
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 def test_bop_talib_parity(ohlc_arrays) -> None:
     """TA-Lib and numpy backends agree on generic data."""
     open_, high, low, close = ohlc_arrays
     assert_allclose(
         bop_numpy(open_, high, low, close),
         bop_talib(open_, high, low, close),
-        rtol=1e-12, equal_nan=True,
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -77,7 +79,7 @@ def test_bop_zero_range_is_zero_no_warnings() -> None:
     zig_l = np.full(n, 5.0)
     zig_c = np.full(n, 5.0)
     with warnings.catch_warnings():
-        warnings.simplefilter('error')
+        warnings.simplefilter("error")
         res_np = bop_numpy(zig_o, zig_h, zig_l, zig_c)
         assert np.isfinite(res_np).all()
         assert (res_np == 0.0).all()
@@ -103,17 +105,26 @@ def test_bop_non_contiguous_and_readonly(ohlc_arrays) -> None:
     mk_nc = lambda a: np.stack([a, a], axis=1)[:, 0]  # noqa: E731
     assert_allclose(
         bop_numpy(
-            mk_nc(open_), mk_nc(high), mk_nc(low), mk_nc(close),
+            mk_nc(open_),
+            mk_nc(high),
+            mk_nc(low),
+            mk_nc(close),
         ),
-        expected, rtol=1e-12, equal_nan=True,
+        expected,
+        rtol=1e-12,
+        equal_nan=True,
     )
     assert_allclose(
         bop_ind(
-            pl.Series(open_), pl.Series(high),
-            pl.Series(low), pl.Series(close),
+            pl.Series(open_),
+            pl.Series(high),
+            pl.Series(low),
+            pl.Series(close),
             use_talib=False,
         ),
-        expected, rtol=1e-12, equal_nan=True,
+        expected,
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -134,7 +145,9 @@ def test_bop_ind_use_talib_switch(ohlc_arrays) -> None:
     expected = bop_numpy(open_, high, low, close)
     assert_allclose(
         bop_ind(open_, high, low, close, use_talib=False),
-        expected, rtol=1e-12, equal_nan=True,
+        expected,
+        rtol=1e-12,
+        equal_nan=True,
     )
 
 
@@ -142,11 +155,13 @@ def test_bop_ind_use_talib_switch(ohlc_arrays) -> None:
 def test_bop_polars_basic(df_ohlc: pl.DataFrame) -> None:
     """bop_polars returns date + BOP column matching the numpy backend."""
     result = bop_polars(df_ohlc, use_talib=False)
-    assert 'BOP' in result.columns
-    assert result['BOP'].dtype == pl.Float64
+    assert "BOP" in result.columns
+    assert result["BOP"].dtype == pl.Float64
     assert len(result) == len(df_ohlc)
     expected = bop_numpy(
-        df_ohlc['open'].to_numpy(), df_ohlc['high'].to_numpy(),
-        df_ohlc['low'].to_numpy(), df_ohlc['close'].to_numpy(),
+        df_ohlc["open"].to_numpy(),
+        df_ohlc["high"].to_numpy(),
+        df_ohlc["low"].to_numpy(),
+        df_ohlc["close"].to_numpy(),
     )
-    assert_allclose(result['BOP'].to_numpy(), expected, equal_nan=True)
+    assert_allclose(result["BOP"].to_numpy(), expected, equal_nan=True)

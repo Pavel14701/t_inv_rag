@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import inspect
+
 from collections.abc import Callable
 from typing import Any
 
@@ -25,6 +26,7 @@ from ..overlap.tema import tema_ind
 from ..overlap.trima import trima_ind
 from ..overlap.vidya import vidya_ind
 from ..overlap.wma import wma_ind
+
 
 _MA_FUNCS: dict[str, Callable] = {
     'dema': dema_ind,

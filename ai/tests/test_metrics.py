@@ -6,9 +6,10 @@ to evaluate model predictions during validation.
 
 import pytest
 import torch
+
 from torch import Tensor
 
-from ..metrics import compute_action_accuracy, compute_trade_metrics
+from ai.src.metrics import compute_action_accuracy, compute_trade_metrics
 
 
 @pytest.mark.unit
@@ -31,10 +32,10 @@ def test_compute_action_accuracy() -> None:
     acc: dict[str, float] = compute_action_accuracy(
         logits, targets, ignore_index=-100
     )
-    assert 'overall' in acc
-    assert 'hold' in acc
-    assert 'entry' in acc
-    assert 'exit' in acc
+    assert "overall" in acc
+    assert "hold" in acc
+    assert "entry" in acc
+    assert "exit" in acc
     # Values between 0 and 1
     for v in acc.values():
         assert 0 <= v <= 1
@@ -43,7 +44,7 @@ def test_compute_action_accuracy() -> None:
     acc_all_ignored: dict[str, float] = compute_action_accuracy(
         logits, all_ignored
     )
-    assert acc_all_ignored['overall'] == 0.0
+    assert acc_all_ignored["overall"] == 0.0
 
 
 @pytest.mark.unit
@@ -78,14 +79,14 @@ def test_compute_trade_metrics() -> None:
     metrics: dict[str, float] = compute_trade_metrics(
         logits, targets, outcome_targets, ignore_index=2
     )
-    assert 'win_rate' in metrics
-    assert 'profit_factor' in metrics
-    assert 'num_trades' in metrics
-    assert metrics['num_trades'] >= 0
+    assert "win_rate" in metrics
+    assert "profit_factor" in metrics
+    assert "num_trades" in metrics
+    assert metrics["num_trades"] >= 0
     # If no trades, returns zeros
     no_trade_logits: Tensor = torch.zeros(5, 3)
     no_trade_targets: Tensor = torch.full((5,), 0)
     metrics_zero: dict[str, float] = compute_trade_metrics(
         no_trade_logits, no_trade_targets, torch.ones(5)
     )
-    assert metrics_zero['num_trades'] == 0
+    assert metrics_zero["num_trades"] == 0

@@ -5,12 +5,12 @@ function.  They run on small synthetic data to ensure the model builds,
 trains, and returns an EntryExitTransformer without errors.
 """
 
-import pytest
-import polars as pl
 import numpy as np
+import polars as pl
+import pytest
 
-from ..quickstart import quick_train
-from ..transformer import EntryExitTransformer
+from ai.src.quickstart import quick_train
+from ai.src.transformer import EntryExitTransformer
 
 
 @pytest.mark.integration
@@ -29,24 +29,24 @@ def test_quick_train_basic(sample_parquet_files: dict[str, str]) -> None:
 
     """
     model: EntryExitTransformer = quick_train(
-        features=sample_parquet_files['features_path'],
-        labels=sample_parquet_files['labels_path'],
-        order_blocks=sample_parquet_files['order_blocks_path'],
-        price_cols=['open', 'high', 'low', 'close', 'volume'],
-        sig_cols=['sig1', 'sig2'],
-        tp_sl_cols=['tp', 'sl'],
-        ind_cols=['ind1', 'ind2', 'ind3'],
+        features=sample_parquet_files["features_path"],
+        labels=sample_parquet_files["labels_path"],
+        order_blocks=sample_parquet_files["order_blocks_path"],
+        price_cols=["open", "high", "low", "close", "volume"],
+        sig_cols=["sig1", "sig2"],
+        tp_sl_cols=["tp", "sl"],
+        ind_cols=["ind1", "ind2", "ind3"],
         seq_len=32,
         batch_size=2,
         epochs=1,
-        device='cpu',
+        device="cpu",
     )
     assert isinstance(model, EntryExitTransformer)
 
 
 @pytest.mark.integration
 def test_quick_train_with_validation_file(
-    sample_parquet_files: dict[str, str]
+    sample_parquet_files: dict[str, str],
 ) -> None:
     """Test quick_train with a separate validation Parquet file.
 
@@ -62,20 +62,20 @@ def test_quick_train_with_validation_file(
 
     """
     model: EntryExitTransformer = quick_train(
-        features=sample_parquet_files['features_path'],
-        labels=sample_parquet_files['labels_path'],
-        order_blocks=sample_parquet_files['order_blocks_path'],
-        price_cols=['open', 'high', 'low', 'close', 'volume'],
-        sig_cols=['sig1', 'sig2'],
-        tp_sl_cols=['tp', 'sl'],
-        ind_cols=['ind1', 'ind2', 'ind3'],
+        features=sample_parquet_files["features_path"],
+        labels=sample_parquet_files["labels_path"],
+        order_blocks=sample_parquet_files["order_blocks_path"],
+        price_cols=["open", "high", "low", "close", "volume"],
+        sig_cols=["sig1", "sig2"],
+        tp_sl_cols=["tp", "sl"],
+        ind_cols=["ind1", "ind2", "ind3"],
         seq_len=32,
         batch_size=2,
         epochs=1,
         # same files for simplicity
-        val_path=sample_parquet_files['features_path'],
-        val_labels_path=sample_parquet_files['labels_path'],
-        device='cpu',
+        val_path=sample_parquet_files["features_path"],
+        val_labels_path=sample_parquet_files["labels_path"],
+        device="cpu",
         save_best_path=None,
     )
     assert isinstance(model, EntryExitTransformer)
@@ -83,7 +83,7 @@ def test_quick_train_with_validation_file(
 
 @pytest.mark.integration
 def test_quick_train_with_pattern_cols(
-    sample_parquet_files: dict[str, str]
+    sample_parquet_files: dict[str, str],
 ) -> None:
     """Test quick_train with pattern columns and corresponding n_patterns.
 
@@ -99,28 +99,30 @@ def test_quick_train_with_pattern_cols(
         - The returned object is an instance of EntryExitTransformer.
 
     """
-    labels_path: str = sample_parquet_files['labels_path']
+    labels_path: str = sample_parquet_files["labels_path"]
     df_lbl = pl.read_parquet(labels_path)
     n_rows: int = len(df_lbl)
-    df_lbl = df_lbl.with_columns([
-        pl.Series('pattern1', np.random.randint(0, 2, n_rows)),
-        pl.Series('pattern2', np.random.randint(0, 2, n_rows)),
-    ])
+    df_lbl = df_lbl.with_columns(
+        [
+            pl.Series("pattern1", np.random.randint(0, 2, n_rows)),
+            pl.Series("pattern2", np.random.randint(0, 2, n_rows)),
+        ]
+    )
     df_lbl.write_parquet(labels_path)
     model: EntryExitTransformer = quick_train(
-        features=sample_parquet_files['features_path'],
+        features=sample_parquet_files["features_path"],
         labels=labels_path,
-        order_blocks=sample_parquet_files['order_blocks_path'],
-        price_cols=['open', 'high', 'low', 'close', 'volume'],
-        sig_cols=['sig1', 'sig2'],
-        tp_sl_cols=['tp', 'sl'],
-        ind_cols=['ind1', 'ind2', 'ind3'],
-        pattern_cols=['pattern1', 'pattern2'],
+        order_blocks=sample_parquet_files["order_blocks_path"],
+        price_cols=["open", "high", "low", "close", "volume"],
+        sig_cols=["sig1", "sig2"],
+        tp_sl_cols=["tp", "sl"],
+        ind_cols=["ind1", "ind2", "ind3"],
+        pattern_cols=["pattern1", "pattern2"],
         n_patterns=2,
         seq_len=32,
         batch_size=2,
         epochs=1,
-        device='cpu',
+        device="cpu",
         save_best_path=None,
     )
     assert isinstance(model, EntryExitTransformer)
@@ -137,33 +139,33 @@ def test_quick_train_applies_model_config(
     model.  Priority: explicit arguments > ``**model_kwargs`` > config.
 
     """
-    from ..config import AIConfig, with_overrides
+    from ai.src.config import AIConfig, with_overrides
 
     cfg = with_overrides(
         AIConfig(),
         model={
-            'dropout': 0.0,
-            'max_seq_len': 333,
-            'max_ob_seq_len': 64,
-            'n_action_classes': 3,
-            'n_outcome_classes': 2,
-            'ob_embedding_dim': 6,
-            'atr_global': 2.5,
+            "dropout": 0.0,
+            "max_seq_len": 333,
+            "max_ob_seq_len": 64,
+            "n_action_classes": 3,
+            "n_outcome_classes": 2,
+            "ob_embedding_dim": 6,
+            "atr_global": 2.5,
         },
     )
     model: EntryExitTransformer = quick_train(
-        features=sample_parquet_files['features_path'],
-        labels=sample_parquet_files['labels_path'],
-        order_blocks=sample_parquet_files['order_blocks_path'],
-        price_cols=['open', 'high', 'low', 'close', 'volume'],
-        sig_cols=['sig1', 'sig2'],
-        tp_sl_cols=['tp', 'sl'],
-        ind_cols=['ind1', 'ind2', 'ind3'],
+        features=sample_parquet_files["features_path"],
+        labels=sample_parquet_files["labels_path"],
+        order_blocks=sample_parquet_files["order_blocks_path"],
+        price_cols=["open", "high", "low", "close", "volume"],
+        sig_cols=["sig1", "sig2"],
+        tp_sl_cols=["tp", "sl"],
+        ind_cols=["ind1", "ind2", "ind3"],
         hidden_size=16,  # explicit argument must beat the config default
         seq_len=32,
         batch_size=2,
         epochs=1,
-        device='cpu',
+        device="cpu",
         config=cfg,
         dropout=0.25,  # lands in **model_kwargs: beats the config value
     )

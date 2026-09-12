@@ -16,14 +16,15 @@ from typing import Optional, Tuple
 
 import numpy as np
 import polars as pl
+
 from numba import jit
 
-from ..external import talib, talib_available
 from .._array_ops import (
     _apply_offset_fillna,
     _handle_nan_policy,
     replace_inf_with_nan,
 )
+from ..external import talib, talib_available
 
 
 # ----------------------------------------------------------------------

@@ -11,18 +11,20 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.ssf3 import ssf3_numba, ssf3_ind, ssf3_polars
+from ta.src.overlap.ssf3 import ssf3_ind, ssf3_numba, ssf3_polars
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation (pure Python)
 # -----------------------------------------------------------------------------
+
 
 def _ssf3_reference(
     close: npt.NDArray[np.float64],
@@ -50,8 +52,9 @@ def _ssf3_reference(
     d2 = b + c
     d1 = 1.0 - d2 - d3 - d4
     for i in range(3, n):
-        out[i] = d1 * close[i] + d2 * out[i - 1] \
-            + d3 * out[i - 2] + d4 * out[i - 3]
+        out[i] = (
+            d1 * close[i] + d2 * out[i - 1] + d3 * out[i - 2] + d4 * out[i - 3]
+        )
     return out
 
 
@@ -59,9 +62,10 @@ def _ssf3_reference(
 # Core calculation
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_ssf3_numba_against_reference(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Test ssf3_numba against the pure Python reference."""
     close = prices_random_walk
@@ -80,7 +84,7 @@ def test_ssf3_constant_input_exact() -> None:
 
 @pytest.mark.overlap
 def test_ssf3_smooths_input(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """SSF3 output is smoother (lower std) than its input."""
     close = prices_random_walk
@@ -98,7 +102,7 @@ def test_ssf3_seeds_first_three_samples() -> None:
 
 
 @pytest.mark.overlap
-@pytest.mark.parametrize('m', [1, 2, 3])
+@pytest.mark.parametrize("m", [1, 2, 3])
 def test_ssf3_short_inputs(m: int) -> None:
     """Inputs shorter than 4 are returned as-is (seeded from input)."""
     close = np.arange(1.0, m + 1.0)
@@ -132,18 +136,19 @@ def test_ssf3_coefficients_unit_dc_gain() -> None:
 # Validation / contiguity / read-only
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
-@pytest.mark.parametrize('length', [0, -2])
+@pytest.mark.parametrize("length", [0, -2])
 def test_ssf3_invalid_length(length: int) -> None:
     """Length below 1 raises ValueError."""
     close = np.arange(1.0, 11.0)
-    with pytest.raises(ValueError, match='must be >= 1'):
+    with pytest.raises(ValueError, match="must be >= 1"):
         ssf3_numba(close, length=length)
 
 
 @pytest.mark.overlap
 def test_ssf3_non_contiguous_input(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Strided input is accepted and matches the reference on that data."""
     close = prices_random_walk[::2]
@@ -154,13 +159,14 @@ def test_ssf3_non_contiguous_input(
 
 @pytest.mark.overlap
 def test_ssf3_ind_polars_series(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """ssf3_ind accepts pl.Series (read-only numpy underneath)."""
     close = prices_random_walk
     r = ssf3_ind(pl.Series(close), length=20)
     expected = ssf3_numba(close, length=20)
     assert_allclose(r, expected, rtol=0, atol=0)
+
 
 # -----------------------------------------------------------------------------
 # Offset / fillna
@@ -188,7 +194,7 @@ def test_ssf3_fillna(prices_random_walk: npt.NDArray[np.float64]) -> None:
 
 @pytest.mark.overlap
 def test_ssf3_offset_with_fillna(
-    prices_random_walk: npt.NDArray[np.float64]
+    prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """Offset NaNs are replaced by fillna."""
     close = prices_random_walk
@@ -201,27 +207,29 @@ def test_ssf3_offset_with_fillna(
 # Polars integration
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_ssf3_polars_default_column(df_random_walk: pl.DataFrame) -> None:
     """ssf3_polars adds an 'SSF3_{length}' column by default."""
     out = ssf3_polars(df_random_walk, length=20)
-    assert 'SSF3_20' in out.columns
-    expected = ssf3_numba(df_random_walk['close'].to_numpy(), length=20)
-    assert_allclose(out['SSF3_20'].to_numpy(), expected, rtol=0, atol=0)
+    assert "SSF3_20" in out.columns
+    expected = ssf3_numba(df_random_walk["close"].to_numpy(), length=20)
+    assert_allclose(out["SSF3_20"].to_numpy(), expected, rtol=0, atol=0)
     assert len(out) == len(df_random_walk)
 
 
 @pytest.mark.overlap
 def test_ssf3_polars_custom_column(df_random_walk: pl.DataFrame) -> None:
     """Custom output column name is honoured."""
-    out = ssf3_polars(df_random_walk, length=10, output_col='MY_SSF3')
-    assert 'MY_SSF3' in out.columns
-    assert 'SSF3_10' not in out.columns
+    out = ssf3_polars(df_random_walk, length=10, output_col="MY_SSF3")
+    assert "MY_SSF3" in out.columns
+    assert "SSF3_10" not in out.columns
 
 
 # -----------------------------------------------------------------------------
 # IEEE 754 edge cases
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_ssf3_nan_poisons_tail() -> None:

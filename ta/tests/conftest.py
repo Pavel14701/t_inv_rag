@@ -6,9 +6,10 @@ Provides synthetic price series that mimic real market data:
 - Polars DataFrames for integration tests
 """
 
-import pytest
 import numpy as np
 import polars as pl
+import pytest
+
 
 # -----------------------------------------------------------------------------
 # Constants for synthetic data generation
@@ -73,6 +74,7 @@ DEFAULT_FILLNA = 0.0
 # Synthetic price generators
 # -----------------------------------------------------------------------------
 
+
 def generate_random_walk(
     n: int = DEFAULT_N,
     start_price: float = DEFAULT_START_PRICE,
@@ -135,45 +137,46 @@ def generate_pattern(
         1D float64 array of prices.
 
     """
-    if pattern == 'uptrend':
+    if pattern == "uptrend":
         return np.linspace(start_price, start_price + box_size * n, n)
-    elif pattern == 'downtrend':
+    elif pattern == "downtrend":
         return np.linspace(start_price, start_price - box_size * n, n)
-    elif pattern == 'sideways':
+    elif pattern == "sideways":
         return start_price + box_size * 0.5 * np.sin(
             np.linspace(0, 4 * np.pi, n)
         )
-    elif pattern == 'up_then_down':
+    elif pattern == "up_then_down":
         half = n // 2
         up = np.linspace(start_price, start_price + box_size * half, half)
         down = np.linspace(up[-1], up[-1] - box_size * (n - half), n - half)
         return np.concatenate([up, down])
-    elif pattern == 'down_then_up':
+    elif pattern == "down_then_up":
         half = n // 2
         down = np.linspace(start_price, start_price - box_size * half, half)
         up = np.linspace(down[-1], down[-1] + box_size * (n - half), n - half)
         return np.concatenate([down, up])
-    elif pattern == 'volatile':
+    elif pattern == "volatile":
         return generate_random_walk(
-            n, start_price, drift=0,
+            n,
+            start_price,
+            drift=0,
             volatility=box_size * 1.5,
-            seed=DEFAULT_SEED
+            seed=DEFAULT_SEED,
         )
     else:
-        raise ValueError(f'Unknown pattern: {pattern}')
+        raise ValueError(f"Unknown pattern: {pattern}")
 
 
 # -----------------------------------------------------------------------------
 # Fixtures for price series
 # -----------------------------------------------------------------------------
 
+
 @pytest.fixture
 def prices_uptrend() -> np.ndarray:
     """Simple uptrend: linear increase."""
     return np.linspace(
-        PATTERN_UPTREND_START,
-        PATTERN_UPTREND_END,
-        PATTERN_UPTREND_LEN
+        PATTERN_UPTREND_START, PATTERN_UPTREND_END, PATTERN_UPTREND_LEN
     )
 
 
@@ -183,7 +186,7 @@ def prices_downtrend() -> np.ndarray:
     return np.linspace(
         PATTERN_DOWNDTREND_START,
         PATTERN_DOWNDTREND_END,
-        PATTERN_DOWNDTREND_LEN
+        PATTERN_DOWNDTREND_LEN,
     )
 
 
@@ -199,14 +202,10 @@ def prices_sideways() -> np.ndarray:
 def prices_up_then_down() -> np.ndarray:
     """Price rises then falls."""
     up = np.linspace(
-        PATTERN_UP_DOWN_START,
-        PATTERN_UP_DOWN_PEAK,
-        PATTERN_UP_DOWN_SEG_LEN
+        PATTERN_UP_DOWN_START, PATTERN_UP_DOWN_PEAK, PATTERN_UP_DOWN_SEG_LEN
     )
     down = np.linspace(
-        PATTERN_UP_DOWN_PEAK,
-        PATTERN_UP_DOWN_END,
-        PATTERN_UP_DOWN_SEG_LEN
+        PATTERN_UP_DOWN_PEAK, PATTERN_UP_DOWN_END, PATTERN_UP_DOWN_SEG_LEN
     )
     return np.concatenate([up, down])
 
@@ -215,14 +214,10 @@ def prices_up_then_down() -> np.ndarray:
 def prices_down_then_up() -> np.ndarray:
     """Price falls then rises."""
     down = np.linspace(
-        PATTERN_DOWN_UP_START,
-        PATTERN_DOWN_UP_BOTTOM,
-        PATTERN_DOWN_UP_SEG_LEN
+        PATTERN_DOWN_UP_START, PATTERN_DOWN_UP_BOTTOM, PATTERN_DOWN_UP_SEG_LEN
     )
     up = np.linspace(
-        PATTERN_DOWN_UP_BOTTOM,
-        PATTERN_DOWN_UP_END,
-        PATTERN_DOWN_UP_SEG_LEN
+        PATTERN_DOWN_UP_BOTTOM, PATTERN_DOWN_UP_END, PATTERN_DOWN_UP_SEG_LEN
     )
     return np.concatenate([down, up])
 
@@ -235,7 +230,7 @@ def prices_random_walk() -> np.ndarray:
         start_price=DEFAULT_START_PRICE,
         drift=DEFAULT_DRIFT,
         volatility=DEFAULT_VOLATILITY,
-        seed=DEFAULT_SEED
+        seed=DEFAULT_SEED,
     )
 
 
@@ -247,7 +242,7 @@ def prices_volatile() -> np.ndarray:
         start_price=DEFAULT_START_PRICE,
         drift=0,
         volatility=VOLATILE_VOLATILITY,
-        seed=VOLATILE_SEED
+        seed=VOLATILE_SEED,
     )
 
 
@@ -255,73 +250,69 @@ def prices_volatile() -> np.ndarray:
 def prices_with_reversals() -> np.ndarray:
     """Price series with clear trend reversals."""
     seg1 = np.linspace(
-        PATTERN_REVERSAL_START,
-        PATTERN_REVERSAL_MID,
-        PATTERN_REVERSAL_SEG_LEN
+        PATTERN_REVERSAL_START, PATTERN_REVERSAL_MID, PATTERN_REVERSAL_SEG_LEN
     )
     seg2 = np.linspace(
-        PATTERN_REVERSAL_MID,
-        PATTERN_REVERSAL_BOTTOM,
-        PATTERN_REVERSAL_SEG_LEN
+        PATTERN_REVERSAL_MID, PATTERN_REVERSAL_BOTTOM, PATTERN_REVERSAL_SEG_LEN
     )
     seg3 = np.linspace(
-        PATTERN_REVERSAL_BOTTOM,
-        PATTERN_REVERSAL_END,
-        PATTERN_REVERSAL_SEG_LEN
+        PATTERN_REVERSAL_BOTTOM, PATTERN_REVERSAL_END, PATTERN_REVERSAL_SEG_LEN
     )
     return np.concatenate([seg1, seg2, seg3])
 
 
 @pytest.fixture
 def df_ohlc(prices_random_walk: np.ndarray) -> pl.DataFrame:
-    """DataFrame with open, high, low, close columns."""  # noqa: D403
+    """DataFrame with open, high, low, close columns."""
     np.random.seed(OHLC_SEED)
     n = len(prices_random_walk)
-    return pl.DataFrame({
-        'date': np.arange(n),
-        'open': prices_random_walk + np.random.randn(n) * OHLC_NOISE_SCALE,
-        'high': prices_random_walk + np.abs(
-            np.random.randn(n) * OHLC_HIGH_LOW_SCALE
-        ),
-        'low': prices_random_walk - np.abs(
-            np.random.randn(n) * OHLC_HIGH_LOW_SCALE
-        ),
-        'close': prices_random_walk,
-    })
+    return pl.DataFrame(
+        {
+            "date": np.arange(n),
+            "open": prices_random_walk + np.random.randn(n) * OHLC_NOISE_SCALE,
+            "high": prices_random_walk
+            + np.abs(np.random.randn(n) * OHLC_HIGH_LOW_SCALE),
+            "low": prices_random_walk
+            - np.abs(np.random.randn(n) * OHLC_HIGH_LOW_SCALE),
+            "close": prices_random_walk,
+        }
+    )
 
 
 # -----------------------------------------------------------------------------
 # Fixtures for Polars DataFrames
 # -----------------------------------------------------------------------------
 
-@pytest.fixture
-def df_uptrend(prices_uptrend) -> pl.DataFrame:  # noqa: D103
-    return pl.DataFrame({'close': prices_uptrend})
-
 
 @pytest.fixture
-def df_downtrend(prices_downtrend) -> pl.DataFrame:  # noqa: D103
-    return pl.DataFrame({'close': prices_downtrend})
+def df_uptrend(prices_uptrend) -> pl.DataFrame:
+    return pl.DataFrame({"close": prices_uptrend})
 
 
 @pytest.fixture
-def df_sideways(prices_sideways) -> pl.DataFrame:  # noqa: D103
-    return pl.DataFrame({'close': prices_sideways})
+def df_downtrend(prices_downtrend) -> pl.DataFrame:
+    return pl.DataFrame({"close": prices_downtrend})
 
 
 @pytest.fixture
-def df_random_walk(prices_random_walk) -> pl.DataFrame:  # noqa: D103
-    return pl.DataFrame({'close': prices_random_walk})
+def df_sideways(prices_sideways) -> pl.DataFrame:
+    return pl.DataFrame({"close": prices_sideways})
 
 
 @pytest.fixture
-def df_volatile(prices_volatile) -> pl.DataFrame:  # noqa: D103
-    return pl.DataFrame({'close': prices_volatile})
+def df_random_walk(prices_random_walk) -> pl.DataFrame:
+    return pl.DataFrame({"close": prices_random_walk})
+
+
+@pytest.fixture
+def df_volatile(prices_volatile) -> pl.DataFrame:
+    return pl.DataFrame({"close": prices_volatile})
 
 
 # -----------------------------------------------------------------------------
 # Fixtures for common parameters
 # -----------------------------------------------------------------------------
+
 
 @pytest.fixture
 def box_size() -> float:
@@ -351,25 +342,80 @@ def fillna() -> float:
 # Fixtures for IEEE 754 edge cases (NaN, Inf, extreme, empty, short, etc.)
 # -----------------------------------------------------------------------------
 
+
 @pytest.fixture
 def prices_with_nan() -> np.ndarray:
     """Price series with a NaN at index 5 (length 15)."""
-    return np.array([1.0, 2.0, 3.0, 4.0, 5.0, np.nan, 7.0, 8.0, 9.0, 10.0,
-                    11.0, 12.0, 13.0, 14.0, 15.0], dtype=np.float64)
+    return np.array(
+        [
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            np.nan,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            15.0,
+        ],
+        dtype=np.float64,
+    )
 
 
 @pytest.fixture
 def prices_with_inf() -> np.ndarray:
     """Price series with an Inf at index 5 (length 15)."""
-    return np.array([1.0, 2.0, 3.0, 4.0, 5.0, np.inf, 7.0, 8.0, 9.0, 10.0,
-                    11.0, 12.0, 13.0, 14.0, 15.0], dtype=np.float64)
+    return np.array(
+        [
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            np.inf,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            15.0,
+        ],
+        dtype=np.float64,
+    )
 
 
 @pytest.fixture
 def prices_extreme() -> np.ndarray:
     """Price series with extreme values (1e300 and 1e-300) (length 15)."""
-    return np.array([1e300, 1e-300, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-                    9.0, 10.0, 11.0, 12.0, 13.0], dtype=np.float64)
+    return np.array(
+        [
+            1e300,
+            1e-300,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+        ],
+        dtype=np.float64,
+    )
 
 
 @pytest.fixture

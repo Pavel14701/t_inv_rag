@@ -114,10 +114,11 @@ uv sync --all-packages
 docker compose up -d          # postgres, redis, rabbitmq, qdrant, ollama
 uv run --package dte-main alembic upgrade head   # миграции БД
 uv run --package dte-dsl pytest dsl/tests      # тесты DSL
-uv run --package dte-ta pytest ta/src/tests    # тесты индикаторов
-uv run --package dte-ai pytest ai/src/tests    # тесты ai
+uv run --package dte-ta pytest ta/tests        # тесты индикаторов
+uv run --package dte-ai pytest ai/tests        # тесты ai
 uv run --package dte-rag pytest rag/tests      # тесты LLM-слоя
 uv run --package dte-infer pytest infer/tests  # смоук-тесты инференса
+uv run pytest -m dsl                          # только тесты dte-dsl (service-маркеры)
 uv run --package dte-infer python -m infer.cli --help   # инференс
 ```
 

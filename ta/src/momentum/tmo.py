@@ -19,10 +19,11 @@ IEEE 754 notes
 """
 import numpy as np
 import polars as pl
+
 from numba import float64, int64, njit
 
-from ..overlap.ema import ema_ind
 from .._array_ops import _apply_offset_fillna
+from ..overlap.ema import ema_ind
 
 
 @njit(

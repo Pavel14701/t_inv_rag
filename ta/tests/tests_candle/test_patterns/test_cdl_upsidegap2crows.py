@@ -1,9 +1,10 @@
 """Unit tests for Upside Gap Two Crows pattern (Numba implementation)."""
 
 import numpy as np
+
 from numpy.testing import assert_array_equal
 
-from ....candle.cdl_upsidegap2crows import _cdl_upsidegap2crows_nb
+from ta.src.candle.cdl_upsidegap2crows import _cdl_upsidegap2crows_nb
 
 
 def test_cdl_upsidegap2crows_valid():

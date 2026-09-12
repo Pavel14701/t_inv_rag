@@ -5,14 +5,15 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...volatility.abberation import (
-    aberration_numpy,
+from ta.src.overlap.sma import sma_ind
+from ta.src.volatility.abberation import (
     aberration_ind,
+    aberration_numpy,
     aberration_polars,
 )
-from ...overlap.sma import sma_ind
 
 
 def _ohlc_arrays(
@@ -40,8 +41,12 @@ def test_aberration_numpy_basic(
     high, low, close = _ohlc_arrays(prices_random_walk)
     length, atr_length = 5, 15
     zg, sg, xg, atr = aberration_numpy(
-        high, low, close,
-        length=length, atr_length=atr_length, use_talib=False,
+        high,
+        low,
+        close,
+        length=length,
+        atr_length=atr_length,
+        use_talib=False,
     )
 
     assert zg.shape == sg.shape == xg.shape == atr.shape == close.shape
@@ -62,7 +67,12 @@ def test_aberration_numpy_band_identities(
     """SG and XG are exact zg +- atr shifts of the mid line."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     zg, sg, xg, atr = aberration_numpy(
-        high, low, close, length=5, atr_length=15, use_talib=False,
+        high,
+        low,
+        close,
+        length=5,
+        atr_length=15,
+        use_talib=False,
     )
     assert_allclose(sg, zg + atr, rtol=1e-12, equal_nan=True)
     assert_allclose(xg, zg - atr, rtol=1e-12, equal_nan=True)
@@ -75,7 +85,12 @@ def test_aberration_numpy_zg_is_sma_of_hlc3(
     """ZG equals the SMA over (high + low + close) / 3."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     zg, _, _, _ = aberration_numpy(
-        high, low, close, length=5, atr_length=15, use_talib=False,
+        high,
+        low,
+        close,
+        length=5,
+        atr_length=15,
+        use_talib=False,
     )
     hlc3 = (high + low + close) / 3.0
     expected = sma_ind(hlc3, length=5, use_talib=False)
@@ -102,10 +117,17 @@ def test_aberration_numpy_non_contiguous_input(
         np.ascontiguousarray(high),
         np.ascontiguousarray(low),
         np.ascontiguousarray(close),
-        length=5, atr_length=15, use_talib=False,
+        length=5,
+        atr_length=15,
+        use_talib=False,
     )
     result = aberration_numpy(
-        high_nc, low_nc, close_nc, length=5, atr_length=15, use_talib=False,
+        high_nc,
+        low_nc,
+        close_nc,
+        length=5,
+        atr_length=15,
+        use_talib=False,
     )
     for res, exp in zip(result, expected):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
@@ -117,11 +139,16 @@ def test_aberration_numpy_length_too_short_raises(
 ) -> None:
     """Length < 1 and atr_length < 1 are rejected."""
     high, low, close = _ohlc_arrays(prices_random_walk)
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         aberration_numpy(high, low, close, length=0, use_talib=False)
-    with pytest.raises(ValueError, match='atr_length must be >= 1'):
+    with pytest.raises(ValueError, match="atr_length must be >= 1"):
         aberration_numpy(
-            high, low, close, length=5, atr_length=0, use_talib=False,
+            high,
+            low,
+            close,
+            length=5,
+            atr_length=0,
+            use_talib=False,
         )
 
 
@@ -132,8 +159,14 @@ def test_aberration_offset_fillna(
     """Test offset and fillna propagate to all four lines."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     zg, sg, xg, atr = aberration_numpy(
-        high, low, close, length=5, atr_length=15,
-        offset=1, fillna=0.0, use_talib=False,
+        high,
+        low,
+        close,
+        length=5,
+        atr_length=15,
+        offset=1,
+        fillna=0.0,
+        use_talib=False,
     )
     assert zg[0] == 0.0
     assert sg[0] == 0.0
@@ -148,8 +181,12 @@ def test_aberration_ind_with_pl_series(
     """Test aberration_ind with Polars Series input."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     zg, sg, xg, atr = aberration_ind(
-        pl.Series(high), pl.Series(low), pl.Series(close),
-        length=5, atr_length=15, use_talib=False,
+        pl.Series(high),
+        pl.Series(low),
+        pl.Series(close),
+        length=5,
+        atr_length=15,
+        use_talib=False,
     )
     assert isinstance(zg, np.ndarray)
     assert np.isfinite(zg[25:]).all()
@@ -159,10 +196,16 @@ def test_aberration_ind_with_pl_series(
 def test_aberration_polars_basic(df_ohlc: pl.DataFrame) -> None:
     """Test aberration_polars adds the four default columns."""
     result_df = aberration_polars(
-        df_ohlc, length=5, atr_length=15, use_talib=False,
+        df_ohlc,
+        length=5,
+        atr_length=15,
+        use_talib=False,
     )
     for col in (
-        'ABER_ZG_5_15', 'ABER_SG_5_15', 'ABER_XG_5_15', 'ABER_ATR_5_15',
+        "ABER_ZG_5_15",
+        "ABER_SG_5_15",
+        "ABER_XG_5_15",
+        "ABER_ATR_5_15",
     ):
         assert col in result_df.columns
         assert result_df[col].dtype == pl.Float64

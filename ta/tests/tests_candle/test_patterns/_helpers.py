@@ -12,9 +12,11 @@ Provides:
 import numpy as np
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ....external import talib_available
+from ta.src.external import talib_available
+
 
 # Neutral candle: small real WHITE body, modest shadows. Repeated identical
 # white candles satisfy no classic black/white pattern condition.
@@ -98,6 +100,7 @@ def pattern_suite(
 
     # ---- bullish detection (numba backend) -------------------------------
     if bull is not None:
+
         def test_bullish_detected():
             full = _full(bull)
             i = _idx(full, bull_idx)
@@ -105,34 +108,44 @@ def pattern_suite(
             assert r.dtype == np.float64
             assert r[i] == bull_value
             assert_array_equal(r[:4], np.zeros(4))
-        tests[f'test_{name}_bullish_detected'] = test_bullish_detected
+
+        tests[f"test_{name}_bullish_detected"] = test_bullish_detected
 
         def test_flat_input_no_pattern():
             candles = [flat] * 12
             r = _run(candles, use_talib=False)
             assert_array_equal(r, np.zeros(len(candles)))
-        tests[f'test_{name}_flat_input_no_pattern'] = \
+
+        tests[f"test_{name}_flat_input_no_pattern"] = (
             test_flat_input_no_pattern
+        )
 
         def test_talib_backend_binary():
             if not talib_available:
-                pytest.skip('TA-Lib not installed')
+                pytest.skip("TA-Lib not installed")
             full = _full(bull)
             r = _run(full, use_talib=True)
             assert np.all(np.isin(np.unique(r), list(talib_values)))
-        tests[f'test_{name}_talib_backend_binary'] = test_talib_backend_binary
+
+        tests[f"test_{name}_talib_backend_binary"] = test_talib_backend_binary
 
         def test_readonly_polars_series_input():
             full = _full(bull)
             o, h, low_, c = ohlc(full)
             r_series = fn(
-                pl.Series(o), pl.Series(h), pl.Series(low_), pl.Series(c),
-                use_talib=False, **extra
+                pl.Series(o),
+                pl.Series(h),
+                pl.Series(low_),
+                pl.Series(c),
+                use_talib=False,
+                **extra,
             )
             r_arr = _run(full, use_talib=False)
             assert_array_equal(r_series, r_arr)
-        tests[f'test_{name}_readonly_polars_input'] = \
+
+        tests[f"test_{name}_readonly_polars_input"] = (
             test_readonly_polars_series_input
+        )
 
         def test_offset_and_fillna():
             full = _full(bull)
@@ -140,26 +153,28 @@ def pattern_suite(
             shifted = _run(full, use_talib=False, offset=2, fillna=-7.0)
             assert_allclose(shifted[:2], -7.0, rtol=0, atol=0)
             assert_allclose(shifted[2:], base[:-2], rtol=0, atol=0)
-        tests[f'test_{name}_offset_and_fillna'] = test_offset_and_fillna
+
+        tests[f"test_{name}_offset_and_fillna"] = test_offset_and_fillna
 
     # ---- bearish detection (numba backend) -------------------------------
     if bear is not None:
+
         def test_bearish_detected():
             full = _full(bear)
             i = _idx(full, bear_idx)
             r = _run(full, use_talib=False)
             assert r[i] == bear_value
             assert_array_equal(r[:4], np.zeros(4))
-        tests[f'test_{name}_bearish_detected'] = test_bearish_detected
+
+        tests[f"test_{name}_bearish_detected"] = test_bearish_detected
 
     # ---- polars wrapper ---------------------------------------------------
     if polars_fn is not None and output_col is not None and bull is not None:
+
         def test_polars_wrapper():
             full = _full(bull)
             o, h, low_, c = ohlc(full)
-            df = pl.DataFrame({
-                'open': o, 'high': h, 'low': low_, 'close': c
-            })
+            df = pl.DataFrame({"open": o, "high": h, "low": low_, "close": c})
             out = polars_fn(df)
             assert output_col in out.columns
             assert len(out) == len(df)
@@ -168,6 +183,7 @@ def pattern_suite(
             expected = _run(full, use_talib=True)
             assert_array_equal(col, expected)
             assert np.all(np.isin(np.unique(col), list(talib_values)))
-        tests[f'test_{name}_polars_wrapper'] = test_polars_wrapper
+
+        tests[f"test_{name}_polars_wrapper"] = test_polars_wrapper
 
     return tests

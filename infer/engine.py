@@ -1,14 +1,15 @@
 """Bar-by-bar inference engine (TZ-05 п.3.2).
 
-Сигнальный контур: DSL entry/exit по барам через
-``dsl.evaluate_dsl`` (parse один раз, Interpreter на бар).
-P(win)-фильтр — через контракт TZ-06 (см. ml-часть внизу файла).
-Read-only по отношению к рынку: никаких ордеров.
+Signal contour: DSL entry/exit per bar via ``dsl.evaluate_dsl``
+(parse once, Interpreter per bar). P(win) filter goes through the
+TZ-06 contract (see the ml part at the bottom of this file).
+Read-only with respect to the market: no orders.
 """
 
 from __future__ import annotations
 
 import time as _time
+
 from dataclasses import dataclass, field
 
 import polars as pl
@@ -23,16 +24,16 @@ from .provider import BarSeriesProvider, WarmupNotReady
 
 @dataclass
 class InferenceResult:
-    """Результат прогона: серии сигналов + сводка (TZ-05 п.3.3).
+    """Run result: signal series + summary (TZ-05 п.3.3).
 
     Attributes:
         signals: DataFrame ``{date, entry_signal, exit_signal, p_win}``.
-        num_bars: всего баров.
-        num_entry: число entry-сигналов.
-        num_exit: число exit-сигналов.
-        num_warmup_skips: баров, пропущенных из-за прогрева.
-        num_ml_filtered: сигналов, отброшенных порогом P(win).
-        elapsed_ms: общее время прогона в миллисекундах.
+        num_bars: total number of bars.
+        num_entry: number of entry signals.
+        num_exit: number of exit signals.
+        num_warmup_skips: bars skipped due to warm-up.
+        num_ml_filtered: signals dropped by the P(win) threshold.
+        elapsed_ms: total run time in milliseconds.
 
     """
 
@@ -46,7 +47,7 @@ class InferenceResult:
     errors: list[str] = field(default_factory=list)
 
     def summary(self) -> str:
-        """Человекочитаемая сводка прогона."""
+        """Human-readable run summary."""
         return (
             f'bars={self.num_bars} entry={self.num_entry} '
             f'exit={self.num_exit} warmup_skips={self.num_warmup_skips} '
@@ -56,12 +57,12 @@ class InferenceResult:
 
 
 class _CachedContext(Context):
-    """Context с кэшем валидации по (indicator, params, attributes).
+    """Context with a validation cache keyed by (indicator, params, attributes).
 
-    ``Context._validate`` детерминирован по этому ключу, но вызывается
-    на каждое обращение к индикатору на каждом баре — при 5000 баров
-    это тысячи повторных прогонов манифест-валидатора. Кэш безопасен:
-    манифест провайдера за время прогона не меняется.
+    ``Context._validate`` is deterministic for this key, but it runs on
+    every indicator access on every bar — with 5000 bars that means
+    thousands of repeated manifest-validator passes. The cache is safe:
+    the provider manifest does not change during a run.
 
     """
 
@@ -81,8 +82,8 @@ class _CachedContext(Context):
 
 
 def _contains_let(node) -> bool:
-    """Есть ли в AST let-биндинги (влияют на переиспользование
-    интерпретатора: _locals живёт в экземпляре — TZ-01 п.3).
+    """Whether the AST contains let-bindings (they affect interpreter
+    reuse: _locals lives on the instance — TZ-01 п.3).
     """
     import dataclasses
 
@@ -107,21 +108,21 @@ def run_inference(
     p_threshold: float | None = None,
     predictor=None,
 ) -> InferenceResult:
-    """Прогнать стратегию по барам и вернуть серии сигналов.
+    """Run the strategy bar by bar and return signal series.
 
     Args:
-        df: Нормализованный OHLCV-кадр (см. ``infer.data.normalize``).
-        dsl_entry: DSL-выражение входа (обязательно).
-        dsl_exit: DSL-выражение выхода (опционально).
-        p_threshold: Порог P(win); ниже порога entry отбрасывается.
-        predictor: :class:`ai.src.bundle.EntryExitPredictor` или None.
+        df: normalized OHLCV frame (see ``infer.data.normalize``).
+        dsl_entry: entry DSL expression (required).
+        dsl_exit: exit DSL expression (optional).
+        p_threshold: P(win) threshold; entries below it are dropped.
+        predictor: :class:`ai.src.bundle.EntryExitPredictor` or None.
 
     Returns:
         :class:`InferenceResult`.
 
     Raises:
-        dsl.exceptions.ParseError: синтаксическая ошибка выражений
-            (проверяется до прогона).
+        dsl.exceptions.ParseError: syntax error in the expressions
+            (checked before the run).
 
     """
     started = _time.perf_counter()
@@ -140,8 +141,8 @@ def run_inference(
     ml_filtered = 0
     errors: list[str] = []
 
-    # Переиспользование интерпретатора безопасно только без let-ов
-    # (_locals живёт в экземпляре — TZ-01 п.3).
+    # Interpreter reuse is safe only without let-bindings
+    # (_locals lives on the instance — TZ-01 п.3).
     reuse_entry = not _contains_let(entry_ast)
     reuse_exit = exit_ast is not None and not _contains_let(exit_ast)
     entry_interp = Interpreter(context) if reuse_entry else None
@@ -195,21 +196,21 @@ def run_inference(
 
 
 def _import_ta():
-    """Ленивый импорт ta (тяжёлые numba/talib-модули)."""
+    """Lazy import of ta (heavy numba/talib modules)."""
     import ta.src as ta_mod
 
     return ta_mod
 
 
 def predict_p_win_at(predictor, df: pl.DataFrame, t: int) -> float | None:
-    """P(win) на баре t через контракт TZ-06 (EntryExitPredictor).
+    """P(win) at bar t via the TZ-06 contract (EntryExitPredictor).
 
-    Окно строится из доступных колонок: prices = OHLCV (5 колонок),
-    indicators/signals/tp/sl — нули (полный фичевый конвейер появится
-    в TZ-02/TZ-04; размерности сверяются с bundle).
+    The window is built from available columns: prices = OHLCV (5 columns),
+    indicators/signals/tp/sl — zeros (the full feature pipeline arrives in
+    TZ-02/TZ-04; dimensions are cross-checked against the bundle).
 
     Returns:
-        P(win) в [0, 1] или None, если баров меньше seq_len.
+        P(win) in [0, 1], or None if there are fewer bars than seq_len.
 
     """
     import torch
@@ -252,7 +253,7 @@ def predict_p_win_at(predictor, df: pl.DataFrame, t: int) -> float | None:
 
 
 def _canon_col(df: pl.DataFrame, canon: str):
-    """Найти колонку по каноническому имени (с алиасами legacy-схемы)."""
+    """Find a column by canonical name (with legacy-schema aliases)."""
     from .provider import _COLUMN_ALIASES
 
     for alias in _COLUMN_ALIASES[canon]:

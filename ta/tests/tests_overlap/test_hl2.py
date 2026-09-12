@@ -9,14 +9,15 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, extreme)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.hl2 import _hl2, hl2_ind, hl2_polars
-from ..._array_ops import _apply_offset_fillna
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.overlap.hl2 import _hl2, hl2_ind, hl2_polars
 
 
 # -----------------------------------------------------------------------------
@@ -89,23 +90,24 @@ def test_hl2_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """hl2_polars should add HL2 column correctly."""
     np.random.seed(42)
     n = len(df_random_walk)
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     high_arr = close + np.abs(np.random.randn(n) * 0.5)
     low_arr = close - np.abs(np.random.randn(n) * 0.5)
-    df = df_random_walk.with_columns([
-        pl.Series('high', high_arr),
-        pl.Series('low', low_arr),
-    ])
-    result_df = hl2_polars(
-        df, high_col='high', low_col='low', output_col='HL2'
+    df = df_random_walk.with_columns(
+        [
+            pl.Series("high", high_arr),
+            pl.Series("low", low_arr),
+        ]
     )
-    assert 'HL2' in result_df.columns
-    assert result_df['HL2'].dtype == pl.Float64
+    result_df = hl2_polars(
+        df, high_col="high", low_col="low", output_col="HL2"
+    )
+    assert "HL2" in result_df.columns
+    assert result_df["HL2"].dtype == pl.Float64
     assert len(result_df) == len(df)
     expected = _hl2_reference(high_arr, low_arr)
     assert_allclose(
-        result_df['HL2'].to_numpy(),
-        expected, rtol=1e-6, equal_nan=True
+        result_df["HL2"].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -114,29 +116,30 @@ def test_hl2_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
     """hl2_polars should apply offset and fillna."""
     np.random.seed(42)
     n = len(df_random_walk)
-    close = df_random_walk['close'].to_numpy()
+    close = df_random_walk["close"].to_numpy()
     high_arr = close + np.abs(np.random.randn(n) * 0.5)
     low_arr = close - np.abs(np.random.randn(n) * 0.5)
-    df = df_random_walk.with_columns([
-        pl.Series('high', high_arr),
-        pl.Series('low', low_arr),
-    ])
+    df = df_random_walk.with_columns(
+        [
+            pl.Series("high", high_arr),
+            pl.Series("low", low_arr),
+        ]
+    )
 
     offset = 2
     fillna = 0.0
     result_df = hl2_polars(
         df,
-        high_col='high',
-        low_col='low',
+        high_col="high",
+        low_col="low",
         offset=offset,
         fillna=fillna,
-        output_col='HL2',
+        output_col="HL2",
     )
 
     expected = _hl2(high_arr, low_arr, offset=offset, fillna=fillna)
     assert_allclose(
-        result_df['HL2'].to_numpy(),
-        expected, rtol=1e-6, equal_nan=True
+        result_df["HL2"].to_numpy(), expected, rtol=1e-6, equal_nan=True
     )
 
 
@@ -145,7 +148,7 @@ def test_hl2_polars_offset_fillna(df_random_walk: pl.DataFrame) -> None:
 # -----------------------------------------------------------------------------
 @pytest.mark.overlap
 def test_hl2_with_nan(prices_with_nan):
-    """NaN in input propagates correctly to output."""  # noqa: D403
+    """NaN in input propagates correctly to output."""
     high = prices_with_nan + 1.0
     low = prices_with_nan - 1.0
     result = _hl2(high, low)
@@ -198,19 +201,21 @@ def test_hl2_polars_with_nan(df_random_walk):
     """Polars integration should propagate NaN correctly."""
     np.random.seed(42)
     n = len(df_random_walk)
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
     high_arr = close_arr + np.abs(np.random.randn(n) * 0.5)
     low_arr = close_arr - np.abs(np.random.randn(n) * 0.5)
-    df = df_random_walk.with_columns([
-        pl.Series('close', close_arr),
-        pl.Series('high', high_arr),
-        pl.Series('low', low_arr),
-    ])
-    result_df = hl2_polars(
-        df, high_col='high', low_col='low', output_col='HL2'
+    df = df_random_walk.with_columns(
+        [
+            pl.Series("close", close_arr),
+            pl.Series("high", high_arr),
+            pl.Series("low", low_arr),
+        ]
     )
-    hl2_vals = result_df['HL2'].to_numpy()
+    result_df = hl2_polars(
+        df, high_col="high", low_col="low", output_col="HL2"
+    )
+    hl2_vals = result_df["HL2"].to_numpy()
     assert np.isnan(hl2_vals[5])
     assert np.isfinite(hl2_vals[:5]).all()
     assert np.isfinite(hl2_vals[6:]).all()

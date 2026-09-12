@@ -30,33 +30,34 @@ Example:
 
 """
 
-from .evaluate import evaluate_dsl
 from .context import Context
+from .evaluate import evaluate_dsl
+from .exceptions import DSLError, EvaluationError, ParseError, ProviderError
 from .providers import (
+    AsyncHTTPProvider,
+    HTTPProvider,
     IndicatorProvider,
+    IndicatorSchema,
+    InProcessProvider,
     Manifest,
     ManifestValidator,
     ParameterSchema,
-    IndicatorSchema,
-    InProcessProvider,
-    HTTPProvider,
-    AsyncHTTPProvider,
 )
-from .exceptions import DSLError, ParseError, EvaluationError, ProviderError
+
 
 __all__ = (
-    'evaluate_dsl',
+    'AsyncHTTPProvider',
     'Context',
+    'DSLError',
+    'EvaluationError',
+    'HTTPProvider',
+    'InProcessProvider',
     'IndicatorProvider',
+    'IndicatorSchema',
     'Manifest',
     'ManifestValidator',
     'ParameterSchema',
-    'IndicatorSchema',
-    'InProcessProvider',
-    'HTTPProvider',
-    'AsyncHTTPProvider',
-    'DSLError',
     'ParseError',
-    'EvaluationError',
     'ProviderError',
+    'evaluate_dsl',
 )

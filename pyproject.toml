@@ -38,7 +38,6 @@ dev = [
     "isort==8.0.1",
     "flake8-pyproject==1.2.4",
     "flake8-pie>=0.16.0",
-    "pandas-stubs>=2.3.2.250926",
 ]
 
 [[tool.uv.index]]
@@ -48,11 +47,20 @@ default = true
 [tool.ruff]
 line-length = 79
 target-version = "py312"
-exclude = ["tests/*", ".venv/", "**/migrations/*"]
+exclude = [".venv/", "**/migrations/*", ".mypy_cache/", "__pycache__/"]
 fix = true
 
 [tool.ruff.lint]
-select = ["E","F","Q","D","N"]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes (undefined/unused names)
+    "Q",    # quotes
+    "D",    # pydocstyle
+    "N",    # pep8-naming
+    "I",    # import order (replaces isort)
+    "B",    # bugbear (real bug patterns)
+    "RUF",  # unicode/ambiguity guards (EN-only discipline, TZ-14)
+]
 ignore = [
     "E203",
     "D100",
@@ -65,6 +73,17 @@ ignore = [
 ]
 preview = true
 
+[tool.ruff.lint.per-file-ignores]
+# Тесты: без требования докстрингов, но E/F/B/RUF/I действуют
+# (EN-only дисциплина распространяется и на тесты, TZ-14 п.2.1).
+"tests/**" = ["D"]
+"**/tests/**" = ["D"]
+"test_*.py" = ["D"]
+"conftest.py" = ["D"]
+# Легаси-адаптеры strategies/src/infrastructure: переписываются в TZ-02;
+# держим только критичные правила (F, E, RUF).
+"strategies/src/infrastructure/**" = ["D", "N"]
+
 [tool.ruff.format]
 indent-style = "space"
 quote-style = "double"
@@ -73,7 +92,7 @@ docstring-code-format = true
 docstring-code-line-length = 88
 
 [tool.ruff.lint.flake8-quotes]
-inline-quotes = "single"
+inline-quotes = "double"
 multiline-quotes = "double"
 docstring-quotes = "double"
 
@@ -129,5 +148,69 @@ explicit_package_bases = true
 namespace_packages = true
 
 [tool.pytest.ini_options]
+# Единая точка конфигурации pytest (TZ-14 п.2.3): per-package pytest.ini
+# ликвидированы. Прогон работает одинаково из корня и из пакета:
+#   uv run pytest                          # весь монорепозиторий
+#   uv run --package dte-dsl pytest dsl/tests
 pythonpath = ["."]
+testpaths = [
+    "dsl/tests",
+    "ta/tests",
+    "ai/tests",
+    "infer/tests",
+    "rag/tests",
+]
+addopts = "-v --tb=short --strict-markers -m \"not deprecated\""
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+markers = [
+    # --- сквозные (внутренние) маркеры ---
+    "unit: fast isolated tests",
+    "integration: tests touching services/network/files",
+    "slow: > 5s tests (opt-in via -m slow)",
+    "deprecated: scheduled for removal (excluded by default)",
+    # --- service-маркеры (разделение по сервисам, TZ-14 п.2.3) ---
+    # Проставляются автоматически hook'ом pytest_collection_modifyitems
+    # в conftest.py каждого пакета; вручную не дублировать.
+    "dsl: belongs to the dte-dsl package",
+    "ta: belongs to the dte-ta package",
+    "ai: belongs to the dte-ai package",
+    "infer: belongs to the dte-infer package",
+    "rag: belongs to the dte-rag package",
+    "main: belongs to the dte-main package",
+    "strategies: belongs to the dte-strategies package",
+    # --- доменные маркеры (унаследованы из per-package pytest.ini) ---
+    "candle: [ta] candle-pattern indicators",
+    "custom: [ta] custom indicators",
+    "momentum: [ta] momentum indicators",
+    "overlap: [ta] overlap indicators",
+    "statistics: [ta] statistics indicators",
+    "trend: [ta] trend indicators",
+    "volatility: [ta] volatility indicators",
+    "volume: [ta] volume indicators",
+    "performance: [ta] performance/speed tests",
+    "tokenizer: [dsl] tokenizer module",
+    "parser: [dsl] parser module",
+    "ast: [dsl] AST serialization",
+    "interpreter: [dsl] interpreter module",
+    "manifest: [dsl] manifest and validator",
+    "provider: [dsl] provider implementations",
+    "evaluate: [dsl] evaluate_dsl entry point",
+    "error: [dsl] error-handling tests",
+    "async_test: [dsl] asynchronous tests",
+    "with_providers: [dsl] tests using mock/real providers",
+    "without_providers: [dsl] tests without providers",
+]
+
+filterwarnings = [
+    # Сторонний шум, на который мы не влияем:
+    "ignore:The PyTorch API of nested tensors is in prototype stage.*:UserWarning",
+    "ignore:Type google._upb._message.*:DeprecationWarning",
+    "ignore::DeprecationWarning:numba.*",
+    "ignore::PendingDeprecationWarning",
+    # TA-Lib опционален; отсутствие — штатный фолбэк, а не ошибка данных:
+    "ignore:TA-Lib not installed.*:UserWarning:ta\\.src\\.external",
+]
 

@@ -10,19 +10,21 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, extreme values)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose, assert_array_equal
 
-from ...overlap.wcp import wcp_numba, wcp_talib, wcp_ind, wcp_polars
-from ...external import talib_available
+from ta.src.external import talib_available
+from ta.src.overlap.wcp import wcp_ind, wcp_numba, wcp_polars, wcp_talib
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation (pure numpy)
 # -----------------------------------------------------------------------------
+
 
 def _wcp_reference(
     high: npt.NDArray[np.float64],
@@ -37,12 +39,13 @@ def _wcp_reference(
 # Formula parity
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_wcp_numba_matches_formula(df_ohlc: pl.DataFrame) -> None:
     """Test wcp_numba against the closed-form reference."""
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
 
     result = wcp_numba(high, low, close)
     expected = _wcp_reference(high, low, close)
@@ -73,13 +76,14 @@ def test_wcp_constant_series() -> None:
 # Backend parity
 # -----------------------------------------------------------------------------
 
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 @pytest.mark.overlap
 def test_wcp_backend_parity(df_ohlc: pl.DataFrame) -> None:
     """Numba and TA-Lib backends agree bit-for-bit on finite input."""
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
 
     r_numba = wcp_numba(high, low, close)
     r_talib = wcp_talib(high, low, close)
@@ -89,9 +93,9 @@ def test_wcp_backend_parity(df_ohlc: pl.DataFrame) -> None:
 @pytest.mark.overlap
 def test_wcp_ind_use_talib_false_matches_numba(df_ohlc: pl.DataFrame) -> None:
     """wcp_ind with use_talib=False equals wcp_numba."""
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
 
     r_ind = wcp_ind(high, low, close, use_talib=False)
     r_numba = wcp_numba(high, low, close)
@@ -102,14 +106,15 @@ def test_wcp_ind_use_talib_false_matches_numba(df_ohlc: pl.DataFrame) -> None:
 # Contiguity / read-only inputs
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_wcp_non_contiguous_input(df_ohlc: pl.DataFrame) -> None:
     """Non-contiguous input gives identical results (regression: the no-op
     contiguous loop previously discarded the copy).
     """
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
 
     r_cont = wcp_numba(high, low, close)
     r_strided = wcp_numba(high[::2], low[::2], close[::2])
@@ -120,15 +125,15 @@ def test_wcp_non_contiguous_input(df_ohlc: pl.DataFrame) -> None:
 def test_wcp_readonly_input(df_ohlc: pl.DataFrame) -> None:
     """Read-only (polars) input is accepted."""
     r_series = wcp_numba(
-        df_ohlc['high'].to_numpy(),
-        df_ohlc['low'].to_numpy(),
-        df_ohlc['close'].to_numpy(),
+        df_ohlc["high"].to_numpy(),
+        df_ohlc["low"].to_numpy(),
+        df_ohlc["close"].to_numpy(),
     )
     r_pl = wcp_ind(
-        pl.Series(df_ohlc['high']),
-        pl.Series(df_ohlc['low']),
-        pl.Series(df_ohlc['close']),
-        use_talib=False
+        pl.Series(df_ohlc["high"]),
+        pl.Series(df_ohlc["low"]),
+        pl.Series(df_ohlc["close"]),
+        use_talib=False,
     )
     assert_array_equal(r_series, r_pl)
 
@@ -137,14 +142,15 @@ def test_wcp_readonly_input(df_ohlc: pl.DataFrame) -> None:
 def test_wcp_ind_polars_series_input(df_ohlc: pl.DataFrame) -> None:
     """wcp_ind accepts pl.Series directly."""
     r = wcp_ind(
-        df_ohlc['high'], df_ohlc['low'], df_ohlc['close'], use_talib=False
+        df_ohlc["high"], df_ohlc["low"], df_ohlc["close"], use_talib=False
     )
     expected = _wcp_reference(
-        df_ohlc['high'].to_numpy(),
-        df_ohlc['low'].to_numpy(),
-        df_ohlc['close'].to_numpy()
+        df_ohlc["high"].to_numpy(),
+        df_ohlc["low"].to_numpy(),
+        df_ohlc["close"].to_numpy(),
     )
     assert_allclose(r, expected, rtol=0, atol=1e-12)
+
 
 # -----------------------------------------------------------------------------
 # Offset / fillna
@@ -154,9 +160,9 @@ def test_wcp_ind_polars_series_input(df_ohlc: pl.DataFrame) -> None:
 @pytest.mark.overlap
 def test_wcp_offset(df_ohlc: pl.DataFrame) -> None:
     """Positive offset shifts the series forward."""
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
 
     r0 = wcp_numba(high, low, close)
     r2 = wcp_numba(high, low, close, offset=2)
@@ -167,9 +173,9 @@ def test_wcp_offset(df_ohlc: pl.DataFrame) -> None:
 @pytest.mark.overlap
 def test_wcp_fillna(df_ohlc: pl.DataFrame) -> None:
     """Fillna passthrough: no natural NaNs, so values stay unchanged."""
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
 
     r = wcp_numba(high, low, close, fillna=-1.0)
     assert not np.isnan(r).any()
@@ -179,9 +185,9 @@ def test_wcp_fillna(df_ohlc: pl.DataFrame) -> None:
 @pytest.mark.overlap
 def test_wcp_offset_with_fillna(df_ohlc: pl.DataFrame) -> None:
     """Offset-shifted-in NaNs are replaced by fillna."""
-    high = df_ohlc['high'].to_numpy()
-    low = df_ohlc['low'].to_numpy()
-    close = df_ohlc['close'].to_numpy()
+    high = df_ohlc["high"].to_numpy()
+    low = df_ohlc["low"].to_numpy()
+    close = df_ohlc["close"].to_numpy()
 
     r = wcp_numba(high, low, close, offset=3, fillna=0.0)
     assert (r[:3] == 0.0).all()
@@ -192,17 +198,18 @@ def test_wcp_offset_with_fillna(df_ohlc: pl.DataFrame) -> None:
 # Polars integration
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_wcp_polars_default_column(df_ohlc: pl.DataFrame) -> None:
     """wcp_polars adds a 'WCP' column."""
     out = wcp_polars(df_ohlc, use_talib=False)
-    assert 'WCP' in out.columns
+    assert "WCP" in out.columns
     expected = _wcp_reference(
-        df_ohlc['high'].to_numpy(),
-        df_ohlc['low'].to_numpy(),
-        df_ohlc['close'].to_numpy()
+        df_ohlc["high"].to_numpy(),
+        df_ohlc["low"].to_numpy(),
+        df_ohlc["close"].to_numpy(),
     )
-    assert_allclose(out['WCP'].to_numpy(), expected, rtol=0, atol=1e-12)
+    assert_allclose(out["WCP"].to_numpy(), expected, rtol=0, atol=1e-12)
     assert len(out) == len(df_ohlc)
 
 
@@ -210,17 +217,21 @@ def test_wcp_polars_default_column(df_ohlc: pl.DataFrame) -> None:
 def test_wcp_polars_custom_column_and_params(df_ohlc: pl.DataFrame) -> None:
     """Custom output column, offset and fillna are honoured."""
     out = wcp_polars(
-        df_ohlc, offset=2, fillna=-9.0, use_talib=False,
-        output_col='WCP_CUSTOM'
+        df_ohlc,
+        offset=2,
+        fillna=-9.0,
+        use_talib=False,
+        output_col="WCP_CUSTOM",
     )
-    assert 'WCP_CUSTOM' in out.columns
-    col = out['WCP_CUSTOM'].to_numpy()
+    assert "WCP_CUSTOM" in out.columns
+    col = out["WCP_CUSTOM"].to_numpy()
     assert (col[:2] == -9.0).all()
 
 
 # -----------------------------------------------------------------------------
 # IEEE 754 edge cases
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_wcp_nan_propagates_pointwise() -> None:

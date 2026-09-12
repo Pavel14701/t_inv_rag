@@ -5,34 +5,35 @@ including mock providers, contexts, and interpreters for both synchronous
 and asynchronous execution modes.
 """
 
-import pytest
 from typing import Any
 
+import pytest
+
 from ..context import Context
-from ..interpreter import Interpreter
-from ..providers.base import IndicatorProvider, AsyncIndicatorProvider
 from ..exceptions import ProviderError
+from ..interpreter import Interpreter
+from ..providers.base import AsyncIndicatorProvider, IndicatorProvider
 from ..providers.in_process import InProcessProvider
 from ..providers.manifest import IndicatorSchema, Manifest, ParameterSchema
 
 
 DEFAULT_MANIFEST = {
-    'indicators': {
-        'close': {'attributes': []},
-        'volume': {'attributes': []},
-        'low': {'attributes': []},
-        'high': {'attributes': []},
-        'rsi': {
-            'attributes': ['value', 'signal'],
-            'parameters': {'period': {'type': 'float', 'default': 14.0}}
+    "indicators": {
+        "close": {"attributes": []},
+        "volume": {"attributes": []},
+        "low": {"attributes": []},
+        "high": {"attributes": []},
+        "rsi": {
+            "attributes": ["value", "signal"],
+            "parameters": {"period": {"type": "float", "default": 14.0}},
         },
-        'macd': {
-            'attributes': ['line', 'signal', 'histogram'],
-            'parameters': {
-                'fast': {'type': 'float', 'default': 12.0},
-                'slow': {'type': 'float', 'default': 26.0}
-            }
-        }
+        "macd": {
+            "attributes": ["line", "signal", "histogram"],
+            "parameters": {
+                "fast": {"type": "float", "default": 12.0},
+                "slow": {"type": "float", "default": 26.0},
+            },
+        },
     }
 }
 
@@ -57,7 +58,7 @@ class SyncMockProvider(IndicatorProvider):
         self,
         values: dict[tuple, float] | None = None,
         history: dict[tuple, list[float]] | None = None,
-        manifest: dict[str, Any] | None = None
+        manifest: dict[str, Any] | None = None,
     ) -> None:
         """Initialize the mock provider.
 
@@ -81,7 +82,7 @@ class SyncMockProvider(IndicatorProvider):
         indicator: str,
         params: dict[str, Any],
         attributes: list[str],
-        offset: int
+        offset: int,
     ) -> float:
         """Resolve a value from the predefined values dictionary.
 
@@ -102,18 +103,18 @@ class SyncMockProvider(IndicatorProvider):
             indicator,
             tuple(sorted(params.items())),
             tuple(attributes),
-            offset
+            offset,
         )
         if key in self.values:
             return self.values[key]
-        raise ProviderError(f'No value for {key}')
+        raise ProviderError(f"No value for {key}")
 
     def resolve_history(
         self,
         indicator: str,
         params: dict[str, Any],
         attributes: list[str],
-        n: int
+        n: int,
     ) -> list[float]:
         """Resolve historical values from the predefined history.
 
@@ -134,7 +135,7 @@ class SyncMockProvider(IndicatorProvider):
         if key in self.history:
             hist = self.history[key]
             return hist[-n:] if len(hist) >= n else hist
-        raise ProviderError(f'No history for {key}')
+        raise ProviderError(f"No history for {key}")
 
 
 class AsyncMockProvider(AsyncIndicatorProvider):
@@ -148,53 +149,54 @@ class AsyncMockProvider(AsyncIndicatorProvider):
         self,
         values: dict[tuple, float] | None = None,
         history: dict[tuple, list[float]] | None = None,
-        manifest: dict[str, Any] | None = None
+        manifest: dict[str, Any] | None = None,
     ) -> None:
         self.values = values or {}
         self.history = history or {}
         self._manifest = manifest or DEFAULT_MANIFEST
 
     # Synchronous method required by Context during initialization
-    def get_manifest(self) -> dict[str, Any]:  # noqa: D102
+    def get_manifest(self) -> dict[str, Any]:
         return self._manifest
 
-    async def get_manifest_async(self) -> dict[str, Any]:  # noqa: D102
+    async def get_manifest_async(self) -> dict[str, Any]:
         return self._manifest
 
-    async def resolve_async(  # noqa: D102
+    async def resolve_async(
         self,
         indicator: str,
         params: dict[str, Any],
         attributes: list[str],
-        offset: int
+        offset: int,
     ) -> float:
         key = (
             indicator,
             tuple(sorted(params.items())),
             tuple(attributes),
-            offset
+            offset,
         )
         if key in self.values:
             return self.values[key]
-        raise ProviderError(f'No value for {key}')
+        raise ProviderError(f"No value for {key}")
 
-    async def resolve_history_async(  # noqa: D102
+    async def resolve_history_async(
         self,
         indicator: str,
         params: dict[str, Any],
         attributes: list[str],
-        n: int
+        n: int,
     ) -> list[float]:
         key = (indicator, tuple(sorted(params.items())), tuple(attributes))
         if key in self.history:
             hist = self.history[key]
             return hist[-n:] if len(hist) >= n else hist
-        raise ProviderError(f'No history for {key}')
+        raise ProviderError(f"No history for {key}")
 
 
 # -----------------------------------------------------------------------------
 # Fixtures
 # -----------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sync_mock_provider() -> SyncMockProvider:
@@ -216,7 +218,7 @@ def context_empty() -> Context:
 
 @pytest.fixture
 def context_with_sync_provider(
-    sync_mock_provider: SyncMockProvider
+    sync_mock_provider: SyncMockProvider,
 ) -> Context:
     """Return a Context with a single synchronous mock provider."""
     return Context([sync_mock_provider])
@@ -224,7 +226,7 @@ def context_with_sync_provider(
 
 @pytest.fixture
 def context_with_async_provider(
-    async_mock_provider: AsyncMockProvider
+    async_mock_provider: AsyncMockProvider,
 ) -> Context:
     """Return a Context with a single asynchronous mock provider."""
     return Context([async_mock_provider])
@@ -254,8 +256,8 @@ def context_with_history() -> Context:
     historical access without a full manifest.
     """
     values = {
-        ('close', (), (), 0): 100.0,
-        ('close', (), (), 1): 95.0,
+        ("close", (), (), 0): 100.0,
+        ("close", (), (), 1): 95.0,
     }
     provider = SyncMockProvider(values, manifest=DEFAULT_MANIFEST)
     return Context([provider])
@@ -269,14 +271,14 @@ def sample_values() -> dict[tuple, float]:
     indicators with various parameters and offsets.
     """
     return {
-        ('close', (), (), 0): 100.0,
-        ('volume', (), (), 0): 1000.0,
-        ('rsi', (('period', 14),), ('value',), 0): 80.0,
-        ('macd', (('fast', 12), ('slow', 26)), ('line',), 0): 1.5,
-        ('macd', (('fast', 12), ('slow', 26)), ('signal',), 0): 0.5,
-        ('close', (), (), 1): 95.0,
-        ('low', (), (), 0): 50.0,
-        ('high', (), (), 0): 110.0,
+        ("close", (), (), 0): 100.0,
+        ("volume", (), (), 0): 1000.0,
+        ("rsi", (("period", 14),), ("value",), 0): 80.0,
+        ("macd", (("fast", 12), ("slow", 26)), ("line",), 0): 1.5,
+        ("macd", (("fast", 12), ("slow", 26)), ("signal",), 0): 0.5,
+        ("close", (), (), 1): 95.0,
+        ("low", (), (), 0): 50.0,
+        ("high", (), (), 0): 110.0,
     }
 
 
@@ -287,8 +289,8 @@ def sample_history() -> dict[tuple, list[float]]:
     Provides historical values for 'close' and 'volume' indicators.
     """
     return {
-        ('close', (), ()): [10, 20, 30, 40],
-        ('volume', (), ()): [100, 90, 80, 70],
+        ("close", (), ()): [10, 20, 30, 40],
+        ("volume", (), ()): [100, 90, 80, 70],
     }
 
 
@@ -300,9 +302,7 @@ def context_with_sample_data(sample_values, sample_history) -> Context:
     indicators, parameters, and rising/falling functions.
     """
     provider = SyncMockProvider(
-        sample_values,
-        sample_history,
-        manifest=DEFAULT_MANIFEST
+        sample_values, sample_history, manifest=DEFAULT_MANIFEST
     )
     return Context([provider])
 
@@ -315,9 +315,7 @@ def async_context_with_sample_data(sample_values, sample_history) -> Context:
     This is the async counterpart of context_with_sample_data.
     """
     provider = AsyncMockProvider(
-        sample_values,
-        sample_history,
-        manifest=DEFAULT_MANIFEST
+        sample_values, sample_history, manifest=DEFAULT_MANIFEST
     )
     return Context([provider])
 
@@ -331,25 +329,22 @@ def sample_manifest() -> Manifest:
     """
     return Manifest(
         indicators={
-            'rsi': IndicatorSchema(
+            "rsi": IndicatorSchema(
                 parameters={
-                    'period': ParameterSchema(
-                        type='integer',
-                        default=14,
-                        min=1,
-                        max=100
+                    "period": ParameterSchema(
+                        type="integer", default=14, min=1, max=100
                     ),
-                    'source': ParameterSchema(type='any', default='close')
+                    "source": ParameterSchema(type="any", default="close"),
                 },
-                attributes=['value', 'signal']
+                attributes=["value", "signal"],
             ),
-            'macd': IndicatorSchema(
+            "macd": IndicatorSchema(
                 parameters={
-                    'fast': ParameterSchema(type='integer', default=12, min=2),
-                    'slow': ParameterSchema(type='integer', default=26, min=2),
+                    "fast": ParameterSchema(type="integer", default=12, min=2),
+                    "slow": ParameterSchema(type="integer", default=26, min=2),
                 },
-                attributes=['line', 'signal', 'histogram']
-            )
+                attributes=["line", "signal", "histogram"],
+            ),
         }
     )
 
@@ -358,49 +353,49 @@ def sample_manifest() -> Manifest:
 def mock_context():
     """Context with predefined indicator values for testing."""
     manifest = {
-        'indicators': {
-            'close': {'attributes': []},
-            'high': {'attributes': []},
-            'low': {'attributes': []},
-            'volume': {'attributes': []},
-            'rsi': {
-                'attributes': ['value', 'signal'],
-                'parameters': {'period': {'type': 'float', 'default': 14.0}}
+        "indicators": {
+            "close": {"attributes": []},
+            "high": {"attributes": []},
+            "low": {"attributes": []},
+            "volume": {"attributes": []},
+            "rsi": {
+                "attributes": ["value", "signal"],
+                "parameters": {"period": {"type": "float", "default": 14.0}},
             },
-            'macd': {
-                'attributes': ['line', 'signal', 'histogram'],
-                'parameters': {
-                    'fast': {'type': 'float', 'default': 12.0},
-                    'slow': {'type': 'float', 'default': 26.0}
-                }
+            "macd": {
+                "attributes": ["line", "signal", "histogram"],
+                "parameters": {
+                    "fast": {"type": "float", "default": 12.0},
+                    "slow": {"type": "float", "default": 26.0},
+                },
             },
-            'sma': {'attributes': []},
+            "sma": {"attributes": []},
         }
     }
 
     def resolver(indicator, params, attributes, offset):
         # Predefined values for different offsets
         base_values = {
-            'close': {0: 101.0, 1: 95.0, 2: 90.0, 3: 85.0},
-            'high': {0: 110.0, 1: 105.0, 2: 100.0, 3: 95.0},
-            'low': {0: 90.0, 1: 85.0, 2: 80.0, 3: 75.0},
-            'volume': {0: 1000000, 1: 900000, 2: 800000, 3: 700000},
-            'rsi': {0: 70.0, 1: 65.0, 2: 60.0, 3: 55.0},
-            'macd': {0: 1.5, 1: 1.2, 2: 1.0, 3: 0.8},
+            "close": {0: 101.0, 1: 95.0, 2: 90.0, 3: 85.0},
+            "high": {0: 110.0, 1: 105.0, 2: 100.0, 3: 95.0},
+            "low": {0: 90.0, 1: 85.0, 2: 80.0, 3: 75.0},
+            "volume": {0: 1000000, 1: 900000, 2: 800000, 3: 700000},
+            "rsi": {0: 70.0, 1: 65.0, 2: 60.0, 3: 55.0},
+            "macd": {0: 1.5, 1: 1.2, 2: 1.0, 3: 0.8},
         }
         # For attributes, return different values if needed
-        if indicator == 'macd':
-            if 'signal' in attributes:
-                base_values['macd'] = {0: 0.5, 1: 0.4, 2: 0.3, 3: 0.2}
-            elif 'histogram' in attributes:
-                base_values['macd'] = {0: 1.0, 1: 0.8, 2: 0.6, 3: 0.4}
+        if indicator == "macd":
+            if "signal" in attributes:
+                base_values["macd"] = {0: 0.5, 1: 0.4, 2: 0.3, 3: 0.2}
+            elif "histogram" in attributes:
+                base_values["macd"] = {0: 1.0, 1: 0.8, 2: 0.6, 3: 0.4}
         # For SMA, compute simple moving average based on close history
-        if indicator == 'sma':
+        if indicator == "sma":
             return 95.0
         # Resolve value from base_values
         if indicator in base_values:
             return base_values[indicator].get(offset, 0.0)
-        raise ValueError(f'Unknown indicator: {indicator}')
+        raise ValueError(f"Unknown indicator: {indicator}")
 
     provider = InProcessProvider(manifest, resolver)
     return Context([provider])

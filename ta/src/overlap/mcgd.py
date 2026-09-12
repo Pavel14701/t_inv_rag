@@ -15,6 +15,7 @@ A NaN in the input poisons the recursive filter from that point onward
 """
 import numpy as np
 import polars as pl
+
 from numba import jit
 
 from .._array_ops import (
@@ -62,7 +63,7 @@ def _mcgd_numba_core(close: np.ndarray, length: int, c: float) -> np.ndarray:
         value forward (or re-seeds from the price when MCGD is zero) so the
         series never explodes to +/-Inf.
 
-    """  # noqa: D403
+    """
     n = len(close)
     mcgd = np.empty(n, dtype=np.float64)
     if n == 0:
@@ -131,7 +132,7 @@ def mcgd_numba(
     - Infinite values are replaced with NaN before any calculation.
     - This function is IEEE 754 compliant.
 
-    """  # noqa: D403
+    """
     if length < 1:
         raise ValueError(f'MCGD length must be >= 1, got {length}.')
     if c <= 0:

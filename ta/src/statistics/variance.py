@@ -18,10 +18,11 @@ The core algorithm is implemented in Numba for high performance.
 
 import numpy as np
 import polars as pl
+
 from numba import jit
 
-from ..external import talib, talib_available
 from .._array_ops import _apply_offset_fillna
+from ..external import talib, talib_available
 
 
 @jit(nopython=True, fastmath=False, cache=True)

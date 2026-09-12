@@ -5,10 +5,11 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 import pytest
+
 from numpy.testing import assert_allclose
 
-from ...trend.rwi import rwi_numpy, rwi_ind, rwi_polars
-from ...volatility.atr import atr_ind
+from ta.src.trend.rwi import rwi_ind, rwi_numpy, rwi_polars
+from ta.src.volatility.atr import atr_ind
 
 
 def _ohlc_arrays(
@@ -36,7 +37,11 @@ def test_rwi_numpy_basic(
     high, low, close = _ohlc_arrays(prices_random_walk)
     length = 5
     rwi_high, rwi_low = rwi_numpy(
-        high, low, close, length=length, use_talib=False,
+        high,
+        low,
+        close,
+        length=length,
+        use_talib=False,
     )
 
     assert rwi_high.shape == close.shape
@@ -57,11 +62,20 @@ def test_rwi_numpy_formula_parity(
     high, low, close = _ohlc_arrays(prices_random_walk)
     length = 5
     rwi_high, rwi_low = rwi_numpy(
-        high, low, close, length=length, use_talib=False,
+        high,
+        low,
+        close,
+        length=length,
+        use_talib=False,
     )
     atr = atr_ind(
-        high, low, close, length=length, mamode='rma',
-        use_talib=False, nan_policy='ignore',
+        high,
+        low,
+        close,
+        length=length,
+        mamode="rma",
+        use_talib=False,
+        nan_policy="ignore",
     )
     denom_factor = np.sqrt(length)
     for i in range(length, len(close), 9):
@@ -92,7 +106,7 @@ def test_rwi_numpy_length_too_short_raises() -> None:
     high = np.array([2.0, 3.0, 4.0])
     low = np.array([1.0, 2.0, 3.0])
     close = np.array([1.5, 2.5, 3.5])
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         rwi_numpy(high, low, close, length=0, use_talib=False)
 
 
@@ -103,7 +117,7 @@ def test_rwi_numpy_series_too_short_raises() -> None:
     close = np.arange(1.0, n + 1.0)
     high = close + 0.5
     low = close - 0.5
-    with pytest.raises(ValueError, match='Input series too short'):
+    with pytest.raises(ValueError, match="Input series too short"):
         rwi_numpy(high, low, close, length=n, use_talib=False)
 
 
@@ -114,7 +128,7 @@ def test_rwi_numpy_inf_raises(
     """Infinite values are rejected up-front (documented contract)."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     high[3] = np.inf
-    with pytest.raises(ValueError, match='non-finite'):
+    with pytest.raises(ValueError, match="non-finite"):
         rwi_numpy(high, low, close, length=5, use_talib=False)
 
 
@@ -125,7 +139,7 @@ def test_rwi_numpy_nan_raises_by_default(
     """NaN input raises with nan_policy='raise' (default)."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     low[2] = np.nan
-    with pytest.raises(ValueError, match='Input low contains NaN'):
+    with pytest.raises(ValueError, match="Input low contains NaN"):
         rwi_numpy(high, low, close, length=5, use_talib=False)
 
 
@@ -136,8 +150,11 @@ def test_rwi_ind_with_pl_series(
     """Test rwi_ind with Polars Series input."""
     high, low, close = _ohlc_arrays(prices_random_walk)
     rwi_high, rwi_low = rwi_ind(
-        pl.Series(high), pl.Series(low), pl.Series(close),
-        length=5, use_talib=False,
+        pl.Series(high),
+        pl.Series(low),
+        pl.Series(close),
+        length=5,
+        use_talib=False,
     )
     assert isinstance(rwi_high, np.ndarray)
     assert rwi_high.shape == close.shape
@@ -148,8 +165,8 @@ def test_rwi_ind_with_pl_series(
 def test_rwi_polars_basic(df_ohlc: pl.DataFrame) -> None:
     """Test rwi_polars adds both columns with the default suffix."""
     result_df = rwi_polars(df_ohlc, length=5, use_talib=False)
-    assert 'RWI_HIGH_5' in result_df.columns
-    assert 'RWI_LOW_5' in result_df.columns
+    assert "RWI_HIGH_5" in result_df.columns
+    assert "RWI_LOW_5" in result_df.columns
     assert len(result_df) == len(df_ohlc)
-    assert result_df['RWI_HIGH_5'].dtype == pl.Float64
-    assert result_df['RWI_HIGH_5'][5:].is_finite().all()
+    assert result_df["RWI_HIGH_5"].dtype == pl.Float64
+    assert result_df["RWI_HIGH_5"][5:].is_finite().all()

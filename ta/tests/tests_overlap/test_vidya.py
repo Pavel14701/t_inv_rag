@@ -9,20 +9,21 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, extreme)
 """
 
-import pytest
 import numpy as np
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.vidya import (
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.external import talib_available
+from ta.src.overlap.vidya import (
     _cmo_numba,
-    vidya_numba,
-    vidya_talib,
     vidya_ind,
+    vidya_numba,
     vidya_polars,
+    vidya_talib,
 )
-from ..._array_ops import _apply_offset_fillna
-from ...external import talib_available
 
 
 def _vidya_reference(close, length=10, drift=1):
@@ -133,8 +134,8 @@ def test_vidya_numba_nan_policy_raise() -> None:
     """Test vidya_numba with nan_policy='raise' raises on NaN."""
     close = np.linspace(100.0, 150.0, 30)
     close[15] = np.nan
-    with pytest.raises(ValueError, match='contains NaN'):
-        vidya_numba(close, length=10, nan_policy='raise')
+    with pytest.raises(ValueError, match="contains NaN"):
+        vidya_numba(close, length=10, nan_policy="raise")
 
 
 @pytest.mark.overlap
@@ -146,7 +147,7 @@ def test_vidya_numba_nan_policy_ffill() -> None:
     for i in range(1, len(filled)):
         if np.isnan(filled[i]):
             filled[i] = filled[i - 1]
-    result = vidya_numba(close, length=10, nan_policy='ffill')
+    result = vidya_numba(close, length=10, nan_policy="ffill")
     expected = _vidya_reference(filled, length=10)
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
 
@@ -160,7 +161,7 @@ def test_vidya_numba_nan_policy_bfill() -> None:
     for i in range(len(filled) - 2, -1, -1):
         if np.isnan(filled[i]):
             filled[i] = filled[i + 1]
-    result = vidya_numba(close, length=10, nan_policy='bfill')
+    result = vidya_numba(close, length=10, nan_policy="bfill")
     expected = _vidya_reference(filled, length=10)
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
 
@@ -178,7 +179,7 @@ def test_vidya_numba_nan_policy_both() -> None:
     for i in range(len(filled) - 2, -1, -1):
         if np.isnan(filled[i]):
             filled[i] = filled[i + 1]
-    result = vidya_numba(close, length=10, nan_policy='both')
+    result = vidya_numba(close, length=10, nan_policy="both")
     expected = _vidya_reference(filled, length=10)
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
 
@@ -188,15 +189,15 @@ def test_vidya_numba_invalid_nan_policy() -> None:
     """Invalid nan_policy raises ValueError."""
     close = np.linspace(100.0, 150.0, 30)
     close[15] = np.nan
-    with pytest.raises(ValueError, match='Unknown nan_policy'):
-        vidya_numba(close, length=10, nan_policy='invalid')
+    with pytest.raises(ValueError, match="Unknown nan_policy"):
+        vidya_numba(close, length=10, nan_policy="invalid")
 
 
 @pytest.mark.overlap
 def test_vidya_numba_invalid_length() -> None:
     """Length < 1 raises ValueError."""
     close = np.linspace(100.0, 150.0, 30)
-    with pytest.raises(ValueError, match='length must be'):
+    with pytest.raises(ValueError, match="length must be"):
         vidya_numba(close, length=0)
 
 
@@ -204,7 +205,7 @@ def test_vidya_numba_invalid_length() -> None:
 def test_vidya_numba_too_short_series() -> None:
     """Series shorter than length + drift raises ValueError."""
     close = np.linspace(100.0, 110.0, 5)
-    with pytest.raises(ValueError, match='Input series too short'):
+    with pytest.raises(ValueError, match="Input series too short"):
         vidya_numba(close, length=10)
 
 
@@ -217,7 +218,7 @@ def test_vidya_ind_uses_numba() -> None:
     assert_allclose(result, expected, rtol=1e-9, equal_nan=True)
 
 
-@pytest.mark.skipif(not talib_available, reason='TA-Lib not installed')
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 @pytest.mark.overlap
 def test_vidya_ind_uses_talib() -> None:
     """Test vidya_ind uses TA-Lib CMO when available and requested."""
@@ -235,10 +236,10 @@ def test_vidya_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """Test vidya_polars returns a DataFrame with correct column."""
     length = 10
     result = vidya_polars(df_random_walk, length=length, use_talib=False)
-    assert 'VIDYA_10' in result.columns
+    assert "VIDYA_10" in result.columns
     assert len(result) == len(df_random_walk)
-    assert result['VIDYA_10'].dtype == pl.Float64
-    vals = result['VIDYA_10'].to_numpy()
+    assert result["VIDYA_10"].dtype == pl.Float64
+    vals = result["VIDYA_10"].to_numpy()
     assert np.isnan(vals[:length]).all()
     assert np.isfinite(vals[length:]).all()
 
@@ -250,13 +251,17 @@ def test_vidya_polars_with_offset_fillna(df_random_walk: pl.DataFrame) -> None:
     offset = 1
     fillna = 0.0
     result = vidya_polars(
-        df_random_walk, length=length, offset=offset,
-        fillna=fillna, use_talib=False,
+        df_random_walk,
+        length=length,
+        offset=offset,
+        fillna=fillna,
+        use_talib=False,
     )
-    vals = result['VIDYA_10'].to_numpy()
+    vals = result["VIDYA_10"].to_numpy()
     expected = _apply_offset_fillna(
-        vidya_numba(df_random_walk['close'].to_numpy(), length=length),
-        offset, fillna,
+        vidya_numba(df_random_walk["close"].to_numpy(), length=length),
+        offset,
+        fillna,
     )
     assert_allclose(vals, expected, rtol=1e-9, equal_nan=True)
 
@@ -266,24 +271,26 @@ def test_vidya_polars_custom_output_col(df_random_walk: pl.DataFrame) -> None:
     """Test vidya_polars with custom output column name."""
     length = 14
     result = vidya_polars(
-        df_random_walk, length=length,
-        output_col='CUSTOM_VIDYA', use_talib=False,
+        df_random_walk,
+        length=length,
+        output_col="CUSTOM_VIDYA",
+        use_talib=False,
     )
-    assert 'CUSTOM_VIDYA' in result.columns
-    assert result['CUSTOM_VIDYA'].dtype == pl.Float64
+    assert "CUSTOM_VIDYA" in result.columns
+    assert result["CUSTOM_VIDYA"].dtype == pl.Float64
 
 
 @pytest.mark.overlap
 def test_vidya_polars_with_nan(df_random_walk: pl.DataFrame) -> None:
     """Test vidya_polars propagates NaN correctly."""
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
     close_arr[15] = np.inf
-    df_nan = df_random_walk.with_columns(pl.Series('close', close_arr))
+    df_nan = df_random_walk.with_columns(pl.Series("close", close_arr))
     result = vidya_polars(
-        df_nan, length=10, use_talib=False, nan_policy='ignore'
+        df_nan, length=10, use_talib=False, nan_policy="ignore"
     )
-    vals = result['VIDYA_10'].to_numpy()
+    vals = result["VIDYA_10"].to_numpy()
     assert np.isnan(vals).all()
 
 
@@ -291,10 +298,11 @@ def test_vidya_polars_with_nan(df_random_walk: pl.DataFrame) -> None:
 # IEEE 754 compliance tests
 # -----------------------------------------------------------------------------
 
+
 def test_vidya_with_nan(prices_with_nan):
-    """NaN in input makes VIDYA NaN from that point onward."""  # noqa: D403, E501
+    """NaN in input makes VIDYA NaN from that point onward."""
     length = 5
-    result = vidya_numba(prices_with_nan, length=length, nan_policy='ignore')
+    result = vidya_numba(prices_with_nan, length=length, nan_policy="ignore")
     assert np.isnan(result[:length]).all()
     assert np.isnan(result[5:]).all()
 
@@ -302,7 +310,7 @@ def test_vidya_with_nan(prices_with_nan):
 def test_vidya_with_inf(prices_with_inf):
     """Inf in input is replaced with NaN, so behaves like NaN."""
     length = 5
-    result = vidya_numba(prices_with_inf, length=length, nan_policy='ignore')
+    result = vidya_numba(prices_with_inf, length=length, nan_policy="ignore")
     assert np.isnan(result[:length]).all()
     assert np.isnan(result[5:]).all()
 
@@ -310,34 +318,34 @@ def test_vidya_with_inf(prices_with_inf):
 def test_vidya_empty(prices_empty):
     """Empty input raises ValueError because series too short."""
     length = 5
-    with pytest.raises(ValueError, match='Input series too short'):
+    with pytest.raises(ValueError, match="Input series too short"):
         vidya_numba(prices_empty, length=length)
 
 
 def test_vidya_all_nan(prices_all_nan):
     """All NaNs raise under default 'raise'; 'ignore' propagates them."""
     length = 5
-    with pytest.raises(ValueError, match='contains NaN'):
+    with pytest.raises(ValueError, match="contains NaN"):
         vidya_numba(prices_all_nan, length=length)
-    result = vidya_numba(prices_all_nan, length=length, nan_policy='ignore')
+    result = vidya_numba(prices_all_nan, length=length, nan_policy="ignore")
     assert np.isnan(result).all()
 
 
 def test_vidya_extreme_values(prices_extreme):
     """Extreme values must not crash."""
     length = 10
-    result = vidya_numba(prices_extreme, length=length, nan_policy='ignore')
+    result = vidya_numba(prices_extreme, length=length, nan_policy="ignore")
     assert result is not None
 
 
 def test_vidya_polars_with_nan_df(df_random_walk):
     """Polars integration propagates NaN correctly."""
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
     close_arr[15] = np.inf
-    df_with_nan = df_random_walk.with_columns(pl.Series('close', close_arr))
+    df_with_nan = df_random_walk.with_columns(pl.Series("close", close_arr))
     result = vidya_polars(
-        df_with_nan, length=10, use_talib=False, nan_policy='ignore'
+        df_with_nan, length=10, use_talib=False, nan_policy="ignore"
     )
-    vals = result['VIDYA_10'].to_numpy()
+    vals = result["VIDYA_10"].to_numpy()
     assert np.isnan(vals).all()

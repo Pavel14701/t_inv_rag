@@ -8,16 +8,17 @@ Tests cover:
 - median_polars DataFrame integration
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...statistics.median import (
+from ta.src.statistics.median import (
     _median_numba_core,
-    median_numba,
     median_ind,
+    median_numba,
     median_polars,
 )
 
@@ -25,6 +26,7 @@ from ...statistics.median import (
 # -----------------------------------------------------------------------------
 # Numba core tests
 # -----------------------------------------------------------------------------
+
 
 def test_median_numba_core_odd() -> None:
     """Test _median_numba_core with odd window size."""
@@ -35,7 +37,7 @@ def test_median_numba_core_odd() -> None:
     # First length-1 (2) elements are NaN
     expected = np.full_like(prices, np.nan)
     for i in range(length - 1, len(prices)):
-        expected[i] = np.median(prices[i - length + 1: i + 1])
+        expected[i] = np.median(prices[i - length + 1 : i + 1])
 
     assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
 
@@ -48,7 +50,7 @@ def test_median_numba_core_even() -> None:
 
     expected = np.full_like(prices, np.nan)
     for i in range(length - 1, len(prices)):
-        expected[i] = np.median(prices[i - length + 1: i + 1])
+        expected[i] = np.median(prices[i - length + 1 : i + 1])
 
     assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
 
@@ -76,8 +78,11 @@ def test_median_numba_core_empty() -> None:
 # median_numba tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.statistics
-def test_median_numba_basic(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_median_numba_basic(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test median_numba on a random walk."""
     close = prices_random_walk
     length = 30
@@ -86,13 +91,15 @@ def test_median_numba_basic(prices_random_walk: npt.NDArray[np.float64]) -> None
     assert result.shape == close.shape
     assert result.dtype == np.float64
     # First length-1 values are NaN
-    assert np.isnan(result[:length - 1]).all()
+    assert np.isnan(result[: length - 1]).all()
     # After that, values should be finite
-    assert np.isfinite(result[length - 1:]).all()
+    assert np.isfinite(result[length - 1 :]).all()
 
 
 @pytest.mark.statistics
-def test_median_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_median_numba_offset_fillna(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test offset and fillna."""
     close = prices_random_walk
     length = 30
@@ -109,13 +116,15 @@ def test_median_numba_offset_fillna(prices_random_walk: npt.NDArray[np.float64])
 @pytest.mark.statistics
 def test_median_numba_different_lengths() -> None:
     """Test median_numba with different window lengths."""
-    prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], dtype=np.float64)
+    prices = np.array(
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], dtype=np.float64
+    )
 
     for length in [2, 3, 4, 5]:
         result = median_numba(prices, length=length)
         expected = np.full_like(prices, np.nan)
         for i in range(length - 1, len(prices)):
-            expected[i] = np.median(prices[i - length + 1: i + 1])
+            expected[i] = np.median(prices[i - length + 1 : i + 1])
         assert_allclose(result, expected, rtol=1e-6, equal_nan=True)
 
 
@@ -123,8 +132,11 @@ def test_median_numba_different_lengths() -> None:
 # median_ind tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.statistics
-def test_median_ind_with_pl_series(prices_random_walk: npt.NDArray[np.float64]) -> None:
+def test_median_ind_with_pl_series(
+    prices_random_walk: npt.NDArray[np.float64],
+) -> None:
     """Test median_ind with Polars Series input."""
     s = pl.Series(prices_random_walk)
     length = 30
@@ -133,13 +145,14 @@ def test_median_ind_with_pl_series(prices_random_walk: npt.NDArray[np.float64]) 
     assert isinstance(result, np.ndarray)
     assert result.shape == (len(prices_random_walk),)
     assert result.dtype == np.float64
-    assert np.isnan(result[:length - 1]).all()
-    assert np.isfinite(result[length - 1:]).all()
+    assert np.isnan(result[: length - 1]).all()
+    assert np.isfinite(result[length - 1 :]).all()
 
 
 # -----------------------------------------------------------------------------
 # median_polars tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.statistics
 def test_median_polars_basic(df_random_walk: pl.DataFrame) -> None:
@@ -147,53 +160,60 @@ def test_median_polars_basic(df_random_walk: pl.DataFrame) -> None:
     length = 30
     result_series = median_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
-        output_col='MEDIAN',
+        output_col="MEDIAN",
     )
 
     assert isinstance(result_series, pl.Series)
-    assert result_series.name == 'MEDIAN'
+    assert result_series.name == "MEDIAN"
     assert len(result_series) == len(df_random_walk)
     assert result_series.dtype == pl.Float64
 
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = median_numba(close_arr, length=length)
-    assert_allclose(result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True)
+    assert_allclose(
+        result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True
+    )
 
 
 @pytest.mark.statistics
 def test_median_polars_default_output_col() -> None:
     """Test default output column name."""
-    df = pl.DataFrame({'close': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
+    df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
     length = 3
-    result_series = median_polars(df, close_col='close', length=length)
-    assert result_series.name == f'MEDIAN_{length}'
+    result_series = median_polars(df, close_col="close", length=length)
+    assert result_series.name == f"MEDIAN_{length}"
 
 
 @pytest.mark.statistics
-def test_median_polars_with_offset_fillna(df_random_walk: pl.DataFrame) -> None:
+def test_median_polars_with_offset_fillna(
+    df_random_walk: pl.DataFrame,
+) -> None:
     """Test median_polars with offset and fillna."""
     length = 30
     result_series = median_polars(
         df_random_walk,
-        close_col='close',
+        close_col="close",
         length=length,
         offset=1,
         fillna=0.0,
-        output_col='MEDIAN',
+        output_col="MEDIAN",
     )
 
     assert result_series[0] == 0.0
 
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     expected = median_numba(close_arr, length=length, offset=1, fillna=0.0)
-    assert_allclose(result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True)
+    assert_allclose(
+        result_series.to_numpy(), expected, rtol=1e-6, equal_nan=True
+    )
 
 
 # -----------------------------------------------------------------------------
 # IEEE-754 corner-case tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.statistics
 def test_median_numba_nan_window_is_nan() -> None:
@@ -234,5 +254,5 @@ def test_median_numba_numpy_parity(
 @pytest.mark.statistics
 def test_median_numba_invalid_length_raises() -> None:
     """Passing length < 1 raises ValueError."""
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         median_numba(np.array([1.0, 2.0, 3.0]), length=0)

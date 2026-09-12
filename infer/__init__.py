@@ -1,23 +1,24 @@
-"""Inference package (TZ-05): стратегия + данные → сигналы (опц. P(win)).
+"""Inference package (TZ-05): strategy + data -> signals (optional P(win)).
 
-Модули:
-- :mod:`infer.provider` — BarSeriesProvider (каузальные ta-индикаторы,
-  compute-once + кэш, O(1) offset-индексация);
-- :mod:`infer.data` — источники данных (synthetic/parquet/yfinance/tinvest);
-- :mod:`infer.engine` — bar-by-bar контур сигналов + сводка;
+Modules:
+- :mod:`infer.provider` — BarSeriesProvider (causal ta indicators,
+  compute-once + cache, O(1) offset indexing);
+- :mod:`infer.data` — data sources (synthetic/parquet/yfinance/tinvest);
+- :mod:`infer.engine` — bar-by-bar signal contour + summary;
 - :mod:`infer.cli` — CLI.
 
-Read-only по отношению к рынку: никаких брокерских ордеров.
+Read-only with respect to the market: no broker orders.
 """
 
 from .engine import InferenceResult, predict_p_win_at, run_inference
 from .provider import BarSeriesProvider, WarmupNotReady, build_manifest
 
+
 __all__ = [
-    'InferenceResult',
     'BarSeriesProvider',
+    'InferenceResult',
     'WarmupNotReady',
     'build_manifest',
-    'run_inference',
     'predict_p_win_at',
+    'run_inference',
 ]

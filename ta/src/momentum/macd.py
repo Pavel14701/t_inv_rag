@@ -5,9 +5,9 @@ Supports NumPy arrays, Polars DataFrames, and optional TA-Lib acceleration.
 import numpy as np
 import polars as pl
 
+from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
 from ..external import talib, talib_available
 from ..overlap.ema import ema_ind
-from .._array_ops import _apply_offset_fillna, replace_inf_with_nan
 
 
 def macd_numpy(

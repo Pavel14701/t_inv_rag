@@ -6,14 +6,15 @@
 ## 1. Структура и имена
 
 ```
-<package>/tests/                     # все тесты пакета (infer, rag, dsl, ai, ta, ...)
-<package>/tests/conftest.py          # fixtures ТОЛЬКО этого пакета
-<package>/tests/test_<module>.py     # один файл на тестируемый модуль/фичу
-<package>/pytest.ini                 # унифицированный шаблон (см. §6)
+<package>/src/...        # код пакета (src-layout, где есть)
+<package>/tests/         # тесты РЯДОМ со src (ta/tests, ai/tests, dsl/tests...)
+<package>/tests/conftest.py   # fixtures ТОЛЬКО этого пакета
+<package>/tests/test_<module>.py  # один файл на тестируемый модуль/фичу
 ```
+(нет `<package>/tests` внутри `src/`; per-package `pytest.ini` запрещены — конфиг один в корне)
 
-- Имя файла: `test_<модуль>.py` (например `test_interpreter.py`); подгруппы —
-  каталогом `tests_<domain>/` (как `ta/src/tests/tests_candle/`), не суффиксом.
+- Имя файла: `test_<module>.py` (например `test_interpreter.py`); подгруппы —
+  каталогом `tests_<domain>/` (как `ta/tests/tests_candle/`), не суффиксом.
 - Тест-функция: `test_<behavior>_<expected>()` — «что проверяем» + «что ожидаем»:
   `test_rising_with_insufficient_history_returns_notready`.
 - Классы-группировки (`Test*`) — только когда параметризация/фикстуры общие для группы.
@@ -67,23 +68,20 @@
 - Тесты в корне репозитория или вне `tests/` пакета.
 - `print()`-отладка в коммитнутых тестах (caplog/assert — да).
 
-## 6. Единый шаблон pytest.ini
+## 6. Единый конфиг (корневой pyproject.toml)
 
-```ini
-[pytest]
-minversion = 7.0
-addopts = -v --tb=short --strict-markers -m "not deprecated"
-testpaths = tests
-python_files = test_*.py
-python_classes = Test*
-python_functions = test_*
+Per-package `pytest.ini` ликвидированы (TZ-14). Единственная точка конфигурации —
+`[tool.pytest.ini_options]` в корневом `pyproject.toml`: сквозные маркеры
+(unit/integration/slow/deprecated) + service-маркеры (dsl/ta/ai/infer/rag/main/strategies,
+проставляются автоматически корневым `conftest.py` по пути) + доменные маркеры
+(candle/overlap/... из ta, tokenizer/parser/... из dsl). Прогон одинаков из корня и из пакета:
 
-markers =
-    unit: fast isolated tests
-    integration: tests touching services/network/files
-    slow: > 5s tests (opt-in)
-    deprecated: scheduled for removal (excluded by default)
+```bash
+uv run pytest                    # весь монорепозиторий
+uv run --package dte-dsl pytest dsl/tests   # один пакет
+uv run pytest -m dsl             # только dte-dsl (service-маркер)
+uv run pytest -m "ta and not slow"
 ```
 
-Различия между пакетами — только в `testpaths` и дополнительных уже существующих
-маркерах. Прогресс унификации существующих файлов — часть TZ-14.
+Новые доменные маркеры добавляются в реестр корневого pyproject
+(`--strict-markers` иначе не пропустит). Прогресс sweeps — в TZ-14.

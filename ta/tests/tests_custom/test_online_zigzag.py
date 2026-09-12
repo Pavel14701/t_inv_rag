@@ -12,14 +12,16 @@ Tests cover:
 - edge cases: flat series, single bar, validation errors
 - relation to the scipy-style historical ZigZag on clean swings
 """
+
 import numpy as np
 import pytest
 
-from ...custom.market_structure import (
+from ta.src.custom.market_structure import (
     OnlineZigZag,
     Pivot,
     zigzag_reversal_numpy,
 )
+
 
 REVERSAL = 2.0
 
@@ -53,7 +55,7 @@ def _pivots_to_arrays(pivots: list[Pivot]):
 # Parity: online == historical batch
 # -----------------------------------------------------------------------------
 @pytest.mark.custom
-@pytest.mark.parametrize('seed', [0, 1, 2, 3])
+@pytest.mark.parametrize("seed", [0, 1, 2, 3])
 def test_online_matches_historical_random_walk(seed: int) -> None:
     high, low = _random_walk_ohlc(500, seed=seed)
     online = OnlineZigZag(REVERSAL)
@@ -107,10 +109,10 @@ def test_confirmed_pivots_never_repaint() -> None:
     # prefix must equal the corresponding pivot of the full run
     for t in (50, 100, 200, 300, 399):
         part = OnlineZigZag(REVERSAL)
-        part.update_series(high[:t + 1], low[:t + 1])
+        part.update_series(high[: t + 1], low[: t + 1])
         got = part.confirmed
         assert len(got) <= len(final)
-        assert got == final[:len(got)]
+        assert got == final[: len(got)]
 
 
 @pytest.mark.custom
@@ -119,7 +121,9 @@ def test_incremental_equals_batch_prefix() -> None:
     zz = OnlineZigZag(REVERSAL)
     for t in range(len(high)):
         zz.update(high[t], low[t])
-        historical = zigzag_reversal_numpy(high[:t + 1], low[:t + 1], REVERSAL)
+        historical = zigzag_reversal_numpy(
+            high[: t + 1], low[: t + 1], REVERSAL
+        )
         assert zz.confirmed == historical
 
 
@@ -190,16 +194,22 @@ def test_matches_scipy_zigzag_on_clean_swings() -> None:
     """On clean sine swings the online pivots match the historical
     scipy-style ZigZag, minus the final (still open) leg extremes.
     """
-    from ...trend.zigzag import zigzag_peaks_valleys
+    from ta.src.trend.zigzag import zigzag_peaks_valleys
 
     high, low = _sine_ohlc(400, amplitude=15.0, period=50.0)
     zz = OnlineZigZag(1.0)
     zz.update_series(high, low)
     peaks, valleys = _pivots_to_arrays(zz.confirmed)
     ref_peaks, ref_valleys = zigzag_peaks_valleys(
-        high, low,
-        prominence_peak=0.0, prominence_valley=0.0, distance=1,
-        width=None, wlen=None, rel_height=0.5, plateau_size=None,
+        high,
+        low,
+        prominence_peak=0.0,
+        prominence_valley=0.0,
+        distance=1,
+        width=None,
+        wlen=None,
+        rel_height=0.5,
+        plateau_size=None,
     )
     # every confirmed online pivot must exist in the historical result.
     # The online machine also confirms the initial series extreme (the
@@ -244,11 +254,11 @@ def test_single_bar() -> None:
 
 @pytest.mark.custom
 def test_invalid_reversal_raises() -> None:
-    with pytest.raises(ValueError, match='reversal'):
+    with pytest.raises(ValueError, match="reversal"):
         OnlineZigZag(0.0)
-    with pytest.raises(ValueError, match='reversal'):
+    with pytest.raises(ValueError, match="reversal"):
         OnlineZigZag(-1.0)
-    with pytest.raises(ValueError, match='reversal_pct'):
+    with pytest.raises(ValueError, match="reversal_pct"):
         OnlineZigZag(1.0, reversal_pct=1.5)
 
 
@@ -256,14 +266,14 @@ def test_invalid_reversal_raises() -> None:
 def test_non_finite_input_raises() -> None:
     zz = OnlineZigZag(1.0)
     zz.update(100.0, 99.0)
-    with pytest.raises(ValueError, match='finite'):
+    with pytest.raises(ValueError, match="finite"):
         zz.update(np.nan, 99.0)
-    with pytest.raises(ValueError, match='finite'):
+    with pytest.raises(ValueError, match="finite"):
         zz.update(101.0, np.inf)
 
 
 @pytest.mark.custom
 def test_update_series_length_mismatch() -> None:
     zz = OnlineZigZag(1.0)
-    with pytest.raises(ValueError, match='same length'):
+    with pytest.raises(ValueError, match="same length"):
         zz.update_series(np.ones(3), np.ones(4))

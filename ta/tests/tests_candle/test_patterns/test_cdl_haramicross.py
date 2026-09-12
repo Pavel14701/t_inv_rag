@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """Tests for Harami Cross (cdl_haramicross)."""
 
+from ta.src.candle.cdl_haramicross import (
+    cdl_haramicross,
+    cdl_haramicross_polars,
+)
+
 from ._helpers import pattern_suite
-from ....candle.cdl_haramicross import cdl_haramicross, cdl_haramicross_polars
+
 
 # large black body, doji inside it
 BULL = [
@@ -16,15 +21,17 @@ BEAR = [
     (102.0, 103.5, 101.5, 101.85),
 ]
 
-globals().update(pattern_suite(
-    name='cdl_haramicross',
-    fn=cdl_haramicross,
-    polars_fn=cdl_haramicross_polars,
-    output_col='CDL_HARAMICROSS',
-    bull=BULL,
-    bear=BEAR,
-    bull_value=1.0,
-    bear_value=-1.0,
-    talib_values=(0.0, 1.0, -1.0),
-    extra={'strict': False},
-))
+globals().update(
+    pattern_suite(
+        name="cdl_haramicross",
+        fn=cdl_haramicross,
+        polars_fn=cdl_haramicross_polars,
+        output_col="CDL_HARAMICROSS",
+        bull=BULL,
+        bear=BEAR,
+        bull_value=1.0,
+        bear_value=-1.0,
+        talib_values=(0.0, 1.0, -1.0),
+        extra={"strict": False},
+    )
+)

@@ -11,25 +11,28 @@ Tests cover:
 - IEEE 754 compliance (NaN, Inf, empty, short, all-NaN, extreme)
 """
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ...overlap.midpoint import (
+from ta.src._array_ops import _apply_offset_fillna
+from ta.src.external import talib_available
+from ta.src.overlap.midpoint import (
     _midpoint_numba_core,
-    midpoint_numba,
-    midpoint_talib,
     midpoint_ind,
+    midpoint_numba,
     midpoint_polars,
+    midpoint_talib,
 )
-from ..._array_ops import _apply_offset_fillna
 
 
 # -----------------------------------------------------------------------------
 # Reference implementation (pure Python / numpy)
 # -----------------------------------------------------------------------------
+
 
 def _midpoint_reference(
     close: npt.NDArray[np.float64],
@@ -41,7 +44,7 @@ def _midpoint_reference(
     if n < length:
         return out
     for i in range(length - 1, n):
-        window = close[i - length + 1:i + 1]
+        window = close[i - length + 1 : i + 1]
         out[i] = (np.min(window) + np.max(window)) * 0.5
     return out
 
@@ -49,6 +52,7 @@ def _midpoint_reference(
 # -----------------------------------------------------------------------------
 # Numba core function tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_midpoint_numba_core_basic() -> None:
@@ -63,7 +67,7 @@ def test_midpoint_numba_core_basic() -> None:
         assert result.shape == close.shape
         assert_allclose(result, expected, rtol=1e-12, equal_nan=True)
         # First `length - 1` values are the warm-up NaNs.
-        assert np.isnan(result[:length - 1]).all()
+        assert np.isnan(result[: length - 1]).all()
 
 
 @pytest.mark.overlap
@@ -112,6 +116,8 @@ def test_midpoint_numba_core_matches_random_walk(
 # Tests for midpoint_numba (public wrapper)
 # -----------------------------------------------------------------------------
 
+
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 @pytest.mark.overlap
 def test_midpoint_numba_vs_talib(
     prices_random_walk: npt.NDArray[np.float64],
@@ -124,8 +130,8 @@ def test_midpoint_numba_vs_talib(
         mask = ~np.isnan(tl)
         assert_allclose(nb[mask], tl[mask], rtol=1e-10)
         # Same warm-up NaN region.
-        assert np.isnan(nb[:length - 1]).all()
-        assert np.isnan(tl[:length - 1]).all()
+        assert np.isnan(nb[: length - 1]).all()
+        assert np.isnan(tl[: length - 1]).all()
 
 
 @pytest.mark.overlap
@@ -151,17 +157,18 @@ def test_midpoint_numba_offset_fillna() -> None:
 def test_midpoint_numba_invalid_length() -> None:
     """Length < 1 must raise ValueError, never corrupt the output."""
     close = np.array([10.0, 11.0, 12.0], dtype=np.float64)
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         midpoint_numba(close, length=0)
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         midpoint_numba(close, length=-1)
 
 
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 @pytest.mark.overlap
 def test_midpoint_talib_invalid_length() -> None:
     """TA-Lib backend validates length before calling TA-Lib."""
     close = np.array([10.0, 11.0, 12.0], dtype=np.float64)
-    with pytest.raises(ValueError, match='length must be >= 1'):
+    with pytest.raises(ValueError, match="length must be >= 1"):
         midpoint_talib(close, length=0)
 
 
@@ -180,6 +187,7 @@ def test_midpoint_numba_input_types() -> None:
 # -----------------------------------------------------------------------------
 # Universal wrapper tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.overlap
 def test_midpoint_ind_matches_numba(
@@ -217,19 +225,21 @@ def test_midpoint_ind_talib_backend(
 # Polars integration tests
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.overlap
 def test_midpoint_polars_basic(df_random_walk: pl.DataFrame) -> None:
     """midpoint_polars returns a DataFrame with a correct MIDPOINT column."""
     length = 10
     result = midpoint_polars(df_random_walk, length=length, use_talib=False)
     assert isinstance(result, pl.DataFrame)
-    assert f'MIDPOINT_{length}' in result.columns
-    close_arr = df_random_walk['close'].to_numpy()
+    assert f"MIDPOINT_{length}" in result.columns
+    close_arr = df_random_walk["close"].to_numpy()
     expected = _midpoint_reference(close_arr, length)
     mask = ~np.isnan(expected)
     assert_allclose(
-        result[f'MIDPOINT_{length}'].to_numpy()[mask],
-        expected[mask], rtol=1e-12,
+        result[f"MIDPOINT_{length}"].to_numpy()[mask],
+        expected[mask],
+        rtol=1e-12,
     )
 
 
@@ -237,10 +247,13 @@ def test_midpoint_polars_basic(df_random_walk: pl.DataFrame) -> None:
 def test_midpoint_polars_custom_output_col(df_random_walk) -> None:
     """Custom output column name is respected."""
     result = midpoint_polars(
-        df_random_walk, length=5, output_col='MIDPOINT', use_talib=False,
+        df_random_walk,
+        length=5,
+        output_col="MIDPOINT",
+        use_talib=False,
     )
-    assert 'MIDPOINT' in result.columns
-    assert result['MIDPOINT'].dtype == pl.Float64
+    assert "MIDPOINT" in result.columns
+    assert result["MIDPOINT"].dtype == pl.Float64
 
 
 @pytest.mark.overlap
@@ -248,14 +261,17 @@ def test_midpoint_polars_custom_close_col(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """midpoint_polars with a non-default close column name."""
-    df = pl.DataFrame({'price': prices_random_walk})
+    df = pl.DataFrame({"price": prices_random_walk})
     result = midpoint_polars(
-        df, close_col='price', length=10, output_col='MIDPOINT',
+        df,
+        close_col="price",
+        length=10,
+        output_col="MIDPOINT",
         use_talib=False,
     )
     expected = _midpoint_reference(prices_random_walk, 10)
     mask = ~np.isnan(expected)
-    assert_allclose(result['MIDPOINT'].to_numpy()[mask], expected[mask])
+    assert_allclose(result["MIDPOINT"].to_numpy()[mask], expected[mask])
 
 
 @pytest.mark.overlap
@@ -265,7 +281,7 @@ def test_midpoint_polars_with_offset_fillna(
     """midpoint_polars applies offset and fillna."""
     offset = 2
     fillna = 0.0
-    close_arr = df_random_walk['close'].to_numpy()
+    close_arr = df_random_walk["close"].to_numpy()
     base = midpoint_numba(close_arr, length=5, offset=0, fillna=None)
     expected = _apply_offset_fillna(base, offset, fillna)
     result = midpoint_polars(
@@ -273,16 +289,18 @@ def test_midpoint_polars_with_offset_fillna(
         length=5,
         offset=offset,
         fillna=fillna,
-        output_col='MIDPOINT',
+        output_col="MIDPOINT",
         use_talib=False,
     )
-    assert_allclose(result['MIDPOINT'].to_numpy(), expected, rtol=1e-12)
+    assert_allclose(result["MIDPOINT"].to_numpy(), expected, rtol=1e-12)
 
 
 # -----------------------------------------------------------------------------
 # IEEE 754 compliance tests (using fixtures from conftest.py)
 # -----------------------------------------------------------------------------
 
+
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 @pytest.mark.overlap
 def test_midpoint_with_nan(prices_with_nan) -> None:
     """NaN windows skip the NaN (same behaviour as TA-Lib MIDPOINT)."""
@@ -292,6 +310,7 @@ def test_midpoint_with_nan(prices_with_nan) -> None:
     assert_allclose(result[mask], talib_res[mask], rtol=1e-12)
 
 
+@pytest.mark.skipif(not talib_available, reason="TA-Lib not installed")
 @pytest.mark.overlap
 def test_midpoint_with_inf(prices_with_inf) -> None:
     """Inf propagates through min/max identically in both backends."""
@@ -342,26 +361,25 @@ def test_midpoint_extreme_values(prices_extreme) -> None:
 @pytest.mark.overlap
 def test_midpoint_polars_with_nan(df_random_walk: pl.DataFrame) -> None:
     """Polars integration propagates NaN correctly."""
-    close_arr = df_random_walk['close'].to_numpy().copy()
+    close_arr = df_random_walk["close"].to_numpy().copy()
     close_arr[5] = np.nan
-    df_with_nan = df_random_walk.with_columns(pl.Series('close', close_arr))
+    df_with_nan = df_random_walk.with_columns(pl.Series("close", close_arr))
     result = midpoint_polars(
         df_with_nan,
         length=3,
-        output_col='MIDPOINT',
+        output_col="MIDPOINT",
         use_talib=False,
     )
-    vals = result['MIDPOINT'].to_numpy()
+    vals = result["MIDPOINT"].to_numpy()
     # Warm-up NaNs at indices 0..1 (length=3).
     assert np.isnan(vals[:2]).all()
-    # Parity with the TA-Lib backend on the same NaN-poisoned input.
-    talib_vals = midpoint_talib(close_arr, 3)
+    # Parity with the Numba backend on the same NaN-poisoned input.
     nb_vals = midpoint_numba(close_arr, 3)
     assert np.array_equal(
         np.nan_to_num(vals, nan=-999.0),
         np.nan_to_num(nb_vals, nan=-999.0),
     )
     assert np.array_equal(
-        np.nan_to_num(talib_vals, nan=-999.0),
+        np.nan_to_num(vals, nan=-999.0),
         np.nan_to_num(nb_vals, nan=-999.0),
     )

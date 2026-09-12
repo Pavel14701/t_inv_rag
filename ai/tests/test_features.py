@@ -6,18 +6,19 @@ feature generation functions.
 
 from datetime import datetime
 
-import pytest
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import pytest
+
 from numpy.testing import assert_allclose
 
-from ..features import (
+from ai.src.datatypes import OrderBlock
+from ai.src.features import (
     compute_atr,
     compute_ob_distances,
     compute_tp_sl,
 )
-from ..datatypes import OrderBlock
 
 
 @pytest.mark.unit
@@ -104,9 +105,7 @@ def test_compute_atr_is_causal(sample_dataframe: pl.DataFrame) -> None:
     atr_full = compute_atr(sample_dataframe, period=14)
     for cut in (20, 60, 120, 199):
         atr_prefix = compute_atr(sample_dataframe.slice(0, cut), period=14)
-        assert_allclose(
-            atr_full[:cut], atr_prefix, rtol=1e-5, atol=1e-6
-        )
+        assert_allclose(atr_full[:cut], atr_prefix, rtol=1e-5, atol=1e-6)
 
 
 @pytest.mark.unit
@@ -116,10 +115,12 @@ def test_compute_tp_sl_uses_previous_bar_atr(
     """TP/SL at bar t must be built from ATR of bar t-1."""
     atr = compute_atr(sample_dataframe, period=14)
     tp, sl = compute_tp_sl(
-        sample_dataframe, atr=atr,
-        tp_atr_multiplier=2.0, sl_atr_multiplier=1.5,
+        sample_dataframe,
+        atr=atr,
+        tp_atr_multiplier=2.0,
+        sl_atr_multiplier=1.5,
     )
-    close = sample_dataframe['close'].to_numpy()
+    close = sample_dataframe["close"].to_numpy()
     # Bar 0 uses its own ATR (no previous bar exists)
     assert_allclose(tp[0], close[0] + 2.0 * atr[0], rtol=1e-5)
     assert_allclose(sl[0], close[0] - 1.5 * atr[0], rtol=1e-5)
@@ -135,21 +136,25 @@ def test_compute_ob_distances_is_in_zone_flag(
 ) -> None:
     """is_in_zone is 1.0 exactly where close is inside an active zone."""
     atr = compute_atr(sample_dataframe, period=14)
-    close = sample_dataframe['close'].to_numpy()
+    close = sample_dataframe["close"].to_numpy()
     # A demand block spanning bars 10..30 with a zone around close[15]
     zone_low = float(close[15]) - 0.5
     zone_high = float(close[15]) + 0.5
     ob = OrderBlock(
-        id=99, block_type='demand',
-        start=datetime.now(), break_=datetime.now(),
+        id=99,
+        block_type="demand",
+        start=datetime.now(),
+        break_=datetime.now(),
         retest=datetime.now(),
-        zone_low=zone_low, zone_high=zone_high,
-        strength=5.0, structure_label='valid',
-        trend_direction='up', start_idx=10, end_idx=30,
+        zone_low=zone_low,
+        zone_high=zone_high,
+        strength=5.0,
+        structure_label="valid",
+        trend_direction="up",
+        start_idx=10,
+        end_idx=30,
     )
-    _, _, _, is_in_zone = compute_ob_distances(
-        sample_dataframe, [ob], atr
-    )
+    _, _, _, is_in_zone = compute_ob_distances(sample_dataframe, [ob], atr)
     for t in (12, 20, 30):  # inside the active window
         expected = 1.0 if zone_low <= close[t] <= zone_high else 0.0
         assert is_in_zone[t] == expected
@@ -167,23 +172,35 @@ def test_compute_ob_distances_strongest_is_per_bar(
     let the strong block's distance leak into the weak block's period.
     """
     atr = compute_atr(sample_dataframe, period=14)
-    close = sample_dataframe['close'].to_numpy()
+    close = sample_dataframe["close"].to_numpy()
     mid = float(close[15])
     weak = OrderBlock(
-        id=1, block_type='demand',
-        start=datetime.now(), break_=datetime.now(),
+        id=1,
+        block_type="demand",
+        start=datetime.now(),
+        break_=datetime.now(),
         retest=datetime.now(),
-        zone_low=mid - 0.5, zone_high=mid + 0.5,
-        strength=0.1, structure_label=None, trend_direction=None,
-        start_idx=10, end_idx=20,
+        zone_low=mid - 0.5,
+        zone_high=mid + 0.5,
+        strength=0.1,
+        structure_label=None,
+        trend_direction=None,
+        start_idx=10,
+        end_idx=20,
     )
     strong = OrderBlock(
-        id=2, block_type='demand',
-        start=datetime.now(), break_=datetime.now(),
+        id=2,
+        block_type="demand",
+        start=datetime.now(),
+        break_=datetime.now(),
         retest=datetime.now(),
-        zone_low=mid - 2.0, zone_high=mid + 2.0,
-        strength=9.0, structure_label=None, trend_direction=None,
-        start_idx=21, end_idx=40,
+        zone_low=mid - 2.0,
+        zone_high=mid + 2.0,
+        strength=9.0,
+        structure_label=None,
+        trend_direction=None,
+        start_idx=21,
+        end_idx=40,
     )
     _, _, strongest, _ = compute_ob_distances(
         sample_dataframe, [weak, strong], atr

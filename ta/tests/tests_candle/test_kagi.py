@@ -12,11 +12,11 @@ Tests cover:
 
 import time
 
-import pytest
 import numpy as np
 import polars as pl
+import pytest
 
-from ...candle.kagi import _kagi_nb, kagi, kagi_polars
+from ta.src.candle.kagi import _kagi_nb, kagi, kagi_polars
 
 
 # -----------------------------------------------------------------------------
@@ -29,49 +29,49 @@ KAGI_TEST_CASES = [
         [100.0, 102.0, 104.0, 106.0, 108.0],
         2.0,
         [0, 1, 1, 1, 1],
-        'uptrend: new highs',
+        "uptrend: new highs",
     ),
     (
         [100.0, 98.0, 96.0, 94.0, 92.0],
         2.0,
         [0, -1, -1, -1, -1],
-        'downtrend: new lows',
+        "downtrend: new lows",
     ),
     (
         [100.0, 103.0, 100.0, 98.0, 96.0],
         2.0,
         [0, 1, -1, -1, -1],
-        'up then reversal (2 points down)',
+        "up then reversal (2 points down)",
     ),
     (
         [100.0, 97.0, 100.0, 102.0, 104.0],
         2.0,
         [0, -1, 1, 1, 1],
-        'down then reversal (2 points up)',
+        "down then reversal (2 points up)",
     ),
     (
         [100.0, 101.0, 101.5, 101.0, 100.5],
         2.0,
         [0, 0, 0, 0, 0],
-        'no movement within reversal threshold (all below 102)',
+        "no movement within reversal threshold (all below 102)",
     ),
     (
         [100.0, 105.0, 104.0, 99.0, 96.0],
         2.0,
         [0, 1, 1, -1, -1],
-        'up then down with multiple points (no immediate reversal)',
+        "up then down with multiple points (no immediate reversal)",
     ),
     (
         [100.0, 95.0, 94.0, 101.0, 104.0],
         2.0,
         [0, -1, -1, 1, 1],
-        'down then up with multiple points',
+        "down then up with multiple points",
     ),
     (
         [100.0, 103.0, 101.5, 99.5, 98.0],
         2.0,
         [0, 1, 1, -1, -1],
-        'up then reversal exactly at threshold (avoid immediate reversal)',
+        "up then reversal exactly at threshold (avoid immediate reversal)",
     ),
 ]
 
@@ -80,9 +80,10 @@ KAGI_TEST_CASES = [
 # Parameterized tests for exact algorithm validation
 # -----------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 @pytest.mark.candle
-@pytest.mark.parametrize('prices, reversal, expected, desc', KAGI_TEST_CASES)
+@pytest.mark.parametrize("prices, reversal, expected, desc", KAGI_TEST_CASES)
 def test_kagi_nb_parametrized(
     prices: list[float],
     reversal: float,
@@ -94,18 +95,13 @@ def test_kagi_nb_parametrized(
     expected_arr = np.array(expected, dtype=np.int8)
     result = _kagi_nb(prices_arr, reversal)
     np.testing.assert_array_equal(
-        result,
-        expected_arr,
-        err_msg=f'Failed for: {desc}'
+        result, expected_arr, err_msg=f"Failed for: {desc}"
     )
 
 
 @pytest.mark.unit
 @pytest.mark.candle
-@pytest.mark.parametrize(
-    'prices, reversal, expected, desc',
-    KAGI_TEST_CASES
-)
+@pytest.mark.parametrize("prices, reversal, expected, desc", KAGI_TEST_CASES)
 def test_kagi_parametrized(
     prices: list[float],
     reversal: float,
@@ -117,15 +113,13 @@ def test_kagi_parametrized(
     expected_arr = np.array(expected, dtype=np.float64)
     result = kagi(prices_arr, reversal)
     np.testing.assert_allclose(
-        result,
-        expected_arr,
-        err_msg=f'Failed for: {desc}'
+        result, expected_arr, err_msg=f"Failed for: {desc}"
     )
 
 
 @pytest.mark.unit
 @pytest.mark.candle
-@pytest.mark.parametrize('prices, reversal, expected, desc', KAGI_TEST_CASES)
+@pytest.mark.parametrize("prices, reversal, expected, desc", KAGI_TEST_CASES)
 def test_kagi_polars_series_parametrized(
     prices: list[float],
     reversal: float,
@@ -137,15 +131,14 @@ def test_kagi_polars_series_parametrized(
     expected_arr = np.array(expected, dtype=np.float64)
     result = kagi(s, reversal)
     np.testing.assert_allclose(
-        result,
-        expected_arr,
-        err_msg=f'Failed for: {desc}'
+        result, expected_arr, err_msg=f"Failed for: {desc}"
     )
 
 
 # -----------------------------------------------------------------------------
 # Tests using shared fixtures for realistic price patterns
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 @pytest.mark.candle
@@ -207,11 +200,11 @@ def test_kagi_polars_df_uptrend(
     reversal: float,
 ) -> None:
     """Test kagi_polars on a DataFrame with uptrend."""
-    result_df = kagi_polars(df_uptrend, price_col='close', reversal=reversal)
-    assert 'KAGI' in result_df.columns
+    result_df = kagi_polars(df_uptrend, price_col="close", reversal=reversal)
+    assert "KAGI" in result_df.columns
     assert len(result_df) == len(df_uptrend)
     # Check that the column is float64
-    assert result_df['KAGI'].dtype == pl.Float64
+    assert result_df["KAGI"].dtype == pl.Float64
 
 
 @pytest.mark.unit
@@ -222,14 +215,12 @@ def test_kagi_polars_df_random_walk(
 ) -> None:
     """Test kagi_polars on a random walk DataFrame."""
     result_df = kagi_polars(
-        df_random_walk,
-        price_col='close',
-        reversal=reversal
+        df_random_walk, price_col="close", reversal=reversal
     )
-    assert 'KAGI' in result_df.columns
+    assert "KAGI" in result_df.columns
     assert len(result_df) == len(df_random_walk)
     # There should be some non-zero values (some lines)
-    assert np.any(result_df['KAGI'].to_numpy() != 0)
+    assert np.any(result_df["KAGI"].to_numpy() != 0)
 
 
 @pytest.mark.unit
@@ -292,16 +283,14 @@ def test_kagi_fillna() -> None:
 @pytest.mark.candle
 def test_kagi_polars() -> None:
     """Test kagi_polars adds a column with correct values."""
-    df = pl.DataFrame({'close': [100.0, 105.0, 104.0, 99.0, 96.0]})
+    df = pl.DataFrame({"close": [100.0, 105.0, 104.0, 99.0, 96.0]})
     result_df = kagi_polars(
-        df, price_col='close',
-        reversal=2.0, output_col='KAGI'
+        df, price_col="close", reversal=2.0, output_col="KAGI"
     )
-    assert 'KAGI' in result_df.columns
+    assert "KAGI" in result_df.columns
     expected_values = [0.0, 1.0, 1.0, -1.0, -1.0]
     np.testing.assert_allclose(
-        result_df['KAGI'].to_numpy(),
-        np.array(expected_values)
+        result_df["KAGI"].to_numpy(), np.array(expected_values)
     )
 
 
@@ -309,19 +298,24 @@ def test_kagi_polars() -> None:
 @pytest.mark.candle
 def test_kagi_polars_with_offset_and_fillna() -> None:
     """Test kagi_polars with offset and fillna parameters."""
-    df = pl.DataFrame({'close': [100.0, 102.0, 104.0, 106.0]})
+    df = pl.DataFrame({"close": [100.0, 102.0, 104.0, 106.0]})
     result_df = kagi_polars(
-        df, price_col='close', reversal=2.0,
-        offset=1, fillna=0.0, output_col='KAGI'
+        df,
+        price_col="close",
+        reversal=2.0,
+        offset=1,
+        fillna=0.0,
+        output_col="KAGI",
     )
-    assert 'KAGI' in result_df.columns
+    assert "KAGI" in result_df.columns
     assert len(result_df) == len(df)
-    assert not np.isnan(result_df['KAGI'].to_numpy()).any()
+    assert not np.isnan(result_df["KAGI"].to_numpy()).any()
 
 
 # -----------------------------------------------------------------------------
 # Performance tests (benchmarks)
 # -----------------------------------------------------------------------------
+
 
 @pytest.mark.performance
 @pytest.mark.candle
@@ -345,7 +339,7 @@ def test_kagi_performance() -> None:
 
 
 # Pure Python reference (slow) - just for illustration
-def kagi_python(prices, reversal):  # noqa: D103, C901
+def kagi_python(prices, reversal):
     n = len(prices)
     out = np.zeros(n, dtype=np.float64)
     if n == 0:
@@ -407,4 +401,4 @@ def test_kagi_nb_vs_python() -> None:
     nb_time = time.perf_counter() - start
     # Numba should be at least 2x faster on large arrays
     if py_time > 0.01 and nb_time > 0.0:
-        assert nb_time < py_time * 0.5, 'Numba version should be faster'
+        assert nb_time < py_time * 0.5, "Numba version should be faster"
