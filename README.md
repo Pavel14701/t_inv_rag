@@ -1,13 +1,16 @@
-# 📘 t_inv_rag — Система алгоритмического трейдинга
+# Deterministic Trading Engine
 
-Модульная система алгоритмического трейдинга: декларативный **DSL** для торговых условий, высокопроизводительный слой **индикаторов** (NumPy/Numba/Polars), **Transformer-модель** для оценки вероятности сделки и жёсткий детерминированный **риск-менеджмент**.
+Детерминированная система алгоритмического трейдинга: торговые решения принимает **только проверяемый код** — декларативный **DSL** → сигналы → жёсткий **риск-контур**. ML-модель лишь оценивает вероятность сделки (`P(win)`), а LLM/RAG — вспомогательный контур генерации стратегий, вынесенный за пределы принятия решений.
 
 **Ключевые принципы:**
-- логика сигналов описывается декларативным DSL, без исполняемого кода;
-- решения о входе/выходе принимает только детерминированный код;
-- ML-модель лишь оценивает вероятность — она не принимает решений и не имеет доступа к риск-менеджменту;
-- LLM/RAG используется только для генерации/модификации стратегий и анализа результатов;
-- риск-лимиты зашиты в код и недоступны для изменения LLM.
+- решения о входе/выходе принимает только детерминированный код (DSL-интерпретатор + движок исполнения);
+- ML-модель оценивает вероятность — она не принимает решений и не имеет доступа к риск-менеджменту;
+- LLM/RAG используется только для генерации/модификации стратегий и анализа результатов — вне контура исполнения;
+- риск-лимиты зашиты в код и недоступны для изменения LLM на любом уровне, включая транспорт.
+
+> Историческое имя репозитория `t_inv_rag` отражало первую итерацию (RAG поверх T-Invest).
+> Ядро проекта — детерминированный торговый контур; RAG — вспомогательный слой
+> (см. раздел «RAG-контур» и TZ-07).
 
 ---
 
@@ -15,102 +18,135 @@
 
 ### ✅ Реализовано
 
-**1. `ta/` — библиотека технических индикаторов**
-- NumPy + Numba ядра, Polars-совместимость, без pandas в вычислениях.
-- Группы индикаторов:
-  - `overlap/` — SMA, EMA, WMA, RMA, HMA, KAMA, ALMA, JMA, TEMA, VIDYA, SuperTrend, Ichimoku и др.;
-  - `momentum/` — RSI, MACD, Stoch, CCI, TSI, ROC и др.;
-  - `volatility/` — ATR, True Range, BBands, AccBands;
-  - `trend/` — ADX, RWI, ZigZag; `statistics/` — stdev, zscore, entropy и др.;
-  - `volume/` — VWMA; `candle/` — полный набор паттернов (CDL) + Heikin Ashi, Renko, Kagi;
-  - `custom/` — OTT, SCRSI, RSI Clouds, AVS-семейство, market structure.
-- Покрыто тестами (momentum, overlap, volatility и др.).
+**1. `ta/` — библиотека технических индикаторов** (`dte-ta`)
+- NumPy + Numba ядра (`@njit`), Polars-совместимость, без pandas в вычислениях.
+- Группы: `overlap/` (SMA…JMA, SuperTrend, Ichimoku), `momentum/` (RSI, MACD, Stoch…),
+  `volatility/` (ATR, BBands), `trend/` (ADX, ZigZag), `statistics/`, `volume/`,
+  `candle/` (CDL-паттерны, Heikin Ashi, Renko, Kagi), `custom/` (OTT, SCRSI, AVS…).
+- Каузальность и NaN-контракт; **1952 теста** зелёные.
 
-**2. `dsl/` — DSL для торговых условий**
-- Токенизатор → парсер → AST → интерпретатор (Visitor), синхронная и асинхронная оценка.
-- Поддержка: арифметика, сравнения, логика с short-circuit, вызовы индикаторов с параметрами и атрибутами, исторические смещения `close[1]`, `rising`/`falling`, `let`-биндинги.
-- Провайдеры данных: in-process, HTTP, манифесты индикаторов (строгая валидация).
-- Подробная документация в `dsl/README.md` и `dsl/docs/`.
-- Полный набор тестов (tokenizer, parser, interpreter, providers, integration).
+**2. `dsl/` — DSL торговых условий** (`dte-dsl`)
+- Токенизатор → парсер → AST → интерпретатор (Visitor), sync + async.
+- Арифметика, логика с short-circuit, вызовы индикаторов, смещения `close[1]`,
+  `rising/falling`, `let`-биндинги. **Нет `eval`/`exec` — произвольный код неисполним.**
+- Провайдеры: in-process, HTTP (HTTP/2/3), манифесты со строгой валидацией;
+  маршрутизация по манифесту, `resolve_history`, `DslValidationError` (TZ-01 ✅).
+- **154 теста** зелёные.
 
-**3. `ai/` — Transformer-модель (Entry-Exit Transformer)**
-- Multi-head Transformer: предсказание действия (hold/entry/exit), исхода (win/loss, R-multiple) и паттернов по окну свечей и order blocks.
-- Supervised и semi-supervised self-training (псевдо-разметка только для высокоуверенных предсказаний).
-- Датасет на скользящих окнах, валидационные контракты (формы, dtypes, конечные значения), метрики (win rate, profit factor), TensorBoard.
-- Документация в `ai/docs/` (architecture, model, data, training, quickstart).
+**3. `ai/` — Entry-Exit Transformer** (`dte-ai`)
+- Предсказывает: действие (hold/entry/exit), исход (win/loss + R-multiple), паттерны —
+  по окну свечей и order blocks.
+- Supervised + self-training (псевдо-разметка), каузальные TP/SL от ATR(t-1),
+  хронологический train/val сплит (без утечки валидации), model bundle +
+  контракт инференса `predict_p_win` (TZ-06 ✅).
+- YAML-конфиг (`configs/ai.yaml`), воспроизводимость (seed), 71 тест.
+- Обученных артефактов пока нет — модель не обучена на реальных данных
+  (обучение — после TZ-04).
 
-**4. Инфраструктура**
-- `docker-compose.yaml`: PostgreSQL 18, Redis 8, RabbitMQ 4.2, Qdrant (GPU), Ollama (DeepSeek-R1 8B, GPU).
-- `alembic.ini` + `migrations/` — настроены миграции БД.
+**4. `infer/` — скрипт инференса** (`dte-infer`)
+- CLI: свечи (synthetic/parquet/yfinance/tinvest) → DSL-сигналы → `--ml` фильтр по
+  `P(win)` (TZ-05 ✅). 9 смоук-тестов.
 
-### 🚧 В разработке / каркас
+**5. `rag/llm.py` — LLM-слой** (`dte-rag`)
+- Per-request роутинг провайдеров/моделей (Ollama + OpenAI-compatible), TZ-07 п.0 ✅.
+- Прикладной RAG-контур (ingestion/retrieval/generation) — не реализован.
 
-- **`main/`** — точка входа сервиса и конфигурация (каркас).
-- **`strategies/`** — application- и infrastructure-слои (каркас: типы, адаптер индикаторов).
-- **RAG-контур** (Qdrant + LlamaIndex + Ollama) — подключение инфраструктуры готово, прикладной слой в разработке.
-- **Risk Engine** — специфицирован (см. исходное ТЗ), реализация впереди.
+### 🚧 В разработке / специфицировано
+
+- **`strategies/`** — каркас; формат `Strategy` + `manifest_hash` + реестр — TZ-02 (следующий шаг).
+- **`backtest/`** — единый движок исполнения (лейблы/бэктест/live) — TZ-04.
+- **Risk Engine** — специфицирован, реализация — TZ-11.
+- **`main/`** — точка входа, DI (dishka), API-бридж — TZ-08/09/10.
+
+### Критерии успеха (TZ-00)
+
+Profit Factor > 1.5 out-of-sample с комиссиями · MaxDD ≤ 20% · Sharpe > 1.0 ·
+модель ≥ базлайнов (LR/RF/XGBoost) · RAG pass@1 ≥ 70% ≤ 2 repair-итераций.
+*Пока не проверяемы: бэктест (TZ-04) впереди.*
 
 ---
+## Монорепозиторий (uv workspaces)
+
+Каждый сервис — отдельный член workspace со своим окружением и зависимостями.
+
+```bash
+uv sync --all-packages        # полное dev-окружение (все члены workspace)
+uv sync --package dte-dsl     # изолированное окружение одного пакета
+uv run --package dte-dsl pytest dsl/tests
+```
+
+| Пакет | Каталог | Ключевые зависимости | GPU |
+|-------|---------|----------------------|-----|
+| `dte-ta` | `ta/` | numba, numpy, scipy | нет |
+| `dte-dsl` | `dsl/` | niquests | нет |
+| `dte-strategies` | `strategies/` | polars, pandas, ta-lib | нет |
+| `dte-ai` | `ai/` | torch, tensorboard, pyyaml | обучение CUDA / инференс DX12 (extra `gpu`) |
+| `dte-infer` | `infer/` | polars, yfinance, t-tech; torch — extra `ml` | нет |
+| `dte-rag` | `rag/` | llama-index, qdrant-client, sentence-transformers | нет (Ollama — внешний сервис) |
+| `dte-main` | `main/` | dishka, faststream, aiogram, sqlalchemy, alembic | нет |
+
+Принцип TZ-00 п.4.7: **GPU-зависимости (torch) существуют только в `dte-ai`**
+(и опционально в `dte-infer[ml]`) — публичный контур их не тянет.
+
+Import-имена пакетов (`ta`, `dsl`, `ai`, `infer`, `rag`, `main`) не изменились —
+изменилась упаковка, а код и ~2200 тестов остались совместимыми.
 
 ## Архитектура
 
 ```
-[Данные] → [Индикаторы (ta)] → [DSL → AST → сигналы] → [ML-модель → вероятность]
-                                                        ↓
-                                               [Risk Engine → решение]
-                                                        ↓
-                                                 [Исполнение]
+[Данные] → [Индикаторы (ta)] → [DSL → AST → сигналы] → [ML: P(win)] → [Risk Engine → решение] → [Исполнение]
+                                детерминированный контур ─────────────────────────────────────┘
+[LLM/RAG] → генерация/объяснение стратегий (вне контура решений)
 ```
 
 LLM/RAG работает **параллельно**, а не внутри контура принятия решений.
 
----
+## Запуск
 
-## Структура репозитория
-
-```
-ta/          # индикаторы (NumPy/Numba), тесты
-dsl/         # DSL: tokenizer, parser, ast, interpreter, providers, тесты
-ai/          # Transformer-модель, датасеты, обучение, метрики, docs
-strategies/  # слой стратегий (каркас)
-main/        # сервис, конфигурация
-migrations/  # Alembic-миграции
-dev_docs/    # спецификации: DSL, индикаторы, свечи, статистика, чеклист
-docker-compose.yaml, alembic.ini, pyproject.toml
+```bash
+uv sync --all-packages
+docker compose up -d          # postgres, redis, rabbitmq, qdrant, ollama
+uv run --package dte-main alembic upgrade head   # миграции БД
+uv run --package dte-dsl pytest dsl/tests      # тесты DSL
+uv run --package dte-ta pytest ta/src/tests    # тесты индикаторов
+uv run --package dte-ai pytest ai/src/tests    # тесты ai
+uv run --package dte-rag pytest rag/tests      # тесты LLM-слоя
+uv run --package dte-infer pytest infer/tests  # смоук-тесты инференса
+uv run --package dte-infer python -m infer.cli --help   # инференс
 ```
 
 ## Технологии
 
-Python ≥ 3.12 · NumPy/Numba · Polars · TA-Lib · PyTorch (sentence-transformers, TensorBoard) · LlamaIndex + Ollama · Qdrant · PostgreSQL + SQLAlchemy + Alembic · Redis · RabbitMQ (FastStream) · aiogram · dishka.
-Менеджмент зависимостей — **uv** (`uv.lock`).
-
-## Запуск
-
-```bash
-uv sync                     # установка зависимостей
-docker compose up -d        # инфраструктура (postgres, redis, rabbitmq, qdrant, ollama)
-uv run alembic upgrade head # миграции БД
-uv run pytest               # тесты (dsl/tests, ta/src/tests)
-```
-
-Тесты отдельных пакетов: `uv run pytest dsl/tests` (конфиг `dsl/pytest.ini`), `uv run pytest ta/src/tests`.
+Python ≥ 3.12 · uv (workspaces) · NumPy/Numba · Polars · TA-Lib · PyTorch ·
+LlamaIndex + Ollama · Qdrant · PostgreSQL + SQLAlchemy + Alembic · Redis ·
+RabbitMQ (FastStream) · aiogram · dishka.
 
 ## Качество кода
 
-Ruff (+ format), flake8, mypy, isort — конфигурация в `pyproject.toml` и `setup.cfg`. Линия — 79 символов, target Python 3.12.
+Ruff (+ format), flake8, mypy, isort — конфигурация в `pyproject.toml` / `setup.cfg`,
+линия 79 символов, Python 3.12. CI (ruff + pytest matrix) — TZ-13.
 
----
+## Документация
+
+- `dev_docs/tz/` — TZ-00…TZ-13: roadmap, ТЗ модулей, статусы.
+- `dsl/README.md`, `dsl/docs/` — DSL; `ai/docs/` — модель и обучение;
+  `dev_docs/quant_checklist.md` — сверка с индустриальным чек-листом.
 
 ## Ограничения (неизменные принципы)
 
 - LLM не принимает торговых решений.
-- LLM не меняет риск-параметры.
+- LLM не меняет риск-параметры (в протоколе очередей TZ-09 нет такой команды).
 - LLM не генерирует код исполнения сделок.
 - Все решения принимаются только кодом.
 
 ## Roadmap
 
-- [ ] Реализация Risk Engine (лимиты риска/просадки, обязательные SL/TP, фильтры).
-- [ ] Прикладной RAG-контур: генерация и модификация стратегий в DSL, анализ бэктестов.
-- [ ] Развитие слоя стратегий и основного сервиса (`main/`).
-- [ ] Обучение модели на исторических данных и интеграция с сигнальным контуром.
+Актуальный порядок — в `dev_docs/tz/TZ-00-roadmap.md`. Кратко:
+
+- [x] TZ-01 DSL hardening · TZ-06 ai stabilization · TZ-05 inference
+- [ ] **TZ-02 strategies + единая OHLC** (следующий шаг)
+- [ ] TZ-03 ta-dsl provider → TZ-04 backtest (единый движок исполнения)
+- [ ] TZ-11 Risk Engine
+- [ ] TZ-09/10 api bridge + white API skeleton → TZ-07 прикладной RAG → TZ-08 DI-склейка
+- [ ] TZ-12 бенчмарки индикаторов · TZ-13 CI
+

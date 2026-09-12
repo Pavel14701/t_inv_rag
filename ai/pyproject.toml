@@ -1,0 +1,31 @@
+[project]
+name = "dte-ai"
+version = "0.1.0"
+description = "Entry-Exit Transformer: P(win) model, dataset, training, model bundle (TZ-06)"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "polars>=1.42.1",
+    "pyyaml>=6.0.3",
+    "tensorboard>=2.20.0",
+    "torch>=2.4.1",
+]
+
+[project.optional-dependencies]
+# Не-CUDA GPU-инференс (AMD/Intel/NVIDIA через DX12): 'vulkan' в конфиге — алиас этого пути.
+# Обучение по-прежнему только CUDA/CPU (TZ-06 п.11). GPU-зависимости живут только
+# в этом пакете: публичный контур (dsl/ta/strategies) torch не тянет (TZ-00 п.4.7).
+gpu = [
+    "torch-directml>=0.2.4 ; sys_platform == 'win32' and python_full_version < '3.15'",
+    "onnx>=1.17",
+    "onnxruntime-directml>=1.20 ; sys_platform == 'win32' and python_full_version < '3.15'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-mock>=3.15.1",
+]
+
+[tool.uv]
+package = false

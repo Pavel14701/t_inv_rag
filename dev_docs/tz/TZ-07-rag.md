@@ -1,3 +1,7 @@
+> **Статус: 🔨 начат.** п.0 LLM-слой с per-request роутингом — ✅ (`rag/llm.py`, 15 тестов).
+> ingestion / retrieval / generation / repair-loop — ⬜, блокируются TZ-02 (manifest_hash).
+
+# TZ-07. RAG-контур генерации стратегий
 # TZ-07. RAG-контур (инжест, retrieval, генерация DSL)
 
 ## 1. Контекст

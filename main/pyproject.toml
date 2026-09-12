@@ -1,0 +1,27 @@
+[project]
+name = "dte-main"
+version = "0.1.0"
+description = "Service entry point: white API bridge, DI (dishka), queues (TZ-09/TZ-10)"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.29.1",
+    "alembic>=1.18.5",
+    "dishka>=1.10.1",
+    "faststream[rabbit]>=0.7.1",
+    "psycopg>=3.3.4",
+    "pyyaml>=6.0.3",
+    "redis>=8.0.1",
+    "sqlalchemy>=2.0.51",
+    "t-tech-investments>=0.3.3",
+    "uuid6>=2025.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-mock>=3.15.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.uv]
+package = false

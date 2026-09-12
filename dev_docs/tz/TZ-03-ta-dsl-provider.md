@@ -1,3 +1,7 @@
+> **Статус: ⬜ не начат** (частично: `infer/provider.py` BarSeriesProvider — цены
+> через DSL-контракт; TaProvider поверх ta-индикаторов отсутствует).
+
+# TZ-03. TaProvider: индикаторы ta/ в DSL
 # TZ-03. TaProvider: прокидывание ta через DSL
 
 ## 1. Контекст

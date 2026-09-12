@@ -1,44 +1,26 @@
 [project]
-name = "t-inv-rag"
+name = "deterministic-trading-engine"
 version = "0.1.0"
-description = "Add your description here"
+description = "Deterministic algorithmic trading system: DSL, ta indicators, Transformer P(win), RAG as an auxiliary layer"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 
-dependencies = [
-    "aio-pika>=9.6.2",
-    "aiogram>=3.29.1",
-    "alembic>=1.18.5",
-    "dishka>=1.10.1",
-    "faststream[rabbit]>=0.7.1",
-    "llama-index>=0.14.23",
-    "llama-index-llms-ollama>=0.10.1",
-    "niquests>=3.20.1",
-    "numba>=0.66.0",
-    "polars>=1.42.1",
-    "psycopg>=3.3.4",
-    "pyyaml>=6.0.3",
-    "qdrant-client>=1.18.0",
-    "redis>=8.0.1",
-    "sentence-transformers>=5.6.0",
-    "sqlalchemy>=2.0.51",
-    "t-tech-investments>=0.3.3",
-    "ta-lib>=0.7.0",
-    "tensorboard>=2.20.0",
-    "torch>=2.4.1",
-    "uuid6>=2025.0.1",
-    "yfinance>=1.5.1",
-]
+# Корневой проект — workspace-обвязка: инструменты разработки и общий тестовый
+# стек. Рантайм-зависимости распределены по членам workspace (uv workspaces).
+# См. dev_docs/tz/TZ-00-roadmap.md п. «Монорепозиторий».
+dependencies = []
 
-[project.optional-dependencies]
-# Не-CUDA GPU-инференс (AMD/Intel/NVIDIA через DX12): 'vulkan' в конфиге — алиас этого пути.
-# Обучение по-прежнему только CUDA/CPU (TZ-06 п.11).
-gpu = [
-    "torch-directml>=0.2.4 ; sys_platform == 'win32' and python_full_version < '3.15'",
-    "onnx>=1.17",
-    "onnxruntime-directml>=1.20 ; sys_platform == 'win32' and python_full_version < '3.15'",
+[tool.uv.workspace]
+members = [
+    "ta",
+    "dsl",
+    "strategies",
+    "ai",
+    "infer",
+    "rag",
+    "main",
 ]
 
 [dependency-groups]
@@ -47,6 +29,7 @@ dev = [
     "mypy==2.1.0",
     "pytest==9.1.1",
     "pytest-mock>=3.15.1",
+    "pytest-asyncio>=1.4.0",
     "flake8==7.3.0",
     "flake8-docstrings==1.7.0",
     "pep8-naming==0.15.1",
@@ -55,7 +38,7 @@ dev = [
     "isort==8.0.1",
     "flake8-pyproject==1.2.4",
     "flake8-pie>=0.16.0",
-    "pytest-asyncio>=1.4.0",
+    "pandas-stubs>=2.3.2.250926",
 ]
 
 [[tool.uv.index]]
