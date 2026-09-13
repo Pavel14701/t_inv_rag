@@ -100,10 +100,15 @@ class SignalStore:
 class WhiteAPI:
     """White API service: stores + queue handlers + REST data."""
 
-    def __init__(self) -> None:
-        self.candles = CandleStore()
-        self.jobs = JobStore()
-        self.signals = SignalStore()
+    def __init__(
+        self,
+        candles: Any | None = None,
+        jobs: Any | None = None,
+        signals: Any | None = None,
+    ) -> None:
+        self.candles = candles if candles is not None else CandleStore()
+        self.jobs = jobs if jobs is not None else JobStore()
+        self.signals = signals if signals is not None else SignalStore()
 
     def handle_report(self, raw: bytes) -> None:
         """Consumer for evt.report."""

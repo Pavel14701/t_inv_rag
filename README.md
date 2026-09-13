@@ -6,7 +6,7 @@
 - решения о входе/выходе принимает только детерминированный код (DSL-интерпретатор + движок исполнения);
 - ML-модель оценивает вероятность — она не принимает решений и не имеет доступа к риск-менеджменту;
 - LLM/RAG используется только для генерации/модификации стратегий и анализа результатов — вне контура исполнения;
-- Risk Engine и жёсткие риск-лимиты пока **не реализованы**; после реализации в рамках TZ-11 лимиты будут зашиты в код и недоступны для изменения LLM на любом уровне, включая транспорт.
+- Risk Engine реализован в рамках TZ-11: лимиты — данные в `configs/risk.yaml`, движок — их интерпретатор; лимиты недоступны для изменения LLM на любом уровне, включая транспорт (в протоколе очередей TZ-09 физически нет такой команды).
 
 > Историческое имя репозитория `t_inv_rag` отражало первую итерацию (RAG поверх T-Invest).
 > Ядро проекта — детерминированный торговый контур; RAG — вспомогательный слой
@@ -47,22 +47,41 @@
 - CLI: свечи (synthetic/parquet/yfinance/tinvest) → DSL-сигналы → `--ml` фильтр по
   `P(win)` (TZ-05 ✅). 9 смоук-тестов.
 
-**5. `rag/llm.py` — LLM-слой** (`dte-rag`)
-- Per-request роутинг провайдеров/моделей (Ollama + OpenAI-compatible), TZ-07 п.0 ✅.
-- Прикладной RAG-контур (ingestion/retrieval/generation) — не реализован.
+**5. `rag/` — прикладной RAG-контур** (`dte-rag`)
+- LLM-слой: per-request роутинг провайдеров/моделей (Ollama + OpenAI-compatible).
+- ingestion (chunk_markdown, white-list доки), vectorstore (InMemory + Qdrant),
+  embeddings (Mock + Ollama bge-m3), retrieval, RAGPipeline с pass@1/pass@N
+  метриками (TZ-07). 47 тестов.
+- Осталось: pass@1 evaluation на живом LLM, интеграционные тесты Qdrant/Ollama.
+
+**6. `main/` — точка входа** (`dte-main`)
+- DI (dishka, 4 контура: backtest/inference/rag/api) с провайдерами
+  LLM/Embeddings/Qdrant/model bundle/PostgreSQL (TZ-08).
+- FastStream-мост WhiteBridge/LocalBridge: ACL, schema-version tolerance,
+  reconnect с backoff, heartbeat-мониторинг (TZ-09).
+- REST на aiohttp (ingest/strategies/backtests/signals/rag) + PostgreSQL-сторы
+  и Alembic-миграции (TZ-10).
 
 ### 🚧 В разработке / специфицировано
 
-- **`strategies/`** — каркас; формат `Strategy` + `manifest_hash` + реестр — TZ-02 (следующий шаг).
-- **`backtest/`** — единый движок исполнения (лейблы/бэктест/live) — TZ-04.
-- **Risk Engine** — специфицирован, реализация — TZ-11.
-- **`main/`** — точка входа, DI (dishka), API-бридж — TZ-08/09/10.
+- **Risk Engine (TZ-11 ✅)** — config-driven движок (5 правил, strict-валидация,
+  params-схемы, RISK_* env), встроен в бэктест: reject-аудит в отчёте;
+  live-склейка — после FastStream↔PG (TZ-10).
+- **`strategies/`** — ядро готово (формат + валидация + реестр + лейблы,
+  25 тестов); осталось: склейка с реестром в REST.
+- **`backtest/`** — ядро готово (execution/portfolio/engine/metrics/validation
+  + baseline gate, 34 теста); осталось: SIV-прогон, msgspec-отчёты, live.
+- **`main/`** — DI/REST/PostgreSQL/FastStream-склейка готовы; осталось:
+  реальный локальный backtest-runner, aiogram-бот, JWT (TZ-08/09/10).
+- **TZ-03 волна 2** — TaProvider: 7 групп индикаторов, multi-output,
+  батчевый resolve_history.
 
 ### Критерии успеха (TZ-00)
 
 Profit Factor > 1.5 out-of-sample с комиссиями · MaxDD ≤ 20% · Sharpe > 1.0 ·
 модель ≥ базлайнов (LR/RF/XGBoost) · RAG pass@1 ≥ 70% ≤ 2 repair-итераций.
-*Пока не проверяемы: бэктест (TZ-04) впереди.*
+*Пока не проверяемы на реальных данных: обучение модели + baseline gate
+и live-контур (нужны данные, обученный bundle и FastStream↔PG склейка).*
 
 > ⚠️ **Baseline gate** — сравнение Transformer с простыми методами (Buy & Hold,
 > логистическая регрессия, RF/XGBoost) на одном тестовом периоде — обязательный гейт:

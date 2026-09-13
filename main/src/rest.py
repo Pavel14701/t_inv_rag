@@ -99,9 +99,7 @@ def build_app(
     async def handle_rag_generate(request: web.Request) -> web.Response:
         """POST /rag/generate: RAG DSL generation (local contour)."""
         if rag_generate is None:
-            return _json(
-                {"error": "rag contour not available"}, status=503
-            )
+            return _json({"error": "rag contour not available"}, status=503)
         try:
             body = await request.read()
             data = msgspec_json.decode(body)
@@ -126,9 +124,7 @@ def error_middleware() -> Any:
     """Middleware converting unhandled errors to 500 JSON."""
 
     @web.middleware
-    async def mw(
-        request: web.Request, handler: Routes
-    ) -> web.Response:
+    async def mw(request: web.Request, handler: Routes) -> web.Response:
         try:
             return await handler(request)
         except web.HTTPException:

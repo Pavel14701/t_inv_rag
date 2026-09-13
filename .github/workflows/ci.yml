@@ -116,3 +116,12 @@ jobs:
       - uses: astral-sh/setup-uv@v4
       - run: uv sync --package dte-backtest
       - run: uv run --package dte-backtest pytest backtest/tests
+
+  test-main:
+    name: pytest main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-main
+      - run: uv run --package dte-main pytest main/tests

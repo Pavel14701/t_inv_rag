@@ -26,8 +26,13 @@ from main.src.bridge import (
 def _batch(n: int = 2) -> OhlcvBatch:
     candles = [
         Candle(
-            inst_id="BTC-USDT", ts=1000 + i, open=1.0, high=2.0, low=0.5,
-            close=1.5, volume=10.0,
+            inst_id="BTC-USDT",
+            ts=1000 + i,
+            open=1.0,
+            high=2.0,
+            low=0.5,
+            close=1.5,
+            volume=10.0,
         )
         for i in range(n)
     ]
@@ -98,7 +103,8 @@ class TestBridgeRoundTrip:
 
         local = LocalBridge(broker=broker, on_backtest=on_backtest)
         cmd = BacktestCommand(
-            request_id="job-1", strategy_id="s1",
+            request_id="job-1",
+            strategy_id="s1",
             dsl_entry="rsi.value < 30",
         )
         async with TestRabbitBroker(broker):
@@ -158,8 +164,13 @@ class TestBridgeRoundTrip:
         WhiteBridge(api, broker=broker)
         local = LocalBridge(broker=broker)
         signal = SignalEvent(
-            inst_id="BTC-USDT", ts=1, direction="long", entry_price=100.0,
-            sl_price=95.0, tp_price=110.0, p_win=0.62,
+            inst_id="BTC-USDT",
+            ts=1,
+            direction="long",
+            entry_price=100.0,
+            sl_price=95.0,
+            tp_price=110.0,
+            p_win=0.62,
         )
         async with TestRabbitBroker(broker):
             await local.publish_signal(signal)
@@ -181,11 +192,13 @@ class TestBridgeRoundTrip:
 
         local = LocalBridge(broker=broker, on_candles=on_candles)
         future = {
-            "inst_id": "BTC-USDT", "candles": [], "schema_version": 99,
+            "inst_id": "BTC-USDT",
+            "candles": [],
+            "schema_version": 99,
         }
         async with TestRabbitBroker(broker):
             await local.broker.publish(
                 msgspec_json.encode(future),
                 queue=QueueName.MD_OHLCV.value,
             )
-        assert got == []  # dropped silently
+        assert not got

@@ -677,6 +677,7 @@ source = { virtual = "backtest" }
 dependencies = [
     { name = "numpy" },
     { name = "polars" },
+    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -689,6 +690,7 @@ dev = [
 requires-dist = [
     { name = "numpy", specifier = ">=2.0" },
     { name = "polars", specifier = ">=1.42.1" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
 ]
 
 [package.metadata.requires-dev]

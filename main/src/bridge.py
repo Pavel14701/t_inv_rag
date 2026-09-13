@@ -37,8 +37,11 @@ class ReconnectPolicy:
     """Exponential backoff for broker reconnects."""
 
     def __init__(
-        self, base_delay: float = 0.5, max_delay: float = 30.0,
-        factor: float = 2.0, max_attempts: int = 10,
+        self,
+        base_delay: float = 0.5,
+        max_delay: float = 30.0,
+        factor: float = 2.0,
+        max_attempts: int = 10,
     ) -> None:
         self.base_delay = base_delay
         self.max_delay = max_delay
@@ -67,9 +70,7 @@ class HeartbeatMonitor:
     def stale_queues(self, max_age_s: float) -> list[str]:
         """Queues silent longer than ``max_age_s``."""
         now = time.monotonic()
-        return [
-            q for q, ts in self._last_seen.items() if now - ts > max_age_s
-        ]
+        return [q for q, ts in self._last_seen.items() if now - ts > max_age_s]
 
 
 def _check_version(body: dict[str, Any]) -> bool:
@@ -81,7 +82,9 @@ class WhiteBridge:
     """White-node bridge: publish md.*/cmd.*, consume evt.*."""
 
     def __init__(
-        self, api: Any, broker: RabbitBroker | None = None,
+        self,
+        api: Any,
+        broker: RabbitBroker | None = None,
         monitor: HeartbeatMonitor | None = None,
     ) -> None:
         self.api = api

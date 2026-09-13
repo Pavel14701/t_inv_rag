@@ -18,6 +18,7 @@ class PerformanceMetrics:
     n_trades: int
     avg_hold_bars: float
     total_pnl: float
+    risk_rejects: tuple = ()  # of RiskReject; len = reject counter
 
 
 def compute_metrics(

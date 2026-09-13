@@ -40,17 +40,20 @@ class PortfolioState:
     day_start_capital: float = 0.0
     day_pnl: float = 0.0
     peak_capital: float = 0.0
+    dd_pause_remaining: int = 0
 
 
 @dataclass(frozen=True, slots=True)
 class Decision:
     """Outcome of ``check()``. ``approve=True`` only if every active rule
-    passed; ``size`` is the capped order size proposed by the rules.
+    passed; ``size`` is the capped order size proposed by the rules;
+    ``rule`` names the rule that rejected (empty on approve).
     """
 
     approve: bool
     reason: str = ""
     size: float = 0.0
+    rule: str = ""
 
 
 def check(
@@ -78,6 +81,7 @@ def check(
         day_start_capital=state.day_start_capital,
         day_pnl=state.day_pnl,
         peak_capital=state.peak_capital,
+        dd_pause_remaining=state.dd_pause_remaining,
     )
     decided_size: float | None = None
     for instance in cfg.engine.rules:
@@ -86,11 +90,15 @@ def check(
         fn = get(instance.name)
         result: RuleResult = fn(signal, internal, pcfg, instance.params)
         if not result.ok:
+            # Sync the pause counter back so the caller keeps tracking it.
+            state.dd_pause_remaining = internal.dd_pause_remaining
             return Decision(
                 approve=False,
                 reason=f"{instance.name}: {result.reason}",
                 size=0.0,
+                rule=instance.name,
             )
         if result.size is not None:
             decided_size = result.size
+    state.dd_pause_remaining = internal.dd_pause_remaining
     return Decision(approve=True, size=decided_size or 0.0)

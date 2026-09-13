@@ -5,6 +5,11 @@
 > metrics.py: PF, Sharpe (годовой), MaxDD, win_rate, avg_hold.
 > validation.py: temporal split, walk-forward folds, baseline gate (pass/fail/simplify),
 > report validator (обязательные: B&H, LR, RF, XGBoost + gate status).
+> ✅ волна 2: risk-gate интеграция (TZ-11 п.4.5) — run_backtest(risk_config=...)
+> прогоняет каждый вход через risk.engine.check(); reject'ы хранятся в
+> metrics.risk_rejects (bar_idx, rule, reason, params-снапшот) — 12 тестов
+> в test_risk_integration.py (config-driven e2e, инвариант «пермиссивный gate
+> == бейслайн», audit trail).
 > Осталось: SIV интеграционный прогон, msgspec-контракты, live-контур.
 
 # TZ-04. Модуль бэктестирования `backtest/`

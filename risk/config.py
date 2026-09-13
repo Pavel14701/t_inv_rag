@@ -176,11 +176,75 @@ class RiskConfig:
         )
 
 
+def _check_param_type(value: Any, expected: type, path: str) -> None:
+    """Type check one param value; bool is never a valid number."""
+    if expected is float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ConfigValidationError(
+                f"param {path} must be a number, got {value!r}"
+            )
+    elif expected is int:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ConfigValidationError(
+                f"param {path} must be an integer, got {value!r}"
+            )
+    elif not isinstance(value, expected):
+        raise ConfigValidationError(
+            f"param {path} must be {expected.__name__}, got {value!r}"
+        )
+
+
+def _validate_rule_params(name: str, params: dict[str, Any]) -> None:
+    """Validate one rule's params against its declared schema.
+
+    Unknown keys, wrong types and missing required sub-keys raise -
+    a config typo must never silently change behavior (TZ-11 item 3.1).
+    """
+    from .rules.base import PARAM_SCHEMAS
+
+    schema = PARAM_SCHEMAS.get(name)
+    if schema is None:
+        return
+    for key, value in params.items():
+        if key not in schema:
+            raise ConfigValidationError(
+                f"unknown param {key!r} for rule {name!r}; "
+                f"declared: {sorted(schema)}"
+            )
+        spec = schema[key]
+        if isinstance(spec, dict):
+            if not isinstance(value, dict):
+                raise ConfigValidationError(
+                    f"param {name}.{key} must be a mapping, got {value!r}"
+                )
+            for sub_key, sub_type in spec.items():
+                if sub_key not in value:
+                    raise ConfigValidationError(
+                        f"param {name}.{key}.{sub_key} is required"
+                    )
+                _check_param_type(
+                    value[sub_key], sub_type, f"{name}.{key}.{sub_key}"
+                )
+            unknown = set(value) - set(spec)
+            if unknown:
+                raise ConfigValidationError(
+                    f"unknown param(s) in {name}.{key}: {sorted(unknown)}"
+                )
+        else:
+            _check_param_type(value, spec, f"{name}.{key}")
+    # Declared sub-blocks (dict-typed schema entries) are required: the
+    # rule cannot do its job without them. Scalar params are optional
+    # (rules keep portfolio-level fallbacks).
+    for key, spec in schema.items():
+        if isinstance(spec, dict) and key not in params:
+            raise ConfigValidationError(f"param {name}.{key} is required")
+
+
 def validate_config(cfg: RiskConfig) -> None:
     """Validate a loaded config: known rule names, bounded numerics.
 
-    Rule-name check imports the registry lazily to avoid a circular import
-    between ``risk.config`` and ``risk.rules``.
+    Rule-name and params checks import the registry lazily to avoid a
+    circular import between ``risk.config`` and ``risk.rules``.
     """
     from .rules import registered_names
 
@@ -190,6 +254,7 @@ def validate_config(cfg: RiskConfig) -> None:
             raise ConfigValidationError(
                 f"unknown rule name {rule.name!r}; registered: {sorted(known)}"
             )
+        _validate_rule_params(rule.name, rule.params)
     if not (0.0 < cfg.portfolio.max_capital_pct <= 1.0):
         raise ConfigValidationError(
             "portfolio.max_capital_pct must be in (0, 1], got "

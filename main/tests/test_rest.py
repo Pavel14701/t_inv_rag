@@ -17,8 +17,13 @@ def _batch() -> OhlcvBatch:
         inst_id="BTC-USDT",
         candles=[
             Candle(
-                inst_id="BTC-USDT", ts=1000 + i, open=1.0, high=2.0,
-                low=0.5, close=1.5, volume=10.0,
+                inst_id="BTC-USDT",
+                ts=1000 + i,
+                open=1.0,
+                high=2.0,
+                low=0.5,
+                close=1.5,
+                volume=10.0,
             )
             for i in range(3)
         ],
@@ -60,11 +65,10 @@ async def test_backtest_202_flow(client_factory) -> None:
     api = WhiteAPI()
     client = client_factory(api)
     async with client:
-        cmd = BacktestCommand(request_id="job-9", strategy_id="s1",
-                              dsl_entry="rsi.value < 30")
-        resp = await client.post(
-            "/backtests", data=msgspec_json.encode(cmd)
+        cmd = BacktestCommand(
+            request_id="job-9", strategy_id="s1", dsl_entry="rsi.value < 30"
         )
+        resp = await client.post("/backtests", data=msgspec_json.encode(cmd))
         assert resp.status == 202
         job_id = (await resp.json())["job_id"]
 
@@ -99,8 +103,13 @@ async def test_signals_endpoint(client_factory) -> None:
     api.handle_signal(
         msgspec_json.encode(
             SignalEvent(
-                inst_id="BTC-USDT", ts=1, direction="long",
-                entry_price=1.0, sl_price=0.9, tp_price=1.2, p_win=0.7,
+                inst_id="BTC-USDT",
+                ts=1,
+                direction="long",
+                entry_price=1.0,
+                sl_price=0.9,
+                tp_price=1.2,
+                p_win=0.7,
             )
         )
     )

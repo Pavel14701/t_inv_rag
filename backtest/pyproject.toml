@@ -6,6 +6,10 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.0",
     "polars>=1.42.1",
+    # Кросс-пакетные зависимости (TZ-11 п.4.5: backtest вызывает check()).
+    # Члены workspace — виртуальные пакеты (package = false), поэтому
+    # runtime-зависимость соседа (risk -> pyyaml) повторяется напрямую.
+    "pyyaml>=6.0.3",
 ]
 
 [dependency-groups]

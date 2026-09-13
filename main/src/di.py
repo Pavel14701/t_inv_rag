@@ -28,9 +28,7 @@ class AppConfig:
         return AppConfig(
             database_url=e.get("DATABASE_URL", ""),
             rabbitmq_url=e.get("RABBITMQ_URL", ""),
-            ollama_base_url=e.get(
-                "OLLAMA_BASE_URL", "http://localhost:11434"
-            ),
+            ollama_base_url=e.get("OLLAMA_BASE_URL", "http://localhost:11434"),
             qdrant_url=e.get("QDRANT_URL", "http://localhost:6333"),
             model_bundle_path=e.get("MODEL_BUNDLE_PATH", ""),
             llm_model=e.get("LLM_MODEL", "qwen3:8b"),
@@ -107,7 +105,10 @@ class VectorStorePort(Protocol):
         ...
 
     def search(
-        self, collection: str, query_vector: list[float], top_k: int = 5,
+        self,
+        collection: str,
+        query_vector: list[float],
+        top_k: int = 5,
         payload_filter: dict[str, Any] | None = None,
     ) -> list[Any]:
         """Cosine top-k search."""
@@ -127,6 +128,33 @@ class ModelBundlePort:
     """DI key: optional AI model bundle (inference contour)."""
 
     bundle: Any | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DatabasePort:
+    """DI key: persistence layer (api contour).
+
+    ``sessions`` is None when DATABASE_URL is not configured - callers
+    fall back to the in-memory stores.
+    """
+
+    sessions: Any | None = None
+
+
+class DatabaseProvider(Provider):
+    """Provides the SQLAlchemy session factory (lazy engine, TZ-10)."""
+
+    scope = Scope.APP
+
+    @provide
+    def database(self, config: AppConfig) -> DatabasePort:
+        """Build the session factory from DATABASE_URL, or hold None."""
+        if not config.database_url:
+            return DatabasePort(sessions=None)
+        from main.src.db import make_engine, make_session_factory
+
+        engine = make_engine(config.database_url)
+        return DatabasePort(sessions=make_session_factory(engine))
 
 
 class LLMProviderDishka(Provider):
@@ -155,9 +183,7 @@ class EmbeddingProvider(Provider):
         """Build the Ollama embedding function."""
         from rag.embeddings import OllamaEmbedding
 
-        return OllamaEmbedding(
-            base_url=config.ollama_base_url, model="bge-m3"
-        )
+        return OllamaEmbedding(base_url=config.ollama_base_url, model="bge-m3")
 
 
 class VectorStoreProvider(Provider):
@@ -185,9 +211,7 @@ class ModelBundleProvider(Provider):
             return ModelBundlePort(bundle=None)
         from ai.src.bundle import load_bundle
 
-        return ModelBundlePort(
-            bundle=load_bundle(config.model_bundle_path)
-        )
+        return ModelBundlePort(bundle=load_bundle(config.model_bundle_path))
 
 
 def build_container(contour: str) -> Any:
@@ -204,9 +228,13 @@ def build_container(contour: str) -> Any:
     if CONTOURS[contour].use_model_bundle:
         providers.append(ModelBundleProvider())
     if contour in ("rag",):
-        providers.extend([
-            LLMProviderDishka(),
-            EmbeddingProvider(),
-            VectorStoreProvider(),
-        ])
+        providers.extend(
+            [
+                LLMProviderDishka(),
+                EmbeddingProvider(),
+                VectorStoreProvider(),
+            ]
+        )
+    if contour in ("api",):
+        providers.append(DatabaseProvider())
     return make_container(*providers)

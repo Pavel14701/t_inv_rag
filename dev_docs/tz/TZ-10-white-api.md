@@ -1,6 +1,6 @@
 # TZ-10. White API: каркас публичного сервиса
 
-> **Статус: 🔨 ядро готово (7 REST-тестов + stores).**
+> **Статус: 🔨 ядро + PostgreSQL готовы (12 REST/store-тестов + 10 db-тестов).**
 > ✅ main/src/api.py: WhiteAPI — CandleStore (идемпотентный ingest по
 > (inst_id, ts), дубль не дублирует — тест), JobStore (202 + job_id pattern),
 > SignalStore (latest N), ACL-проверка на submit_backtest.
@@ -9,11 +9,22 @@
 > GET /strategies/{id}, POST /backtests (202), GET /backtests/{job_id},
 > GET /signals?ticker=, POST /rag/generate (503 без rag-контура).
 > Валидация входов msgspec-структурами из contracts/, 400 на битый JSON.
-> ⬜ PostgreSQL вместо in-memory stores + Alembic-миграции
-> (strategies/backtest_jobs/signals/candles).
-> ⬜ FastStream-приложение: consumers md.* → PG, publishers cmd.* (бридж из
-> TZ-09 готов, нужна склейка с PG-сторами).
+> ✅ волна 2: PostgreSQL-слой — main/src/db.py (SQLAlchemy 2.0 модели candles/
+> strategies/backtest_jobs/signals, переносимая схема: JSON в TEXT, sqlite
+> для тестов), main/src/pgstores.py (PgCandleStore/PgJobStore/PgSignalStore —
+> те же интерфейсы, что in-memory; WhiteAPI принимает любую реализацию),
+> Alembic: migrations/env.py (DATABASE_URL > alembic.ini, psycopg-драйвер) +
+> 0001_initial (4 таблицы + 2 индекса; upgrade/downgrade проверены тестом
+> на sqlite). DI: DatabaseProvider/DatabasePort в api-контуре (без DATABASE_URL
+> → sessions=None → in-memory fallback).
+> ✅ волна 2 (склейка): main/src/service.py — make_pg_white_api (WhiteAPI над
+> тремя PG-сторами), candle_saver (md.ohlcv → PG, asyncio.to_thread), 
+> make_local_bridge/make_white_bridge (cmd.backtest → инъекция runner'а, 
+> дефолт — stub с failed-отчётом, никогда не молчит); e2e-тесты над
+> TestRabbitBroker: ohlcv → PG идемпотентно, cmd → evt.report → PG job completed.
+> ⬜ Реальный локальный runner (DSL→сигналы→backtest+risk) для cmd.backtest.
 > ⬜ aiogram-бот поверх тех же контрактов; JWT-аутентификация.
+> ⬜ Живой PostgreSQL в CI (service-контейнер) для pgstores.
 
 ## 1. Контекст
 

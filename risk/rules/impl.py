@@ -38,20 +38,24 @@ def require_stop_loss(signal, state: RuleState, portfolio, params):
 
 @register("position_limit")
 def position_limit(signal, state: RuleState, portfolio, params):
-    """Cap order size: fraction of capital x price, and max units."""
+    """Cap order size: fraction of capital x price, and max units.
+
+    Params (max_capital_pct / max_units) override the portfolio-level
+    defaults; per-instrument overrides shadow both.
+    """
     if state.capital <= 0:
         return RuleResult(False, "no capital")
     ovr = portfolio.instruments.get(signal.instrument)
-    pct = (
-        ovr.max_capital_pct
-        if ovr and ovr.max_capital_pct is not None
-        else portfolio.max_capital_pct
-    )
-    max_units = (
-        ovr.max_units
-        if ovr and ovr.max_units is not None
-        else portfolio.max_units
-    )
+    if ovr and ovr.max_capital_pct is not None:
+        pct = ovr.max_capital_pct
+    else:
+        pct = params.get("max_capital_pct", portfolio.max_capital_pct)
+        pct = float(pct) if pct is not None else portfolio.max_capital_pct
+    if ovr and ovr.max_units is not None:
+        max_units: float | None = ovr.max_units
+    else:
+        mu = params.get("max_units")
+        max_units = float(mu) if mu is not None else portfolio.max_units
     units_by_capital = state.capital * pct / signal.entry_price
     size = min(units_by_capital, max_units or float("inf"))
     size = min(size, float(signal.requested_units))
@@ -84,11 +88,24 @@ def daily_loss_limit(signal, state: RuleState, portfolio, params):
 
 @register("drawdown_stop")
 def drawdown_stop(signal, state: RuleState, portfolio, params):
-    """Reject (and force a pause) when drawdown from the peak is too deep."""
+    """Reject (and force a pause) when drawdown from the peak is too deep.
+
+    While the pause is active (``pause_bars`` checked signals after the
+    trigger) every entry is rejected without re-evaluating the drawdown.
+    """
     cap_pct = float(params.get("max_drawdown_pct", 0.0))
+    pause_bars = int(params.get("pause_bars", 0))
+    if state.dd_pause_remaining > 0:
+        state.dd_pause_remaining -= 1
+        return RuleResult(
+            False,
+            f"drawdown pause active "
+            f"({state.dd_pause_remaining + 1} checks left)",
+        )
     if state.peak_capital <= 0:
         return RuleResult(False, "no peak capital tracked")
     dd = (state.peak_capital - state.capital) / state.peak_capital
     if dd >= cap_pct:
+        state.dd_pause_remaining = pause_bars
         return RuleResult(False, f"drawdown stop hit (dd={dd:.2%})")
     return RuleResult(True, size=None)

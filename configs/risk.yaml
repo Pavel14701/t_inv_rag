@@ -8,7 +8,9 @@ engine:
     - name: require_stop_loss
       active: true
       params:
-        sl: { min_mult: 0.0, use_atr: true, atr_lookback: 14 }
+        # ATR-based stops are computed by the caller (TZ-04 engine);
+        # this rule validates distances as fractions of the entry price.
+        sl: { min_mult: 0.0 }
         tp: { min_mult: 1.0 }
     - name: position_limit
       active: true

@@ -8,6 +8,7 @@ passing :func:`validate_strategy`.
 
 from __future__ import annotations
 
+import builtins
 import hashlib
 import json
 
@@ -186,7 +187,7 @@ class StrategyRegistry:
             return None
         return Strategy.from_dict(json.loads(path.read_text()))
 
-    def by_manifest(self, manifest_hash: str) -> list[Strategy]:
+    def by_manifest(self, manifest_hash: str) -> builtins.list[Strategy]:
         """Filter strategies by their pinned manifest hash."""
         return [s for s in self.list() if s.manifest_hash == manifest_hash]
 
