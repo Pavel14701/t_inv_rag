@@ -73,8 +73,9 @@
   + baseline gate, 34 теста); осталось: SIV-прогон, msgspec-отчёты, live.
 - **`main/`** — DI/REST/PostgreSQL/FastStream-склейка готовы; осталось:
   реальный локальный backtest-runner, aiogram-бот, JWT (TZ-08/09/10).
-- **TZ-03 волна 2** — TaProvider: 7 групп индикаторов, multi-output,
-  батчевый resolve_history.
+- **`ta/`** — универсальный маппер индикаторов (TZ-03 ✅): 84 индикатора в DSL
+  через авто-биндинги из сигнатур `*_ind` (`ta/src/registry.py`), multi-output,
+  батчевый resolve; волна 1 — 4 golden-якоря.
 
 ### Критерии успеха (TZ-00)
 
@@ -201,7 +202,7 @@ Python 3.12. **Код, идентификаторы, докстринги, ко�
 
 - [x] TZ-01 DSL hardening · TZ-06 ai stabilization · TZ-05 inference
 - [x] TZ-02 strategies + единая OHLC
-- [x] TZ-03 ta-dsl provider (волна 1: 10 биндингов × 7 групп)
+- [x] TZ-03 ta-dsl provider (волна 2: маппер, 84 индикатора в DSL)
 - [x] TZ-04 backtest (execution + portfolio + engine + metrics + baseline gate)
 - [x] TZ-11 Risk Engine (config-driven ядро)
 - [ ] TZ-09/10 api bridge + white API

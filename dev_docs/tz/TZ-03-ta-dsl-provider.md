@@ -1,9 +1,13 @@
-> **Статус: ✅ реализован (волна 1: 4 индикатора + TaProvider + 11 тестов).**
-> IndicatorBinding + реестр (ema, sma, rsi, atr); build_manifest();
+> **Статус: ✅ реализован (волна 1 + волна 2).**
+> Волна 1: IndicatorBinding + реестр golden-якорей (ema, sma, rsi, atr, ...);
+> build_manifest();
 > TaProvider(IndicatorProvider): compute-once кэш, DSL-offset = cache index,
 > WarmupNotReady контракт, look-ahead инвариант, performance < 1s/5000 баров.
-> 11 тестов зелёные (ruff 0, mypy infer 0). Осталось: расширение до 7 групп,
-> multi-output (ott.direction, adx.+/adx.-), батчевый resolve_history.
+> Волна 2 (✅): универсальный маппер `ta/src/registry.py` — авто-биндинги из
+> сигнатур `*_ind`, **84 индикатора в манифесте/DSL**, multi-output
+> (NAMED_OUTPUTS: macd/ppo/fisher/brar/kst), fix cache-key (покрывает все params),
+> 1975 тестов ta (ruff 0, mypy 0). SMOKE_SKIP: ott (numba dispatch), SKIP:
+> ichimoku/scrsi/zigzag/tos_stdevall (непригодны для движка).
 
 # TZ-03. TaProvider: прокидывание ta через DSL
 

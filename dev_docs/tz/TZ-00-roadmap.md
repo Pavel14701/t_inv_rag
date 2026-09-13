@@ -64,7 +64,7 @@ ta ──(TaProvider, TZ-03)──► dsl ──► backtest (TZ-04) ──► �
 | 1 | TZ-01 dsl hardening | ✅ (DslValidationError, resolve_history, манифест-маршрутизация в коде) | Все контракты (исключения, провайдеры) строятся на DSL; чинить после появления клиентов дороже |
 | 2 | TZ-06 ai stabilization | ✅ (bundle, predict_p_win, YAML, device; остаток — батчеризация OB, замер < 5 мс на реальном железе) | torch в зависимостях, утечка валидации, model bundle — до любого использования ai |
 | 3 | TZ-02 strategies + единая OHLC | ✅ (25 тестов: единая схема + Strategy + валидация + реестр + AST + лейбл-генератор) | Формат стратегии и схема данных — склейка ta/dsl/ai; конфликт схем блокирует всё дальше |
-| 4 | TZ-03 ta-dsl provider | 🔨 (волна 1: 4 индикатора + TaProvider + 11 тестов; осталось: 7 групп, multi-output, батчевый resolve_history — **следующий крупный шаг**) | Прокидывание индикаторов в DSL; нужен формат данных из TZ-02 |
+| 4 | TZ-03 ta-dsl provider | ✅ (волна 2: универсальный маппер `ta/src/registry.py` — авто-биндинги из сигнатур `*_ind`, 84 индикатора в манифесте/DSL; multi-output с NAMED_OUTPUTS, батчевый resolve, cache-key по всем params — фикс коллизий; волна 1: 4 golden-якоря; 1975 тестов; SMOKE_SKIP: ott = numba-dispatch) | Прокидывание индикаторов в DSL; нужен формат данных из TZ-02 |
 | 5 | TZ-04 backtest | ✅ ядро (34 + 12 risk-интеграционных теста; risk-gate и reject-аудит ✅; осталось: SIV-прогон, msgspec-контракты отчётов, live-контур) | Честный бэктест ДО RAG и ДО ML-инференса на реальных данных |
 | 6 | TZ-05 inference | ✅ (CLI, конвейер, --ml; остался ручной прогон на T-Invest) | Скрипт сигналов — «бэктест на живом хвосте»; зависит от TZ-02/03/04 (формат стратегии — заготовка) |
 | 7 | TZ-09 api bridge | 🔨 транспорт готов (контракты + ACL + WhiteBridge/LocalBridge, reconnect/backoff, heartbeat, e2e через TestRabbitBroker; осталось: живой RabbitMQ, TLS/токены, lag-метрики в Prometheus) | Транспорт white API ↔ локаль; нужны форматы отчётов (TZ-04) и сигналов (TZ-05) |
@@ -80,11 +80,13 @@ ta ──(TaProvider, TZ-03)──► dsl ──► backtest (TZ-04) ──► �
 
 ## 3.1. Свода на текущий момент
 
-- Полный сюит: **2324 passed / 120 skipped / 0 warnings**; ruff и mypy чисты
+- Полный сюит: **2425 passed / 120 skipped / 0 warnings**; ruff и mypy чисты
   по всему репозиторию (единственный принятый tech-debt — докстринги в
   `ta/src/overlap/mama.py`).
 - Детерминированный контур готов end-to-end на синтетике:
-  ta → DSL → сигналы → **Risk Engine (TZ-11 ✅)** → бэктест с reject-аудитом.
+  ta → DSL → сигналы → **Risk Engine (TZ-11 ✅)** → бэктест с reject-аудитом;
+  DSL-манифест расширен до **84 индикаторов** (TZ-03 волна 2 ✅: универсальный
+  маппер `ta/src/registry.py`, авто-биндинги из сигнатур `*_ind`).
 - Инфраструктура: DI (4 контура), FastStream-мост с ACL, REST, PostgreSQL
   + Alembic, склейка white/local через `service.py` — всё с e2e-тестами
   на in-memory брокере и SQLite; прод-бэкенды (RabbitMQ, PG, Qdrant,
@@ -92,21 +94,18 @@ ta ──(TaProvider, TZ-03)──► dsl ──► backtest (TZ-04) ──► �
 
 ## 3.2. Дальнейший порядок работ
 
-1. **TZ-03 волна 2** — TaProvider: все 7 групп, multi-output
-   (`ott.direction`, `adx.+/-`), батчевый `resolve_history`.
-   Блокирует полноту RAG-генерации (манифест индикаторов) и реальную
-   выразительность стратегий.
-2. **Локальный backtest-runner в main** (замыкает TZ-04 live + TZ-09/TZ-10):
+1. **Локальный backtest-runner в main** (замыкает TZ-04 live + TZ-09/TZ-10):
    cmd.backtest → DSL→сигналы → `run_backtest(risk_config=...)` → evt.report;
-   параллельно msgspec-контракты отчётов TZ-04.
-3. **TZ-07 финал** — pass@1 eval-скрипт (нужен живой Ollama), маркер
+   (TZ-03 волна 2 ✅ — маппер 84 индикаторов уже в DSL), параллельно
+   msgspec-контракты отчётов TZ-04.
+2. **TZ-07 финал** — pass@1 eval-скрипт (нужен живой Ollama), маркер
    `rag_integration` для живых Qdrant/Ollama (docker compose есть).
-4. **TZ-10 добивка** — aiogram-бот, JWT, живой PostgreSQL в CI
+3. **TZ-10 добивка** — aiogram-бот, JWT, живой PostgreSQL в CI
    (service-контейнер).
-5. **TZ-09 добивка** — живой RabbitMQ, TLS/токены, lag-метрики.
-6. **TZ-04/TZ-06 на реальных данных** — SIV-прогон, обучение модели,
+4. **TZ-09 добивка** — живой RabbitMQ, TLS/токены, lag-метрики.
+5. **TZ-04/TZ-06 на реальных данных** — SIV-прогон, обучение модели,
    baseline gate (открывает live), батчеризация OB, замер < 5 мс.
-7. **TZ-12 финал** — повторные прогоны ±10%, TA-Lib опциональным job в CI.
+6. **TZ-12 финал** — повторные прогоны ±10%, TA-Lib опциональным job в CI.
 
 ## 4. Сквозные принципы (обязательны для всех ТЗ)
 

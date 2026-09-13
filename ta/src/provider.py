@@ -251,7 +251,9 @@ class TaProvider(IndicatorProvider):
         self._df = df
         self._n = len(df)
         self.cursor = self._n - 1
-        self._cache: dict[tuple[str, int], np.ndarray] = {}
+        self._cache: dict[
+            tuple[str, tuple[tuple[str, Any], ...]], np.ndarray
+        ] = {}
         self._manifest = build_manifest()
         self._columns: dict[str, np.ndarray] = {}
         for binding in BINDINGS.values():
@@ -272,9 +274,6 @@ class TaProvider(IndicatorProvider):
         length = int(
             params.get("length", binding.default_params.get("length", 1))
         )
-        key = (binding.dsl_name, length)
-        if key in self._cache:
-            return self._cache[key]
         if length > self._n:
             raise WarmupNotReady(
                 f"{binding.dsl_name}: length {length} > bars {self._n}"
@@ -285,6 +284,11 @@ class TaProvider(IndicatorProvider):
         # filter to only params the function actually accepts
         valid = set(inspect.signature(binding.func).parameters)
         kwargs = {k: v for k, v in kwargs.items() if k in valid}
+        # cache key must cover ALL resolved params, not just length:
+        # macd(fast=12) vs macd(fast=26) must not collide (TZ-03 wave 2)
+        key = (binding.dsl_name, tuple(sorted(kwargs.items())))
+        if key in self._cache:
+            return self._cache[key]
         args = [self._columns[src] for src in binding.sources]
         raw = binding.func(*args, **kwargs)
         if isinstance(raw, tuple):
@@ -338,3 +342,11 @@ class TaProvider(IndicatorProvider):
                 f"{indicator}({params}): warm-up NaN at bar {idx}"
             )
         return value
+
+
+# TZ-03 wave 2: auto-derive bindings for every remaining ta indicator
+# (manual bindings above are golden anchors and are never overwritten).
+from . import registry as _registry  # noqa: E402
+
+
+_registry.install_auto_bindings()
