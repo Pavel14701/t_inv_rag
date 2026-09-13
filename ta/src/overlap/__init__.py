@@ -1,3 +1,5 @@
+"""Overlapping moving-average indicators."""
+
 # -*- coding: utf-8 -*-
 from .alligator import alligator_ind, alligator_polars
 from .alma import alma_ind, alma_polars

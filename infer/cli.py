@@ -46,8 +46,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ml", help="path to model bundle (TZ-06)")
     p.add_argument("--p-threshold", type=float, default=None)
     p.add_argument("--output", default="signals.csv")
-    p.add_argument("--bars", type=int, default=1000,
-                   help="bars for synthetic source")
+    p.add_argument(
+        "--bars", type=int, default=1000, help="bars for synthetic source"
+    )
     return p
 
 
@@ -57,8 +58,7 @@ def main(argv: list[str] | None = None) -> int:
 
     dsl_entry, dsl_exit = _resolve_strategy(args)
     if not dsl_entry:
-        print("error: --entry or --strategy-file is required",
-              file=sys.stderr)
+        print("error: --entry or --strategy-file is required", file=sys.stderr)
         return 2
 
     kwargs = {}
@@ -88,8 +88,11 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     result = run_inference(
-        df, dsl_entry, dsl_exit,
-        p_threshold=args.p_threshold, predictor=predictor,
+        df,
+        dsl_entry,
+        dsl_exit,
+        p_threshold=args.p_threshold,
+        predictor=predictor,
     )
     _write_output(result.signals, args.output)
     print(result.summary())

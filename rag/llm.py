@@ -97,7 +97,8 @@ class OllamaProvider:
             messages.append({"role": "system", "content": options.system})
         messages.append({"role": "user", "content": prompt})
         opts = {
-            k: v for k, v in body.items()
+            k: v
+            for k, v in body.items()
             if k in ("temperature", "num_predict")
         }
         return {
@@ -124,7 +125,9 @@ class OllamaProvider:
                 response = self._transport(self._url(), body)
             else:
                 response = niquests.post(
-                    self._url(), json=body, timeout=self.timeout,
+                    self._url(),
+                    json=body,
+                    timeout=self.timeout,
                 ).json()
         except LLMError:
             raise
@@ -142,7 +145,9 @@ class OllamaProvider:
             else:
                 async with niquests.AsyncSession() as session:
                     resp = await session.post(
-                        self._url(), json=body, timeout=self.timeout,
+                        self._url(),
+                        json=body,
+                        timeout=self.timeout,
                     )
                     response = resp.json()
         except LLMError:
@@ -211,7 +216,9 @@ class OpenAICompatProvider:
                 response = self._transport(self._url(), body)
             else:
                 response = niquests.post(
-                    self._url(), json=body, headers=self._headers(),
+                    self._url(),
+                    json=body,
+                    headers=self._headers(),
                     timeout=self.timeout,
                 ).json()
         except LLMError:
@@ -230,7 +237,9 @@ class OpenAICompatProvider:
             else:
                 async with niquests.AsyncSession() as session:
                     resp = await session.post(
-                        self._url(), json=body, headers=self._headers(),
+                        self._url(),
+                        json=body,
+                        headers=self._headers(),
                         timeout=self.timeout,
                     )
                     response = resp.json()
@@ -258,16 +267,22 @@ def build_router_from_env(
     default_provider = env.get("LLM_PROVIDER", "ollama")
     default_model = env.get("LLM_MODEL", "deepseek-r1:8b")
     router = LLMRouter(default_provider=default_provider)
-    router.register("ollama", OllamaProvider(
-        base_url=env.get("OLLAMA_BASE_URL", "http://localhost:11434"),
-        default_model=default_model,
-    ))
-    if env.get("LLM_BASE_URL"):
-        router.register("openai", OpenAICompatProvider(
-            base_url=env["LLM_BASE_URL"],
+    router.register(
+        "ollama",
+        OllamaProvider(
+            base_url=env.get("OLLAMA_BASE_URL", "http://localhost:11434"),
             default_model=default_model,
-            api_key=env.get("LLM_API_KEY"),
-        ))
+        ),
+    )
+    if env.get("LLM_BASE_URL"):
+        router.register(
+            "openai",
+            OpenAICompatProvider(
+                base_url=env["LLM_BASE_URL"],
+                default_model=default_model,
+                api_key=env.get("LLM_API_KEY"),
+            ),
+        )
     return router
 
 
@@ -305,7 +320,8 @@ class LLMRouter:
     ) -> str:
         """Complete a prompt, routing to the requested provider."""
         return self.get(provider).complete(
-            prompt, options or CompletionOptions(),
+            prompt,
+            options or CompletionOptions(),
         )
 
     async def acomplete(
@@ -317,5 +333,6 @@ class LLMRouter:
     ) -> str:
         """Async counterpart of :meth:`complete`."""
         return await self.get(provider).acomplete(
-            prompt, options or CompletionOptions(),
+            prompt,
+            options or CompletionOptions(),
         )

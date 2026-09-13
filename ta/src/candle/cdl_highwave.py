@@ -150,6 +150,7 @@ def cdl_highwave_polars(
     max_shadow_factor: float = 0.3,
     output_col: str = "CDL_HIGHWAVE",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_highwave(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

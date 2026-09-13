@@ -1,3 +1,5 @@
+"""Statistical indicators (stdev, zscore, ...)."""
+
 from .entropy import entropy_ind, entropy_polars
 from .kurtosis import kurtosis_ind, kurtosis_polars
 from .mad import mad_ind, mad_polars

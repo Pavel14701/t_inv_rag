@@ -14,7 +14,8 @@ def _cdl_risefall3methods_nb(
 ) -> np.ndarray:
     """Numba-accelerated Rise/Fall 3 Methods pattern.
     Returns boolean mask where pattern completes (True at the 5th candle).
-    Detects both Rising Three Methods (bullish) and Falling Three Methods (bearish).
+    Detects both Rising Three Methods (bullish) and Falling Three Methods
+        (bearish).
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.bool_)
@@ -35,8 +36,8 @@ def _cdl_risefall3methods_nb(
             o = open_[i - k]
             c = close[i - k]
             h = high[i - k]
-            l = low[i - k]
-            rng = h - l
+            low_ = low[i - k]
+            rng = h - low_
             body = abs(c - o)
             if rng <= 0.0:
                 small_ok_bull = False
@@ -48,7 +49,7 @@ def _cdl_risefall3methods_nb(
                 small_ok_bear = False
                 break
             # must stay within range of candle 1
-            if h > h1 or l < l1:
+            if h > h1 or low_ < l1:
                 small_ok_bull = False
                 small_ok_bear = False
                 break

@@ -150,7 +150,7 @@ def test_stoch_nan_propagation(ohlc) -> None:
     high, low, close = ohlc
     close = close.copy()
     close[30] = np.nan
-    stoch_k, stoch_d = stoch_numpy(high, low, close, use_talib=False)
+    stoch_k, _stoch_d = stoch_numpy(high, low, close, use_talib=False)
     # raw[i] windows [i-13, i] touch bar 30 only at i = 30; the
     # nan-ignore smoothing keeps exactly the %K windows [30, 32] NaN.
     assert np.isnan(stoch_k[30:33]).all()

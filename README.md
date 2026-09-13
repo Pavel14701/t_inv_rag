@@ -85,10 +85,12 @@ uv run --package dte-dsl pytest dsl/tests
 |-------|---------|----------------------|-----|
 | `dte-ta` | `ta/` | numba, numpy, scipy | нет |
 | `dte-dsl` | `dsl/` | niquests | нет |
-| `dte-strategies` | `strategies/` | polars, pandas, ta-lib | нет |
+| `dte-strategies` | `strategies/` | polars, niquests | нет |
 | `dte-ai` | `ai/` | torch, tensorboard, pyyaml | обучение CUDA / инференс DX12 (extra `gpu`) |
 | `dte-infer` | `infer/` | polars, yfinance, t-tech; torch — extra `ml` | нет |
 | `dte-rag` | `rag/` | llama-index, qdrant-client, sentence-transformers | нет (Ollama — внешний сервис) |
+| `dte-backtest` | `backtest/` | numpy, polars | нет |
+| `dte-contracts` | `contracts/` | msgspec | нет |
 | `dte-main` | `main/` | dishka, faststream, aiogram, sqlalchemy, alembic | нет |
 
 Принцип TZ-00 п.4.7: **GPU-зависимости (torch) существуют только в `dte-ai`**
@@ -118,6 +120,7 @@ uv run --package dte-ta pytest ta/tests        # тесты индикаторо
 uv run --package dte-ai pytest ai/tests        # тесты ai
 uv run --package dte-rag pytest rag/tests      # тесты LLM-слоя
 uv run --package dte-infer pytest infer/tests  # смоук-тесты инференса
+uv run --package dte-strategies pytest strategies/tests  # тесты стратегий
 uv run pytest -m dsl                          # только тесты dte-dsl (service-маркеры)
 uv run --package dte-infer python -m infer.cli --help   # инференс
 ```
@@ -127,6 +130,30 @@ uv run --package dte-infer python -m infer.cli --help   # инференс
 Python ≥ 3.12 · uv (workspaces) · NumPy/Numba · Polars · TA-Lib · PyTorch ·
 LlamaIndex + Ollama · Qdrant · PostgreSQL + SQLAlchemy + Alembic · Redis ·
 RabbitMQ (FastStream) · aiogram · dishka.
+
+### Бенчмарки индикаторов ta/ (TZ-12, n=100 000)
+
+Numba-ядра против базлайнов; cold = первый вызов (JIT-компиляция), warm = best-of-3,
+фиксированный seed. TA-Lib не установлен в основном окружении (n/a).
+
+| module | indicator | impl | ms | speedup |
+|---|---|---|---:|---:|
+| overlap | sma | numba (cold) | 1.16 | - |
+| overlap | sma | numba (warm) | 0.62 | 1.0x |
+| overlap | sma | pandas | 1.04 | 1.7x |
+| overlap | ema | numba (warm) | 0.86 | 1.0x |
+| overlap | ema | pandas | 0.57 | 0.7x |
+| momentum | rsi | numba (warm) | 3.09 | 1.0x |
+| momentum | rsi | numpy | 3.14 | 1.0x |
+| momentum | macd | numba (warm) | 3.16 | 1.0x |
+| momentum | macd | numpy | 3.07 | 1.0x |
+| volatility | atr | numba (warm) | 2.05 | 1.0x |
+| volatility | atr | pandas | 13.09 | 6.4x |
+| candle | cdl_engulfing | numba (warm) | 1.18 | 1.0x |
+| custom | scrsi | numba (warm) | 4.09 | 1.0x |
+| custom | scrsi | numpy | 3.87 | 0.9x |
+
+Воспроизведение: `uv run python -m ta.benchmarks.run --n 100000 --save`.
 
 ## Качество кода
 
@@ -154,9 +181,11 @@ Python 3.12. **Код, идентификаторы, докстринги, ко�
 Актуальный порядок — в `dev_docs/tz/TZ-00-roadmap.md`. Кратко:
 
 - [x] TZ-01 DSL hardening · TZ-06 ai stabilization · TZ-05 inference
-- [ ] **TZ-02 strategies + единая OHLC** (следующий шаг)
-- [ ] TZ-03 ta-dsl provider → TZ-04 backtest (единый движок исполнения)
-- [ ] TZ-11 Risk Engine
+- [x] TZ-02 strategies + единая OHLC
+- [x] TZ-03 ta-dsl provider (волна 1: 10 биндингов × 7 групп)
+- [x] TZ-04 backtest (execution + portfolio + engine + metrics + baseline gate)
+- [x] TZ-11 Risk Engine (config-driven ядро)
+- [ ] TZ-09/10 api bridge + white API
 - [ ] TZ-09/10 api bridge + white API skeleton → TZ-07 прикладной RAG → TZ-08 DI-склейка
 - [ ] TZ-12 бенчмарки индикаторов · TZ-13 CI
 

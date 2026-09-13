@@ -223,6 +223,7 @@ def cdl_gapsidesidewhite_polars(
     max_shadow_factor: float = 0.5,
     output_col: str = "CDL_GAPSIDESIDEWHITE",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_gapsidesidewhite(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

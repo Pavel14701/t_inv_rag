@@ -104,6 +104,11 @@ def brar_ind(
         Shift for close.
     offset, fillna : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     ar, br : tuple of np.ndarray

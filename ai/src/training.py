@@ -99,12 +99,14 @@ def build_loader_from_parquet(
     df_lbl = load_labels_parquet(labels_path)
     df = merge_features_labels(df_feat, df_lbl)
 
-    data = np.column_stack([
-        df[price_cols].to_numpy(),
-        df[ind_cols].to_numpy() if ind_cols else np.zeros((df.height, 0)),
-        df[sig_cols].to_numpy() if sig_cols else np.zeros((df.height, 0)),
-        df[tp_sl_cols].to_numpy(),
-    ])
+    data = np.column_stack(
+        [
+            df[price_cols].to_numpy(),
+            df[ind_cols].to_numpy() if ind_cols else np.zeros((df.height, 0)),
+            df[sig_cols].to_numpy() if sig_cols else np.zeros((df.height, 0)),
+            df[tp_sl_cols].to_numpy(),
+        ]
+    )
 
     action = df["action"].to_numpy()
     outcome = df["outcome"].to_numpy()
@@ -190,12 +192,14 @@ def build_unlabeled_loader_from_parquet(
     else:
         outcome = np.full(n, 2, dtype=float)
 
-    data = np.column_stack([
-        df[price_cols].to_numpy(),
-        df[ind_cols].to_numpy() if ind_cols else np.zeros((n, 0)),
-        df[sig_cols].to_numpy() if sig_cols else np.zeros((n, 0)),
-        df[tp_sl_cols].to_numpy(),
-    ])
+    data = np.column_stack(
+        [
+            df[price_cols].to_numpy(),
+            df[ind_cols].to_numpy() if ind_cols else np.zeros((n, 0)),
+            df[sig_cols].to_numpy() if sig_cols else np.zeros((n, 0)),
+            df[tp_sl_cols].to_numpy(),
+        ]
+    )
 
     if bar_index_col and bar_index_col in df.columns:
         bar_index = df[bar_index_col].to_numpy().astype(np.int64)
@@ -265,9 +269,17 @@ def _prepare_batch(batch, device: torch.device):
 
     """
     (
-        prices, indicators, signals, tp, sl,
-        order_blocks, action_tgt, outcome_tgt,
-        pattern_tgt, start_indices, bar_indices,
+        prices,
+        indicators,
+        signals,
+        tp,
+        sl,
+        order_blocks,
+        action_tgt,
+        outcome_tgt,
+        pattern_tgt,
+        start_indices,
+        bar_indices,
     ) = batch
     return {
         "prices": prices.to(device),
@@ -384,8 +396,12 @@ def _run_train_epoch(
     for batch in loader:
         data = _prepare_batch(batch, device)
         loss, _, _ = _model_forward_loss(
-            model, data, outcome_mode, lambda_outcome,
-            lambda_pattern, class_weight
+            model,
+            data,
+            outcome_mode,
+            lambda_outcome,
+            lambda_pattern,
+            class_weight,
         )
         optimizer.zero_grad()
         loss.backward()
@@ -420,9 +436,8 @@ def _run_val_epoch(
     with torch.no_grad():
         for batch in loader:
             data = _prepare_batch(batch, device)
-            loss, action_logits, outcome_logits = _model_forward_loss(
-                model, data, outcome_mode, lambda_outcome,
-                lambda_pattern, None
+            loss, action_logits, _outcome_logits = _model_forward_loss(
+                model, data, outcome_mode, lambda_outcome, lambda_pattern, None
             )
             total_loss += loss.item()
             num_batches += 1
@@ -456,10 +471,10 @@ def _log_epoch(
         - ``Trades/win_rate``, ``Trades/profit_factor``
     """
     msg = (
-        f'Epoch {epoch + 1}/{total_epochs} | '
-        f'Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | '
-        f'Acc: {action_acc["overall"]:.3f} (entry: {action_acc["entry"]:.3f}) | '  # noqa: E501
-        f'WR: {trade_metrics["win_rate"]:.3f} PF: {trade_metrics["profit_factor"]:.2f}'  # noqa: E501
+        f"Epoch {epoch + 1}/{total_epochs} | "
+        f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | "
+        f"Acc: {action_acc['overall']:.3f} (entry: {action_acc['entry']:.3f}) | "  # noqa: E501
+        f"WR: {trade_metrics['win_rate']:.3f} PF: {trade_metrics['profit_factor']:.2f}"  # noqa: E501
     )
     logger.info(msg)
 
@@ -470,9 +485,7 @@ def _log_epoch(
         writer.add_scalar("Acc/entry", action_acc["entry"], epoch)
         writer.add_scalar("Trades/win_rate", trade_metrics["win_rate"], epoch)
         writer.add_scalar(
-            "Trades/profit_factor",
-            trade_metrics["profit_factor"],
-            epoch
+            "Trades/profit_factor", trade_metrics["profit_factor"], epoch
         )
 
 
@@ -572,24 +585,44 @@ def train_one_round(
 
     for epoch in range(epochs):
         train_loss = _run_train_epoch(
-            model, train_loader, device, optimizer,
-            outcome_mode, lambda_outcome, lambda_pattern, class_weight
+            model,
+            train_loader,
+            device,
+            optimizer,
+            outcome_mode,
+            lambda_outcome,
+            lambda_pattern,
+            class_weight,
         )
 
         if val_loader is not None:
             val_loss, action_acc, trade_metrics = _run_val_epoch(
-                model, val_loader, device,
-                outcome_mode, lambda_outcome, lambda_pattern
+                model,
+                val_loader,
+                device,
+                outcome_mode,
+                lambda_outcome,
+                lambda_pattern,
             )
             _log_epoch(
-                writer, epoch, epochs, train_loss, val_loss,
-                action_acc, trade_metrics
+                writer,
+                epoch,
+                epochs,
+                train_loss,
+                val_loss,
+                action_acc,
+                trade_metrics,
             )
             scheduler.step(val_loss)
 
             best_val_loss, no_improve_count, stop = _checkpoint_and_stop(
-                val_loss, best_val_loss, no_improve_count, model,
-                save_best, best_model_path, early_stopping_patience
+                val_loss,
+                best_val_loss,
+                no_improve_count,
+                model,
+                save_best,
+                best_model_path,
+                early_stopping_patience,
             )
             if stop:
                 break
@@ -707,9 +740,17 @@ def _generate_pseudo_labels_batch(
 
     """
     (
-        prices, indicators, signals, tp, sl,
-        order_blocks_batch, action_tgt, outcome_tgt,
-        _pattern_tgt, start_indices, bar_indices,
+        prices,
+        indicators,
+        signals,
+        tp,
+        sl,
+        order_blocks_batch,
+        action_tgt,
+        _outcome_tgt,
+        _pattern_tgt,
+        _start_indices,
+        bar_indices,
     ) = batch
     prices = prices.to(device)
     indicators = indicators.to(device)
@@ -729,10 +770,9 @@ def _generate_pseudo_labels_batch(
     for bi, ti in itertools.product(range(b), range(t)):
         if action_tgt[bi, ti] != -100:
             continue
-        if (
-            max_action_probs[bi, ti] <= action_threshold
-            or pred_action[bi, ti] not in (1, 2)
-        ):
+        if max_action_probs[bi, ti] <= action_threshold or pred_action[
+            bi, ti
+        ] not in (1, 2):
             continue
 
         if pred_action[bi, ti] == 1:
@@ -795,12 +835,14 @@ def _update_labels_parquet(
         shutil.copyfile(labels_path, backup_path)
 
     if "action" not in df_lbl.columns:
-        df_lbl = df_lbl.with_columns([
-            pl.lit(-100).alias("action"),
-            pl.lit(
-                float("nan") if outcome_mode == "regression" else 2.0
-            ).alias("outcome"),
-        ])
+        df_lbl = df_lbl.with_columns(
+            [
+                pl.lit(-100).alias("action"),
+                pl.lit(
+                    float("nan") if outcome_mode == "regression" else 2.0
+                ).alias("outcome"),
+            ]
+        )
     if "is_pseudo" not in df_lbl.columns:
         df_lbl = df_lbl.with_columns([pl.lit(False).alias("is_pseudo")])
 
@@ -823,11 +865,13 @@ def _update_labels_parquet(
         is_pseudo_arr[global_bar] = True
         applied += 1
 
-    df_lbl = df_lbl.with_columns([
-        pl.Series("action", action_arr),
-        pl.Series("outcome", outcome_arr),
-        pl.Series("is_pseudo", is_pseudo_arr),
-    ])
+    df_lbl = df_lbl.with_columns(
+        [
+            pl.Series("action", action_arr),
+            pl.Series("outcome", outcome_arr),
+            pl.Series("is_pseudo", is_pseudo_arr),
+        ]
+    )
     save_labels_parquet(df_lbl, labels_path)
     return applied
 
@@ -958,9 +1002,7 @@ def _self_training_round(
         List of pseudo-labels, or ``None``.
 
     """
-    logger.info(
-        "=== Self-training round %d/%d ===", round_idx + 1, num_rounds
-    )
+    logger.info("=== Self-training round %d/%d ===", round_idx + 1, num_rounds)
     model = train_one_round(
         model,
         train_loader,
@@ -1083,33 +1125,57 @@ def self_training_loop(
     """
     # ---------- Initial labeled loader ----------
     loader, df = build_loader_from_parquet(
-        features_path, labels_path, order_blocks,
-        seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
-        batch_size=batch_size, shuffle=True,
+        features_path,
+        labels_path,
+        order_blocks,
+        seq_len,
+        price_cols,
+        ind_cols,
+        sig_cols,
+        tp_sl_cols,
+        batch_size=batch_size,
+        shuffle=True,
     )
     train_loader, val_loader = _split_train_val(loader, val_split, batch_size)
     class_weight = _compute_class_weights(df["action"].to_numpy())
 
     # ---------- Unlabeled loader ----------
     unlabeled_loader = build_unlabeled_loader_from_parquet(
-        features_path_unlabeled, order_blocks,
-        seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
-        batch_size=batch_size, outcome_mode=outcome_mode,
+        features_path_unlabeled,
+        order_blocks,
+        seq_len,
+        price_cols,
+        ind_cols,
+        sig_cols,
+        tp_sl_cols,
+        batch_size=batch_size,
+        outcome_mode=outcome_mode,
     )
 
     # ---------- Self-training rounds ----------
     for round_idx in range(num_rounds):
         pseudo_labels = _self_training_round(
-            model, round_idx, num_rounds,
-            train_loader, val_loader, unlabeled_loader,
-            device, outcome_mode, lambda_outcome, lr,
-            epochs_per_round, action_threshold, outcome_threshold,
-            min_rr, close_idx, seq_len, class_weight, log_dir,
+            model,
+            round_idx,
+            num_rounds,
+            train_loader,
+            val_loader,
+            unlabeled_loader,
+            device,
+            outcome_mode,
+            lambda_outcome,
+            lr,
+            epochs_per_round,
+            action_threshold,
+            outcome_threshold,
+            min_rr,
+            close_idx,
+            seq_len,
+            class_weight,
+            log_dir,
             save_best=True,
             best_model_path=(
-                f"{save_model_path}_best.pt"
-                if save_model_path
-                else None
+                f"{save_model_path}_best.pt" if save_model_path else None
             ),
             early_stopping_patience=early_stopping_patience,
         )
@@ -1120,9 +1186,16 @@ def self_training_loop(
             labels_path, pseudo_labels, outcome_mode, round_idx=round_idx
         )
         loader, df = build_loader_from_parquet(
-            features_path, labels_path, order_blocks,
-            seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
-            batch_size=batch_size, shuffle=True,
+            features_path,
+            labels_path,
+            order_blocks,
+            seq_len,
+            price_cols,
+            ind_cols,
+            sig_cols,
+            tp_sl_cols,
+            batch_size=batch_size,
+            shuffle=True,
         )
         train_loader, val_loader = _split_train_val(
             loader, val_split, batch_size

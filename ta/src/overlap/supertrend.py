@@ -278,9 +278,25 @@ def supertrend_polars(
         Input data.
     high_col, low_col, close_col : str
         Column names for prices.
-    length, atr_length, multiplier, atr_mamode, offset, fillna, use_talib : as above.
+    length, atr_length, multiplier, atr_mamode, offset, fillna, use_talib : as
+        above.
     suffix : str
         Suffix for column names (default f"_{length}_{multiplier}").
+
+    atr_length : int, optional
+        See the module guide; default mirrors the numpy path.
+    atr_mamode : see notes
+        Documented in the matching numpy implementation.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    multiplier : see notes
+        Documented in the matching numpy implementation.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

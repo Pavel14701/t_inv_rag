@@ -24,7 +24,7 @@ def _import_lib(name: str, warning_msg: str | None = None) -> tuple[Any, bool]:
         module = None
         available = False
         if warning_msg:
-            warnings.warn(warning_msg)
+            warnings.warn(warning_msg, stacklevel=2)
     _cache[name] = (module, available)
     return module, available
 

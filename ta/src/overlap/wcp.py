@@ -50,7 +50,9 @@ def wcp_talib(
     offset: int = 0,
     fillna: float | None = None,
 ) -> np.ndarray:
-    """WCP using TA-Lib (C implementation). Returns (high + low + 2*close)/4."""
+    """WCP using TA-Lib (C implementation). Returns (high + low +
+    2*close)/4.
+    """
     if not talib_available:
         raise ImportError("TA-Lib not available")
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -132,6 +134,13 @@ def wcp_polars(
     offset, fillna, use_talib : as above.
     output_col : str, optional
         Name of the output column (default "WCP").
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

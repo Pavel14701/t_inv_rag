@@ -21,6 +21,8 @@ members = [
     "infer",
     "rag",
     "risk",
+    "backtest",
+    "contracts",
     "main",
 ]
 
@@ -77,6 +79,7 @@ preview = true
 "**/tests/**" = ["D", "RUF069"]
 "test_*.py" = ["D", "RUF069"]
 "conftest.py" = ["D", "RUF069"]
+"**/__init__.py" = ["RUF067"]
 # Легаси-адаптеры strategies/src/infrastructure: переписываются в TZ-02;
 # держим только критичные правила (F, E, RUF).
 "strategies/src/infrastructure/**" = ["D", "N"]
@@ -108,7 +111,7 @@ python_version = "3.12"
 ignore_missing_imports = true
 explicit_package_bases = true
 namespace_packages = true
-exclude = ["migrations", ".venv"]
+exclude = ["migrations", ".venv", "ta/tests", "dsl/tests", "ai/src/tests", "ai/tests", "rag/tests", "risk/tests", "strategies/tests", "infer/tests", "main/src/tests"]
 
 # Wave 1 (done): new packages are born strict.
 [tool.mypy-risk]
@@ -118,7 +121,9 @@ check_untyped_defs = true
 
 # Wave 2 (planned): ai, infer - promote when error count reaches zero.
 [tool.mypy-ai.src]
-disallow_untyped_defs = false
+disallow_untyped_defs = true
+warn_return_any = true
+check_untyped_defs = true
 [tool.mypy-infer]
 disallow_untyped_defs = false
 
@@ -135,7 +140,13 @@ testpaths = [
     "infer/tests",
     "rag/tests",
     "risk/tests",
+    "strategies/tests",
+    "backtest/tests",
+    "contracts/tests",
+    "main/tests",
 ]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 addopts = "-v --tb=short --strict-markers -m \"not deprecated\""
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
@@ -156,6 +167,7 @@ markers = [
     "infer: belongs to the dte-infer package",
     "rag: belongs to the dte-rag package",
     "risk: belongs to the dte-risk package",
+    "backtest: belongs to the dte-backtest package",
     "main: belongs to the dte-main package",
     "strategies: belongs to the dte-strategies package",
     # --- domain markers (inherited from the former per-package inis) ---

@@ -32,7 +32,8 @@ def _cdl_3whitesoldiers_nb(
     strict,
     symmetric,
 ):
-    """Numba-accelerated Three White Soldiers pattern with optional strict filtering
+    """Numba-accelerated Three White Soldiers pattern with optional strict
+        filtering
     and optional symmetric bearish variant.
 
     Returns:

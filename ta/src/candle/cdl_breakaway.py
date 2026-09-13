@@ -67,7 +67,8 @@ def _cdl_breakaway_nb(
 
         direction = 0.0
 
-        # ---------------- Bearish Breakaway (TA-Lib canonical) ----------------
+        # ---------------- Bearish Breakaway (TA-Lib canonical)
+        # ----------------
         bear = (
             (c4 > o4)
             and (c3 > o3)
@@ -79,7 +80,8 @@ def _cdl_breakaway_nb(
             and (c0 < c4)  # closes into the gap
         )
 
-        # ---------------- Bullish Breakaway (TA-Lib canonical) ----------------
+        # ---------------- Bullish Breakaway (TA-Lib canonical)
+        # ----------------
         bull = (
             (c4 < o4)
             and (c3 < o3)
@@ -131,10 +133,10 @@ def _cdl_breakaway_nb(
                 continue
 
             # shadows (fast)
-            def shadow(o, c, h, l):
+            def shadow(o, c, h, low_):
                 up = o if o > c else c
                 lo = c if o > c else o
-                return (h - up) + (lo - l)
+                return (h - up) + (lo - low_)
 
             sh4 = shadow(o4, c4, h4, l4)
             sh3 = shadow(o3, c3, h3, l3)
@@ -169,7 +171,8 @@ def cdl_breakaway(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """Universal Breakaway pattern with strict mode and optional symmetric mode.
+    """Universal Breakaway pattern with strict mode and optional symmetric
+        mode.
 
     If symmetric=False and TA-Lib is available -> TA-Lib is used.
     If symmetric=True -> TA-Lib is skipped and Numba is always used.
@@ -241,6 +244,7 @@ def cdl_breakaway_polars(
     max_shadow_factor=1.0,
     output_col="CDL_BREAKAWAY",
 ):
+    """See module docs."""
     out = cdl_breakaway(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

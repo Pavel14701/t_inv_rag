@@ -154,6 +154,7 @@ def cdl_hikkakemod_polars(
     lookahead=3,
     output_col="CDL_HIKKAKEMOD",
 ):
+    """See module docs."""
     out = cdl_hikkakemod(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

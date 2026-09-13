@@ -146,6 +146,21 @@ def accbands_polars(
     suffix : str
         Custom suffix for column names (default f"_{length}").
 
+    c : str, optional
+        See the module guide; default mirrors the numpy path.
+    drift : int, optional
+        See the module guide; default mirrors the numpy path.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    mamode : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     pl.DataFrame

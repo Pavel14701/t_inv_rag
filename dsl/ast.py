@@ -11,6 +11,7 @@ from typing import Any
 
 # ---------- Basic nodes ----------
 
+
 @dataclass(frozen=True, slots=True)
 class Number:
     """Numeric literal.
@@ -131,8 +132,7 @@ class IndicatorAccess:
 
         """
         return IndicatorAccess(
-            indicator=data["indicator"],
-            attributes=data.get("attributes", [])
+            indicator=data["indicator"], attributes=data.get("attributes", [])
         )
 
 
@@ -184,17 +184,16 @@ class IndicatorWithParams:
             KeyError: If 'indicator' is missing.
 
         """
-        params = {
-            k: from_dict(v) for k, v in data.get("params", {}).items()
-        }
+        params = {k: from_dict(v) for k, v in data.get("params", {}).items()}
         return IndicatorWithParams(
             indicator=data["indicator"],
             params=params,
-            attributes=data.get("attributes", [])
+            attributes=data.get("attributes", []),
         )
 
 
 # ---------- Logical nodes ----------
+
 
 @dataclass(frozen=True, slots=True)
 class LogicalBinOp:
@@ -287,6 +286,7 @@ class LogicalNot:
 
 
 # ---------- Comparison nodes ----------
+
 
 @dataclass(frozen=True, slots=True)
 class Comparison:
@@ -389,6 +389,7 @@ class MultiComparison:
 
 # ---------- Arithmetic nodes ----------
 
+
 @dataclass(frozen=True, slots=True)
 class Add:
     """Addition operation."""
@@ -409,8 +410,7 @@ class Add:
     def from_dict(data: dict[str, Any]) -> Add:
         """Reconstruct an Add node from a dict."""
         return Add(
-            left=from_dict(data["left"]),
-            right=from_dict(data["right"])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -461,8 +461,7 @@ class Sub:
 
         """
         return Sub(
-            left=from_dict(data["left"]),
-            right=from_dict(data["right"])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -513,8 +512,7 @@ class Mul:
 
         """
         return Mul(
-            left=from_dict(data["left"]),
-            right=from_dict(data["right"])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -564,8 +562,7 @@ class Div:
 
         """
         return Div(
-            left=from_dict(data["left"]),
-            right=from_dict(data["right"])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -616,8 +613,7 @@ class Mod:
 
         """
         return Mod(
-            left=from_dict(data["left"]),
-            right=from_dict(data["right"])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -668,8 +664,7 @@ class Pow:
 
         """
         return Pow(
-            left=from_dict(data["left"]),
-            right=from_dict(data["right"])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -715,6 +710,7 @@ class UnaryMinus:
 
 
 # ---------- Variables, historical access, functions ----------
+
 
 @dataclass(frozen=True, slots=True)
 class Let:
@@ -793,7 +789,7 @@ class HistoricalAccess:
         return {
             "type": self.type,
             "expr": self.expr.to_dict(),
-            "offset": self.offset
+            "offset": self.offset,
         }
 
     @staticmethod
@@ -906,10 +902,25 @@ class Falling:
 
 # ---------- AST type alias ----------
 ASTNode = (
-    Number | Var | IndicatorAccess | IndicatorWithParams
-    | Comparison | MultiComparison | LogicalBinOp | LogicalNot
-    | Let | HistoricalAccess | Rising | Falling
-    | Add | Sub | Mul | Div | Mod | Pow | UnaryMinus
+    Number
+    | Var
+    | IndicatorAccess
+    | IndicatorWithParams
+    | Comparison
+    | MultiComparison
+    | LogicalBinOp
+    | LogicalNot
+    | Let
+    | HistoricalAccess
+    | Rising
+    | Falling
+    | Add
+    | Sub
+    | Mul
+    | Div
+    | Mod
+    | Pow
+    | UnaryMinus
 )
 
 
@@ -971,4 +982,4 @@ def from_dict(data: dict[str, Any]) -> ASTNode:
         case "Falling":
             return Falling.from_dict(data)
         case _:
-            raise ValueError(f'Unknown AST node type: {data.get("type")}')
+            raise ValueError(f"Unknown AST node type: {data.get('type')}")

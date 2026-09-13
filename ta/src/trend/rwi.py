@@ -20,7 +20,8 @@ def _rwi_numba_core(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Numba-accelerated RWI high/low computation.
 
-    The kernel runs with ``fastmath=False``: division is guarded by an explicit check
+    The kernel runs with ``fastmath=False``: division is guarded by an explicit
+        check
     ``denom != 0``, and for strict IEEE 754 semantics this branch must
     run without reordering (NaN in ATR yields NaN in RWI; a zero
     denominator leaves NaN instead of inf).
@@ -83,6 +84,17 @@ def rwi_numpy(
     drift : int
         Lookback period for ATR (not used for shift, only for ATR).
     offset, fillna, use_talib, nan_policy, trim : as usual.
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    nan_policy : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    trim : see notes
+        Documented in the matching numpy implementation.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------
@@ -231,9 +243,25 @@ def rwi_polars(
         Input DataFrame.
     high_col, low_col, close_col : str
         Column names for prices.
-    length, mamode, drift, offset, fillna, use_talib, nan_policy : as in rwi_numpy.
+    length, mamode, drift, offset, fillna, use_talib, nan_policy : as in
+        rwi_numpy.
     suffix : str, optional
         Suffix for output column names (default f"_{length}").
+
+    drift : int, optional
+        See the module guide; default mirrors the numpy path.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    mamode : str, optional
+        See the module guide; default mirrors the numpy path.
+    nan_policy : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

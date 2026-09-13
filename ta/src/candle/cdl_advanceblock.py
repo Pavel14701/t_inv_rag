@@ -56,7 +56,8 @@ def _cdl_advanceblock_nb(
 
         direction = 0.0
 
-        # ---------------- Bearish Advance Block (TA-Lib canonical) ----------------
+        # ---------------- Bearish Advance Block (TA-Lib canonical)
+        # ----------------
         bear = (
             (c2 > o2)
             and (c1 > o1)
@@ -150,7 +151,8 @@ def cdl_advanceblock(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """Universal Advance Block pattern with strict mode and optional symmetric variant.
+    """Universal Advance Block pattern with strict mode and optional symmetric
+        variant.
 
     If symmetric=False and TA-Lib is available -> TA-Lib is used.
     If symmetric=True -> TA-Lib is skipped and Numba is always used.
@@ -222,6 +224,7 @@ def cdl_advanceblock_polars(
     max_shadow_factor=1.0,
     output_col="CDL_ADVANCEBLOCK",
 ):
+    """See module docs."""
     out = cdl_advanceblock(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

@@ -24,7 +24,8 @@ from ..external import talib, talib_available
 def _cdl_3linestrike_nb(
     open_, high, low, close, min_body_factor, max_shadow_factor, strict
 ):
-    """Numba-accelerated Three-Line Strike pattern with optional strict filtering.
+    """Numba-accelerated Three-Line Strike pattern with optional strict
+        filtering.
 
     Parameters
     ----------
@@ -33,7 +34,8 @@ def _cdl_3linestrike_nb(
     min_body_factor : float
         Minimum body size as a fraction of the total range (0 = disabled).
     max_shadow_factor : float
-        Maximum total shadow (upper+lower) as a fraction of total range (1 = disabled).
+        Maximum total shadow (upper+lower) as a fraction of total range (1 =
+            disabled).
     strict : bool
         If True, apply additional filters (min body, max shadow). \
             Otherwise only basic pattern.
@@ -67,13 +69,15 @@ def _cdl_3linestrike_nb(
         )
         direction = 0.0
         if bull3:
-            # black thrusting: opens above the third close, closes below the first close
+            # black thrusting: opens above the third close, closes below the
+            # first close
             if (c0 < o0) and (o0 > c1) and (c0 < c3):
                 direction = 1.0
             else:
                 continue
         elif bear3:
-            # white thrusting: opens below the third close, closes above the first close
+            # white thrusting: opens below the third close, closes above the
+            # first close
             if (c0 > o0) and (o0 < c1) and (c0 > c3):
                 direction = -1.0
             else:
@@ -155,6 +159,13 @@ def cdl_3linestrike(
         Minimum body size as fraction of candle range (only if strict=True).
     max_shadow_factor : float
         Maximum total shadow as fraction of candle range (only if strict=True).
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

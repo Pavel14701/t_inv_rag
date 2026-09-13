@@ -262,50 +262,52 @@ def mama_ind(
 
     Parameters
     ----------
-    close : np.ndarray or pl.Series
-        1D array of close prices.
-    fastlimit : float, default 0.5
-        Upper limit for alpha.
-    slowlimit : float, default 0.05
-        Lower limit for alpha.
-    prenan : int, default 3
-        Number of leading NaN values to force in the output.
-    offset : int, default 0
-        Shift applied to the result.
-    fillna : float or None, default None
-        Value to fill NaN after shift.
-    use_talib : bool, default True
-        If True and TA-Lib is available, use TA-Lib.
-    nan_policy : str, default 'raise'
-        How to handle NaNs (only for Numba backend).
+        close : np.ndarray or pl.Series
+            1D array of close prices.
+        fastlimit : float, default 0.5
+            Upper limit for alpha.
+        slowlimit : float, default 0.05
+            Lower limit for alpha.
+        prenan : int, default 3
+            Number of leading NaN values to force in the output.
+        offset : int, default 0
+            Shift applied to the result.
+        fillna : float or None, default None
+            Value to fill NaN after shift.
+        use_talib : bool, default True
+            If True and TA-Lib is available, use TA-Lib.
+        nan_policy : str, default 'raise'
+            How to handle NaNs (only for Numba backend).
 
     Returns
     -------
-    (mama, fama) : tuple of np.ndarray
-        Adaptive moving average and its smoothed companion.
+        (mama, fama) : tuple of np.ndarray
+            Adaptive moving average and its smoothed companion.
 
     Raises
     ------
-    ValueError
-        If trim=True and TA-Lib backend is selected.
+        ValueError
+            If trim=True and TA-Lib backend is selected.
 
     Examples
     --------
-    >>> import numpy as np
-    >>> prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
-    >>> mama, fama = mama_ind(prices, fastlimit=0.5, slowlimit=0.05, use_talib=False)
-    >>> mama[:3]
-    array([nan, nan, nan])
-    >>> mama[3:]
-    array([2.        , 2.5       , 3.        , 3.5       , 4.0       ,
-            4.5       , 5.0       , 5.5       , 6.0       , 6.5       ])
-    >>> import polars as pl
-    >>> s = pl.Series([1.0, 2.0, 3.0, 4.0, 5.0])
-    >>> mama, fama = mama_ind(s, fastlimit=0.5, slowlimit=0.05, use_talib=False, prenan=2)
-    >>> mama[:2]
-    array([nan, nan])
-    >>> mama[2:]
-    array([2. , 2.5, 3. , 3.5, 4. ])
+        >>> import numpy as np
+        >>> prices = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+        >>> mama, fama = mama_ind(prices, fastlimit=0.5,
+    ...     slowlimit=0.05, use_talib=False)
+        >>> mama[:3]
+        array([nan, nan, nan])
+        >>> mama[3:]
+        array([2.        , 2.5       , 3.        , 3.5       , 4.0       ,
+                4.5       , 5.0       , 5.5       , 6.0       , 6.5       ])
+        >>> import polars as pl
+        >>> s = pl.Series([1.0, 2.0, 3.0, 4.0, 5.0])
+        >>> mama, fama = mama_ind(s, fastlimit=0.5,
+    ...     slowlimit=0.05, use_talib=False, prenan=2)
+        >>> mama[:2]
+        array([nan, nan])
+        >>> mama[2:]
+        array([2. , 2.5, 3. , 3.5, 4. ])
 
     """
     if isinstance(close, pl.Series):
@@ -336,67 +338,69 @@ def mama_polars(
 
     Parameters
     ----------
-    df : pl.DataFrame
-        Input DataFrame.
-    close_col : str, default 'close'
-        Name of the column containing close prices.
-    fastlimit : float, default 0.5
-        Upper limit for alpha.
-    slowlimit : float, default 0.05
-        Lower limit for alpha.
-    prenan : int, default 3
-        Number of leading NaN values to force in the output.
-    offset : int, default 0
-        Shift applied to the result.
-    fillna : float or None, default None
-        Value to fill NaN after shift.
-    use_talib : bool, default True
-        Use TA-Lib if available.
-    nan_policy : str, default 'raise'
-        NaN handling policy (only for Numba backend).
-    output_col : str or None, default None
-        Prefix for output Series names. If None, uses 'MAMA' and 'FAMA'.
+        df : pl.DataFrame
+            Input DataFrame.
+        close_col : str, default 'close'
+            Name of the column containing close prices.
+        fastlimit : float, default 0.5
+            Upper limit for alpha.
+        slowlimit : float, default 0.05
+            Lower limit for alpha.
+        prenan : int, default 3
+            Number of leading NaN values to force in the output.
+        offset : int, default 0
+            Shift applied to the result.
+        fillna : float or None, default None
+            Value to fill NaN after shift.
+        use_talib : bool, default True
+            Use TA-Lib if available.
+        nan_policy : str, default 'raise'
+            NaN handling policy (only for Numba backend).
+        output_col : str or None, default None
+            Prefix for output Series names. If None, uses 'MAMA' and 'FAMA'.
 
     Returns
     -------
-    (mama, fama) : tuple of pl.Series
-        Adaptive moving average and its smoothed companion.
+        (mama, fama) : tuple of pl.Series
+            Adaptive moving average and its smoothed companion.
 
     Examples
     --------
-    >>> import polars as pl
-    >>> df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]})
-    >>> mama, fama = mama_polars(df, fastlimit=0.5, slowlimit=0.05, output_col="M")
-    >>> mama
-    shape: (10,)
-    Series: 'M_MAMA' [f64]
-    [
-        null
-        null
-        null
-        2.0
-        2.5
-        3.0
-        3.5
-        4.0
-        4.5
-        5.0
-    ]
-    >>> fama
-    shape: (10,)
-    Series: 'M_FAMA' [f64]
-    [
-        null
-        null
-        null
-        2.0
-        2.25
-        2.5
-        2.75
-        3.0
-        3.25
-        3.5
-    ]
+        >>> import polars as pl
+        >>> df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0,
+    ...     5.0, 6.0, 7.0, 8.0, 9.0, 10.0]})
+        >>> mama, fama = mama_polars(df, fastlimit=0.5,
+    ...     slowlimit=0.05, output_col="M")
+        >>> mama
+        shape: (10,)
+        Series: 'M_MAMA' [f64]
+        [
+            null
+            null
+            null
+            2.0
+            2.5
+            3.0
+            3.5
+            4.0
+            4.5
+            5.0
+        ]
+        >>> fama
+        shape: (10,)
+        Series: 'M_FAMA' [f64]
+        [
+            null
+            null
+            null
+            2.0
+            2.25
+            2.5
+            2.75
+            3.0
+            3.25
+            3.5
+        ]
 
     """
     close = df[close_col].to_numpy()

@@ -47,7 +47,7 @@ class IndicatorProvider(ABC):
         indicator: str,
         params: dict[str, Any],
         attributes: list[str],
-        n: int
+        n: int,
     ) -> list[float]:
         """Retrieve historical values for the last n bars.
 

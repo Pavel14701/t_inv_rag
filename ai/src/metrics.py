@@ -34,8 +34,7 @@ def compute_action_accuracy(
     for cls, name in enumerate(["hold", "entry", "exit"]):
         cls_mask = targets == cls
         results[name] = (
-            correct[cls_mask].mean().item()
-            if cls_mask.any() else 0.0
+            correct[cls_mask].mean().item() if cls_mask.any() else 0.0
         )
     return results
 

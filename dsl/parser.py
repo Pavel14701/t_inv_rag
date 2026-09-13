@@ -1,4 +1,5 @@
 """Recursive descent parser for DSL with all operators."""
+
 from .ast import (
     Add,
     ASTNode,
@@ -103,7 +104,7 @@ class Parser:
         tok = self._peek()
         if tok is None or tok.type != expected_type:
             raise ParseError(
-                f'Expected {expected_type}, got {tok.value if tok else "EOF"}'
+                f"Expected {expected_type}, got {tok.value if tok else 'EOF'}"
             )
         return self._next()
 
@@ -121,8 +122,7 @@ class Parser:
         """
         tok = self._peek()
         return (
-            self._let_expr() if tok and tok.type == "LET"
-            else self._or_expr()
+            self._let_expr() if tok and tok.type == "LET" else self._or_expr()
         )
 
     def _let_expr(self) -> ASTNode:
@@ -232,9 +232,7 @@ class Parser:
                 tok = self._peek()
             if len(ops) == 1:
                 return Comparison(
-                    operator=ops[0],
-                    left=operands[0],
-                    right=operands[1]
+                    operator=ops[0], left=operands[0], right=operands[1]
                 )
             return MultiComparison(operators=ops, operands=operands)
         return left
@@ -470,15 +468,11 @@ class Parser:
         if tok and tok.type == "LBRACKET":
             offset = self._parse_history_offset()
             expr = IndicatorWithParams(
-                indicator=base_name,
-                params=params,
-                attributes=attrs
+                indicator=base_name, params=params, attributes=attrs
             )
             return HistoricalAccess(expr=expr, offset=offset)
         return IndicatorWithParams(
-            indicator=base_name,
-            params=params,
-            attributes=attrs
+            indicator=base_name, params=params, attributes=attrs
         )
 
     def _parse_history_offset(self) -> int:

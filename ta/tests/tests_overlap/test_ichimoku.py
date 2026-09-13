@@ -310,7 +310,7 @@ def test_ind_columns_and_values(
         assert hist[col].dtype == pl.Float64
     assert len(hist) == len(df)
 
-    t_ref, k_ref, a_ref, b_ref, c_ref = _ichimoku_reference(
+    t_ref, k_ref, a_ref, b_ref, _c_ref = _ichimoku_reference(
         df["high"].to_numpy(),
         df["low"].to_numpy(),
         df["close"].to_numpy(),

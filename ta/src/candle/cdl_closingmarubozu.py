@@ -46,10 +46,10 @@ def _cdl_closingmarubozu_nb(
     for i in range(n):
         o = open_[i]
         h = high[i]
-        l = low[i]
+        low_ = low[i]
         c = close[i]
 
-        rng = h - l
+        rng = h - low_
         if rng <= 0.0:
             continue
 
@@ -57,7 +57,7 @@ def _cdl_closingmarubozu_nb(
         bull = (c > o) and (c == h)
 
         # Bearish: close == low
-        bear = (c < o) and (c == l)
+        bear = (c < o) and (c == low_)
 
         if bull:
             direction = 1.0
@@ -76,7 +76,7 @@ def _cdl_closingmarubozu_nb(
             # Shadows (fast, no max/min)
             up = o if o > c else c
             lo = c if o > c else o
-            shadow = (h - up) + (lo - l)
+            shadow = (h - up) + (lo - low_)
 
             if shadow > max_shadow_factor * rng:
                 continue
@@ -165,6 +165,7 @@ def cdl_closingmarubozu_polars(
     max_shadow_factor=0.2,
     output_col="CDL_CLOSINGMARUBOZU",
 ):
+    """See module docs."""
     out = cdl_closingmarubozu(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

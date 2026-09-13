@@ -1,3 +1,5 @@
+"""Custom proprietary indicators (OTT, SCRSI, AVS family)."""
+
 from .avsl import avsl_ind, avsl_polars
 from .avsr import avsr_ind, avsr_polars
 from .market_structure import (

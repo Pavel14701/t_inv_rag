@@ -192,6 +192,11 @@ def t3_ind(
     nan_policy : str, default 'raise'
         How to handle NaN values (Numba backend only).
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray
@@ -235,6 +240,19 @@ def t3_polars(
     length, a, offset, fillna, use_talib, nan_policy : as above.
     output_col : str, optional
         Output column name (default f"T3_{length}_{a}").
+
+    a : float, optional
+        See the module guide; default mirrors the numpy path.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    nan_policy : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

@@ -133,9 +133,28 @@ def bbands_polars(
         Input data.
     close_col : str
         Column with close prices.
-    length, lower_std, upper_std, ddof, mamode, offset, fillna, use_talib : as above.
+    length, lower_std, upper_std, ddof, mamode, offset, fillna, use_talib : as
+        above.
     suffix : str
-        Custom suffix for column names (default f"_{length}_{lower_std}_{upper_std}").
+        Custom suffix for column names (default
+            f"_{length}_{lower_std}_{upper_std}").
+
+    ddof : int, optional
+        See the module guide; default mirrors the numpy path.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    lower_std : see notes
+        Documented in the matching numpy implementation.
+    mamode : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    upper_std : see notes
+        Documented in the matching numpy implementation.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

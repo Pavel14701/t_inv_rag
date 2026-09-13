@@ -33,6 +33,11 @@ def cci_numpy(
     use_talib : bool
         If True and TA-Lib is available, use talib.CCI (c is ignored).
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray

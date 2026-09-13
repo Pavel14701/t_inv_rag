@@ -61,7 +61,8 @@ def _cdl_3starsinsouth_nb(
             and (c0 > c1)  # third closes above the second
         )
 
-        # ---------------- Mirrored bearish (only if symmetric=True) ----------------
+        # ---------------- Mirrored bearish (only if symmetric=True)
+        # ----------------
         bear = False
         if symmetric:
             bear = (
@@ -202,6 +203,7 @@ def cdl_3starsinsouth_polars(
     max_shadow_factor=1.0,
     output_col="CDL_3STARSINSOUTH",
 ):
+    """See module docs."""
     out = cdl_3starsinsouth(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

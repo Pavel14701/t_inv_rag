@@ -21,8 +21,8 @@ def _cdl_longleggeddoji_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         # Body
@@ -32,7 +32,7 @@ def _cdl_longleggeddoji_nb(
             continue
         # Shadows
         upper = h - (c if c > o else o)
-        lower = (c if c > o else o) - l
+        lower = (c if c > o else o) - low_
         # Long-legged: both shadows are long
         if upper < 0.4 * rng:
             continue

@@ -142,7 +142,7 @@ def test_accbands_ind_with_pl_series(
 ) -> None:
     """Test accbands with Polars Series input."""
     high, low, close = _ohlc_arrays(prices_random_walk)
-    upper, mid, lower = accbands(
+    upper, _mid, _lower = accbands(
         pl.Series(high),
         pl.Series(low),
         pl.Series(close),

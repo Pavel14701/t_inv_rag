@@ -152,6 +152,17 @@ def ott_numpy(
         Type of moving average.
     offset, fillna, use_talib, nan_policy, trim : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    nan_policy : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    trim : see notes
+        Documented in the matching numpy implementation.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     (ma, long_stop, short_stop, direction, ott)
@@ -172,7 +183,8 @@ def ott_numpy(
     n = len(close)
     if n < length:
         raise ValueError(
-            f"Input series too short: need at least {length} elements, got {n}."
+            f"Input series too short: need at least {length} "
+            f"elements, got {n}."
         )
     # ---- Moving Average ----
     ma_type_upper = ma_type.upper()

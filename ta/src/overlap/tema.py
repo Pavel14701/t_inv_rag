@@ -235,6 +235,15 @@ def tema_polars(
     output_col : str, optional
         Output column name (default f"TEMA_{length}").
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     pl.DataFrame

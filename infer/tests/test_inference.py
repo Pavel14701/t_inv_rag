@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import polars as pl
 import pytest
@@ -87,7 +89,9 @@ def test_run_inference_signals_and_summary():
 def test_run_inference_parse_error_early():
     """A DSL syntax error fails before the run."""
     df = load_synthetic(n_bars=50)
-    with pytest.raises(Exception):
+    from dsl.exceptions import ParseError
+
+    with pytest.raises(ParseError):
         run_inference(df, "close >")
 
 
@@ -121,8 +125,8 @@ def test_predict_p_win_at_price_feature_mismatch():
     from infer.engine import predict_p_win_at
 
     class _Bundle:
-        seq_len = 8
-        model_config = {
+        seq_len: ClassVar[int] = 8
+        model_config: ClassVar[dict] = {
             "n_price_feats": 4,
             "n_ind_feats": 0,
             "n_sig_feats": 0,

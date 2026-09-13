@@ -332,11 +332,11 @@ def test_zigzag_numpy_rejects_nan() -> None:
     x = np.arange(10.0)
     x_nan = x.copy()
     x_nan[3] = np.nan
-    with pytest.raises(ValueError, match="high.*NaN"):
+    with pytest.raises(ValueError, match=r"high.*NaN"):
         zigzag_numpy(
             x_nan, x, prominence_peak=0.0, prominence_valley=0.0, distance=1
         )
-    with pytest.raises(ValueError, match="low.*NaN"):
+    with pytest.raises(ValueError, match=r"low.*NaN"):
         zigzag_numpy(
             x, x_nan, prominence_peak=0.0, prominence_valley=0.0, distance=1
         )
@@ -400,7 +400,7 @@ def test_zigzag_numpy_accepts_non_contiguous_input() -> None:
     """Non-contiguous (strided) arrays are handled via ascontiguousarray."""
     x = np.arange(40.0)[::2]  # stride 2, non-contiguous
     x[10] = 100.0  # guaranteed interior peak
-    peaks, valleys = zigzag_numpy(
+    peaks, _valleys = zigzag_numpy(
         x, x, prominence_peak=0.0, prominence_valley=0.0, distance=1
     )
     assert 10 in peaks

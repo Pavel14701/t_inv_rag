@@ -148,9 +148,7 @@ def quick_train(
     num_layers = num_layers if num_layers is not None else m.num_layers
     num_heads = num_heads if num_heads is not None else m.num_heads
     val_split = val_split if val_split is not None else t.val_split
-    class_weight = (
-        class_weight if class_weight is not None else t.class_weight
-    )
+    class_weight = class_weight if class_weight is not None else t.class_weight
     early_stopping_patience = (
         early_stopping_patience
         if early_stopping_patience is not None
@@ -174,8 +172,11 @@ def quick_train(
     config_model_kwargs = dataclasses.asdict(m)
     for key in (
         "seq_len",  # explicit, computed above
-        "hidden_size", "num_layers", "num_heads",  # explicit arguments
-        "outcome_mode", "n_patterns",  # explicit arguments
+        "hidden_size",
+        "num_layers",
+        "num_heads",  # explicit arguments
+        "outcome_mode",
+        "n_patterns",  # explicit arguments
         "close_idx",  # training-only, not a constructor kwarg
     ):
         config_model_kwargs.pop(key, None)
@@ -238,7 +239,8 @@ def quick_train(
     # ---------- Class weights (optional) ----------
     cw = (
         _compute_class_weights(df["action"].to_numpy())
-        if class_weight else None
+        if class_weight
+        else None
     )
     # ---------- Train ----------
     model = train_one_round(

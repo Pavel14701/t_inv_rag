@@ -206,6 +206,7 @@ def cdl_concealbabyswall_polars(
     max_shadow_factor=0.3,
     output_col="CDL_CONCEALBABYSWALL",
 ):
+    """See module docs."""
     out = cdl_concealbabyswall(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

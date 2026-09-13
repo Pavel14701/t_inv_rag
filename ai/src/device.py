@@ -83,7 +83,8 @@ def resolve_train_device(cfg: ComputeConfig) -> DeviceHandle:
     if backend not in _TRAIN_BACKENDS:
         raise ValueError(
             f"train_backend must be one of {_TRAIN_BACKENDS}, "
-            f"got {backend!r}; non-CUDA training is not supported (TZ-06 item 11)"
+            f"got {backend!r}; non-CUDA training is not "
+            f"supported (TZ-06 item 11)"
         )
     if backend == "cpu":
         import torch

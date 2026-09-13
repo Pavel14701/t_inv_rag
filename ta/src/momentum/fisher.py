@@ -94,6 +94,11 @@ def fisher_numpy(
         ``length - 1`` bars are NaN.
     offset, fillna : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     tuple of np.ndarray

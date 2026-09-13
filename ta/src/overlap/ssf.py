@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Ehlers Super Smoother Filter (SSF) - aggressively optimized Numba version."""
+"""Ehlers Super Smoother Filter (SSF) - aggressively optimized Numba
+version.
+"""
 
 from typing import Optional
 

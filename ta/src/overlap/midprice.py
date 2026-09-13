@@ -48,12 +48,12 @@ def _midprice_numba_core(
         mx = high[i - length + 1]
         # Scan the window
         for j in range(i - length + 2, i + 1):
-            _low = low[j]
-            _high = high[j]
-            if _low < mn:
-                mn = _low
-            if _high > mx:
-                mx = _high
+            lo = low[j]
+            hi = high[j]
+            if lo < mn:
+                mn = lo
+            if hi > mx:
+                mx = hi
         out[i] = (mn + mx) * 0.5
     return out
 

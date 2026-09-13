@@ -73,9 +73,7 @@ class Context:
 
         """
         if errors := self._validator.validate(indicator, params, attributes):
-            raise DslValidationError(
-                f"Validation errors: {', '.join(errors)}"
-            )
+            raise DslValidationError(f"Validation errors: {', '.join(errors)}")
 
     def _candidates(self, indicator: str) -> list:
         """Providers whose manifest contains this indicator (TZ-01 item 2.1).
@@ -92,11 +90,7 @@ class Context:
         ]
 
     def get_value(
-        self,
-        indicator: str,
-        params: dict,
-        attributes: list,
-        offset: int = 0
+        self, indicator: str, params: dict, attributes: list, offset: int = 0
     ) -> float:
         """Synchronously retrieve the current value of an indicator.
 
@@ -119,12 +113,7 @@ class Context:
         first_error: ProviderError | None = None
         for provider in self._candidates(indicator):
             try:
-                return provider.resolve(
-                    indicator,
-                    params,
-                    attributes,
-                    offset
-                )
+                return provider.resolve(indicator, params, attributes, offset)
             except ProviderError as exc:
                 # Preserve the most specific error (e.g. warmup
                 # unavailability) instead of masking it with a
@@ -137,11 +126,7 @@ class Context:
         raise ProviderError(f"No provider found for indicator '{indicator}'")
 
     def get_history(
-        self,
-        indicator: str,
-        params: dict,
-        attributes: list,
-        n: int
+        self, indicator: str, params: dict, attributes: list, n: int
     ) -> list[float]:
         """Synchronously retrieve historical values for the last n bars.
 
@@ -166,10 +151,7 @@ class Context:
             if getattr(provider, "resolve_history", None) is not None:
                 try:
                     return provider.resolve_history(
-                        indicator,
-                        params,
-                        attributes,
-                        n
+                        indicator, params, attributes, n
                     )
                 except ProviderError as exc:
                     if first_error is None:
@@ -182,11 +164,7 @@ class Context:
         ]
 
     async def get_value_async(
-        self,
-        indicator: str,
-        params: dict,
-        attributes: list,
-        offset: int = 0
+        self, indicator: str, params: dict, attributes: list, offset: int = 0
     ) -> float:
         """Asynchronously retrieve the current value of an indicator.
 
@@ -215,10 +193,7 @@ class Context:
             if getattr(provider, "resolve_async", None) is not None:
                 try:
                     got = await provider.resolve_async(  # type: ignore[union-attr]
-                        indicator,
-                        params,
-                        attributes,
-                        offset
+                        indicator, params, attributes, offset
                     )
                     return got
                 except ProviderError as exc:
@@ -234,7 +209,7 @@ class Context:
                         indicator,
                         params,
                         attributes,
-                        offset
+                        offset,
                     )
                 except ProviderError as exc:
                     if first_error is None:
@@ -245,11 +220,7 @@ class Context:
         raise ProviderError(f"No provider found for indicator '{indicator}'")
 
     async def get_history_async(
-        self,
-        indicator: str,
-        params: dict,
-        attributes: list,
-        n: int
+        self, indicator: str, params: dict, attributes: list, n: int
     ) -> list[float]:
         """Asynchronously retrieve historical values for the last n bars.
 
@@ -273,10 +244,7 @@ class Context:
             if getattr(provider, "resolve_history_async", None) is not None:
                 try:
                     return await provider.resolve_history_async(
-                        indicator,
-                        params,
-                        attributes,
-                        n
+                        indicator, params, attributes, n
                     )
                 except ProviderError as exc:
                     if first_error is None:

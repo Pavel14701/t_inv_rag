@@ -1,17 +1,19 @@
 # TZ-14. Нулевой этап: типизация, линтеры, порядок в тестах, языковая дисциплина
 
-> **Статус: 🔨 в работе — волны 1-4 выполнены. EN-only достигнут: 0 кириллицы/не-ASCII в .py.**
+> **Статус: ✅ выполнен — EN-only, ruff clean, mypy clean, тесты зелёные.**
 > Волна 1: ruff — единый линтер, корневая pytest-конфигурация, service-маркеры,
 > тесты «рядом со src», pandas/pandas_ta удалены, варны 1886 -> 0.
-> Волна 2: setup.cfg + flake8/isort ликвидированы; mypy `risk` строгий (0 ошибок);
-> маркеры: unit=241, integration=30, slow=4, deprecated=69.
-> Волна 3: mypy infer -> 0 (было 15); параметризованы wma/hilo/midprice/midpoint.
-> Волна 4: кириллица и весь не-ASCII в .py устранены (127 строк переведены, 141 файл
-> нормализован: ASCII-арт таблицы, тире, стрелки, ≈/≤/≥ -> ASCII); E701 (120) развёрнут;
-> B905 (40) autofix; RUF069 (70) — точечные noqa «exact IEEE zero/sign»;
-> F841/RUF046/RUF029 закрыты; RUF069 в тестах — per-file ignore (конвенция §4).
-> Остаётся (волна 5, косметика): E501 (~70), E741 (32), RUF059 (72), D102/D103/D417/D104
-> (87 докстрингов), mypy ai strict, CI (TZ-13).
+> Волна 2: setup.cfg + flake8/isort ликвидированы; mypy `risk` strict (0);
+> маркеры unit=241/integration=30/slow=4/deprecated=69.
+> Волна 3: mypy infer -> 0 (было 15); параметризация wma/hilo/midprice/midpoint.
+> Волна 4: 0 кириллицы и 0 не-ASCII в .py (127 строк, 141 файл); E701 (120);
+> B905 (40); RUF069 (70 noqa IEEE); F841/RUF046/RUF029 закрыты.
+> Волна 5: E501 (73 -> 0); D* докстринги (89); E741 (32); RUF059 (72);
+> B017/B028/RUF007/RUF043/RUF012 (10). Ruff: 4146 -> 0.
+> Волна 6: mypy ai strict -> 0 (было 3: Subset cast + None-union + assert);
+> ta atrs ma_mode union -> assert. Тесты исключены из mypy (покрываются pytest).
+> Итого mypy workspace: 0 ошибок.
+> Остаётся: CI TZ-13 (ruff+mypy+pytest matrix).
 
 # TZ-14. Нулевой этап: типизация, линтеры, порядок в тестах, языковая дисциплина
 

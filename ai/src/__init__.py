@@ -133,40 +133,48 @@ Typical usage
 2. Load order blocks:
 
     >>> from trading import load_order_blocks_parquet
-    >>> obs = load_order_blocks_parquet('order_blocks.parquet')
+    >>> obs = load_order_blocks_parquet("order_blocks.parquet")
 
 3. (Optional) Generate labels from a mechanical strategy:
 
     >>> from trading import load_features_parquet, save_labels_parquet
     >>> from trading import generate_labels_from_strategy
-    >>> df = load_features_parquet('features.parquet')
+    >>> df = load_features_parquet("features.parquet")
     >>> action, outcome = generate_labels_from_strategy(df, obs)
     >>> import polars as pl
-    >>> lbl_df = pl.DataFrame({'action': action, 'outcome': outcome})
-    >>> save_labels_parquet(lbl_df, 'labels.parquet')
+    >>> lbl_df = pl.DataFrame({"action": action, "outcome": outcome})
+    >>> save_labels_parquet(lbl_df, "labels.parquet")
 
 4. Build loaders and train:
 
     >>> from trading import build_loader_from_parquet, train_one_round
     >>> from trading import EntryExitTransformer
-    >>> model = EntryExitTransformer(n_price_feats=5, n_ind_feats=0,
-    ...                               n_sig_feats=2)
+    >>> model = EntryExitTransformer(
+...     n_price_feats=5, n_ind_feats=0, n_sig_feats=2)
     >>> train_loader, _ = build_loader_from_parquet(
-    ...     'features.parquet', 'labels.parquet', obs,
-    ...     seq_len=128, price_cols=['open','high','low','close','volume'],
-    ...     ind_cols=[], sig_cols=['dist_supply','dist_demand'],
-    ...     tp_sl_cols=['tp','sl'], batch_size=16, shuffle=True,
-    ...     pattern_cols=['pattern_1','pattern_2'])  # optional
+    ...     "features.parquet",
+    ...     "labels.parquet",
+    ...     obs,
+    ...     seq_len=128,
+    ...     price_cols=["open", "high", "low", "close", "volume"],
+    ...     ind_cols=[],
+    ...     sig_cols=["dist_supply", "dist_demand"],
+    ...     tp_sl_cols=["tp", "sl"],
+    ...     batch_size=16,
+    ...     shuffle=True,
+    ...     pattern_cols=["pattern_1", "pattern_2"],
+    ... )  # optional
     >>> val_loader = train_loader  # or a separate validation set
-    >>> model = train_one_round(model, train_loader, val_loader,
-    ...                         epochs=10, device=device)
+    >>> model = train_one_round(
+...     model, train_loader, val_loader, epochs=10, device=device)
 
 5. (Optional) Self-training with an unlabelled features file:
 
     >>> from trading import self_training_loop
     >>> model = self_training_loop(
-    ...     model, 'features.parquet', 'labels.parquet',
-    ...     'features_unlabeled.parquet', obs, ...)
+    ...     model, "features.parquet", "labels.parquet",
+...     "features_unlabeled.parquet", obs, ...
+    ... )
 
 Data contract
 -------------

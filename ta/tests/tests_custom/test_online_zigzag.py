@@ -13,6 +13,8 @@ Tests cover:
 - relation to the scipy-style historical ZigZag on clean swings
 """
 
+from itertools import pairwise
+
 import numpy as np
 import pytest
 
@@ -75,7 +77,7 @@ def test_online_matches_historical_clean_waves() -> None:
     peaks, valleys = _pivots_to_arrays(historical)
     # alternating peaks/valleys
     kinds = [p.kind for p in historical]
-    assert all(a != b for a, b in zip(kinds, kinds[1:], strict=False))
+    assert all(a != b for a, b in pairwise(kinds))
     assert len(peaks) >= 3 and len(valleys) >= 3
 
 
@@ -138,8 +140,8 @@ def test_pivot_confirmed_only_after_reversal() -> None:
     lows = [99.5] * 5 + [109.5] * 3 + [107.9, 106.5]
     zz = OnlineZigZag(2.0)
     emitted: dict[int, list[Pivot]] = {}
-    for i, (h, l) in enumerate(zip(highs, lows, strict=False)):
-        pivots = zz.update(h, l)
+    for i, (h, lst) in enumerate(zip(highs, lows, strict=False)):
+        pivots = zz.update(h, lst)
         if pivots:
             emitted[i] = pivots
     # bar 5: the init-phase valley of the flat start is anchored on the
@@ -170,8 +172,8 @@ def test_relative_reversal_threshold() -> None:
     highs = [100.2] * 3 + [200.2] * 4 + [198.5]
     lows = [99.8] * 3 + [199.8] * 4 + [198.4]
     zz = OnlineZigZag(1.0, reversal_pct=0.01)
-    for h, l in zip(highs, lows, strict=False):
-        zz.update(h, l)
+    for h, lst in zip(highs, lows, strict=False):
+        zz.update(h, lst)
     peaks = [p for p in zz.confirmed if p.kind == +1]
     # drop of 200.2 - 198.4 = 1.8: below pct threshold
     # max(1.0, 0.01 * 200.2) = 2.002 -> no peak yet
@@ -180,8 +182,8 @@ def test_relative_reversal_threshold() -> None:
     highs.append(198.5)
     lows.append(196.5)  # drop 200.2 - 196.5 = 3.7 >= 2.002 -> confirmed
     zz = OnlineZigZag(1.0, reversal_pct=0.01)
-    for h, l in zip(highs, lows, strict=False):
-        zz.update(h, l)
+    for h, lst in zip(highs, lows, strict=False):
+        zz.update(h, lst)
     peaks = [p for p in zz.confirmed if p.kind == +1]
     assert peaks and peaks[-1].price == 200.2
 

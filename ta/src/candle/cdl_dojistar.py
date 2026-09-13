@@ -169,6 +169,7 @@ def cdl_dojistar_polars(
     max_shadow_factor: float = 1.0,
     output_col: str = "CDL_DOJISTAR",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_dojistar(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

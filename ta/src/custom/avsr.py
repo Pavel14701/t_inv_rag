@@ -37,7 +37,7 @@ def avsr_numpy(
     for arr in (high, close, volume):
         if not arr.flags.c_contiguous:
             arr = np.ascontiguousarray(arr)
-    vpc, vpr, vm, vpci, deviation_raw = _avs_base(
+    vpc, vpr, _vm, vpci, deviation_raw = _avs_base(
         close, volume, fast, slow, stand_div, use_talib
     )
     if max_deviation is not None:

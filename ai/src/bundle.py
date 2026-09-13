@@ -71,9 +71,7 @@ def build_bundle(model, *, model_config: dict, **extra) -> ModelBundle:
         model_config=config,
         seq_len=extra.get("seq_len", 128),
         atr_global=float(
-            extra.get("atr_global")
-            or config.get("atr_global")
-            or 1.0
+            extra.get("atr_global") or config.get("atr_global") or 1.0
         ),
         feature_columns=extra.get("feature_columns"),
         norm_stats=extra.get("norm_stats"),
@@ -122,9 +120,7 @@ def rebuild_model(bundle: ModelBundle) -> EntryExitTransformer:
         An :class:`EntryExitTransformer` with the bundled architecture.
 
     """
-    cfg = {
-        k: v for k, v in bundle.model_config.items() if k != "outcome_mode"
-    }
+    cfg = {k: v for k, v in bundle.model_config.items() if k != "outcome_mode"}
     return EntryExitTransformer(**cfg)
 
 
@@ -175,8 +171,12 @@ class EntryExitPredictor:
         b = lambda x: x.unsqueeze(0).to(device)  # noqa: E731
 
         action_logits, outcome_logits, _pattern = self.model(
-            b(prices), b(indicators), b(signals),
-            b(tp_levels), b(sl_levels), [order_blocks],
+            b(prices),
+            b(indicators),
+            b(signals),
+            b(tp_levels),
+            b(sl_levels),
+            [order_blocks],
         )
         action = torch.softmax(action_logits, dim=-1)[0, -1]
         outcome = outcome_logits[0, -1]

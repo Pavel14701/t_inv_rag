@@ -28,6 +28,13 @@ def bias_numpy(
         Moving average type.
     offset, fillna, use_talib : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray
@@ -95,6 +102,19 @@ def bias_polars(
     length, mamode, offset, fillna, use_talib : as above.
     output_col : str, optional
         Output column name (default f"BIAS_{mamode}_{length}").
+
+    date_col : see notes
+        Documented in the matching numpy implementation.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    mamode : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

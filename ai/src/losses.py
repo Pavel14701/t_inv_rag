@@ -21,7 +21,8 @@ def dual_loss(
     lambda_pattern: float = 0.1,
     class_weight: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Combined loss: action + lambda__outcome * outcome + lambda__pattern * pattern.
+    """Combined loss: action + lambda__outcome * outcome + lambda__pattern *
+        pattern.
 
     The pattern loss is computed only when ``pattern_logits`` and
     ``pattern_targets`` are not None and have at least one feature.

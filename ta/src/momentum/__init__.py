@@ -1,3 +1,5 @@
+"""Momentum indicators (RSI, MACD, Stoch, ...)."""
+
 # -*- coding: utf-8 -*-
 from .ao import ao_ind, ao_polars
 from .apo import apo_ind, apo_polars

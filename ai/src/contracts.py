@@ -43,8 +43,7 @@ def _check_tensor(
         raise TypeError(f"{name}: expected torch.Tensor, got {type(t)}")
     if t.ndim != expected_dims:
         raise ValueError(
-            f"{name}: expected {expected_dims}D tensor, "
-            f"got {t.ndim}D"
+            f"{name}: expected {expected_dims}D tensor, got {t.ndim}D"
         )
     if t.dtype not in allowed_dtypes:
         raise TypeError(
@@ -74,8 +73,7 @@ def validate_prices(prices: torch.Tensor, n_price_feats: int):
     _check_tensor(prices, "prices", 3)
     if prices.shape[-1] != n_price_feats:
         raise ValueError(
-            f"prices: last dim must be {n_price_feats}, "
-            f"got {prices.shape[-1]}"
+            f"prices: last dim must be {n_price_feats}, got {prices.shape[-1]}"
         )
     if prices.min() <= 0:
         logger.warning(
@@ -166,17 +164,13 @@ def validate_tp_sl(tp: torch.Tensor, sl: torch.Tensor):
     for name, t in [("tp", tp), ("sl", sl)]:
         _check_tensor(t, name, 3)
         if t.shape[-1] != 1:
-            raise ValueError(
-                f"{name}: last dim must be 1, got {t.shape[-1]}"
-            )
+            raise ValueError(f"{name}: last dim must be 1, got {t.shape[-1]}")
     if tp.shape != sl.shape:
         raise ValueError(
             f"tp and sl shapes mismatch: {tp.shape} vs {sl.shape}"
         )
     if tp.min() <= 0 or sl.min() <= 0:
-        raise ValueError(
-            "TP and SL must be positive absolute prices."
-        )
+        raise ValueError("TP and SL must be positive absolute prices.")
 
 
 def _validate_single_ob(ob: OrderBlock, seq_len: int, locator: str):
@@ -248,14 +242,10 @@ def validate_order_blocks(
 
     for b, obs in enumerate(order_blocks_list):
         if not isinstance(obs, list):
-            raise TypeError(
-                f"order_blocks[{b}] must be a list of OrderBlock"
-            )
+            raise TypeError(f"order_blocks[{b}] must be a list of OrderBlock")
         for i, ob in enumerate(obs):
             if not isinstance(ob, OrderBlock):
-                raise TypeError(
-                    f"order_blocks[{b}][{i}] is not an OrderBlock"
-                )
+                raise TypeError(f"order_blocks[{b}][{i}] is not an OrderBlock")
             _validate_single_ob(ob, seq_len, f"order_blocks[{b}][{i}]")
 
 
@@ -276,12 +266,12 @@ def validate_action_targets(action_targets: torch.Tensor):
     if not isinstance(action_targets, torch.Tensor):
         raise TypeError(
             "action_targets: expected torch.Tensor, ",
-            f"got {type(action_targets)}"
+            f"got {type(action_targets)}",
         )
     if action_targets.ndim != 2:
         raise ValueError(
             "action_targets: expected 2D tensor, ",
-            f"got {action_targets.ndim}D"
+            f"got {action_targets.ndim}D",
         )
     allowed = {-100, 0, 1, 2}
     unique = action_targets.unique().tolist()
@@ -292,9 +282,7 @@ def validate_action_targets(action_targets: torch.Tensor):
         )
 
 
-def validate_outcome_targets(
-    outcome_targets: torch.Tensor, outcome_mode: str
-):
+def validate_outcome_targets(outcome_targets: torch.Tensor, outcome_mode: str):
     """Validate outcome labels based on the prediction mode.
 
     For 'binary' and 'multiclass' modes, finite values must be 0, 1, or 2
@@ -362,9 +350,7 @@ def validate_batch(
 
     """
     if len(batch) != 11:
-        raise ValueError(
-            f"Expected batch of 11 elements, got {len(batch)}"
-        )
+        raise ValueError(f"Expected batch of 11 elements, got {len(batch)}")
     (
         prices,
         indicators,
@@ -403,17 +389,14 @@ def validate_batch(
     ]:
         if tensor.shape[0] != b or tensor.shape[1] != t:
             raise ValueError(
-                f"{name} shape {tensor.shape} inconsistent "
-                f"with (B={b}, T={t})"
+                f"{name} shape {tensor.shape} inconsistent with (B={b}, T={t})"
             )
     if start_indices.shape != (b,):
         raise ValueError(
             f"start_indices shape {start_indices.shape} != ({b},)"
         )
     if bar_indices.shape != (b,):
-        raise ValueError(
-            f"bar_indices shape {bar_indices.shape} != ({b},)"
-        )
+        raise ValueError(f"bar_indices shape {bar_indices.shape} != ({b},)")
     if pattern_tgt.dtype not in (torch.float32, torch.float64):
         logger.warning(
             "pattern_targets should be float32; got %s.",

@@ -170,6 +170,11 @@ def linreg_numba(
         How to handle NaN values in `close`:
         'raise', 'ignore', 'ffill', 'bfill', or 'both'.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray
@@ -296,6 +301,11 @@ def linreg_polars(
         How to handle NaN values in the close column.
     output_col : str, optional
         Output column name. Default: f"LINREG_{mode}_{length}".
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

@@ -26,6 +26,11 @@ def bop_numpy(
         Multiplier.
     offset, fillna : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray
@@ -106,6 +111,11 @@ def bop_ind(
     offset, fillna : as usual.
     use_talib : bool
         If True and TA-Lib is available, use it; else use Numpy version.
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

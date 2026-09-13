@@ -215,6 +215,7 @@ def cdl_abandonedbaby_polars(
     max_shadow_factor=1.0,
     output_col="CDL_ABANDONEDBABY",
 ):
+    """See module docs."""
     out = cdl_abandonedbaby(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

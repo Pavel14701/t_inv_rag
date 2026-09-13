@@ -1,3 +1,5 @@
+"""Technical-analysis kernels (causal, Numba-accelerated)."""
+
 from .custom import __all__ as custom__all__
 from .external import (
     _TALIB_MA_MAP,

@@ -21,13 +21,13 @@ def _cdl_spinningtop_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         body = abs(c - o)
         upper = h - max(o, c)
-        lower = min(o, c) - l
+        lower = min(o, c) - low_
         # Small body, but not doji
         if body < 0.1 * rng:
             continue

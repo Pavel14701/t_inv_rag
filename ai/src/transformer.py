@@ -6,6 +6,7 @@ Consists of:
 - Three heads: action (hold/entry/exit), outcome, and pattern (unused in
     current training).
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as functional
@@ -140,9 +141,7 @@ class EntryExitTransformer(nn.Module):
             nn.Linear(hidden_size, n_patterns),
         )
 
-    def _positional_encoding(
-        self, max_len: int, d_model: int
-    ) -> torch.Tensor:
+    def _positional_encoding(self, max_len: int, d_model: int) -> torch.Tensor:
         """Create a sinusoidal positional encoding table.
 
         Args:
@@ -233,9 +232,7 @@ class EntryExitTransformer(nn.Module):
             [prices, indicators, signals, tp_levels, sl_levels], dim=-1
         )
         time_emb = self.time_input_proj(time_feats)
-        time_emb = time_emb + self.time_pos_encoding[
-            :, :seq_len, :
-        ].to(device)
+        time_emb = time_emb + self.time_pos_encoding[:, :seq_len, :].to(device)
         time_out = self.time_encoder(time_emb)
 
         # Order block encoder
@@ -297,12 +294,10 @@ class EntryExitTransformer(nn.Module):
         cls_mask = torch.ones(batch, 1, dtype=torch.bool, device=device)
         ob_mask = torch.cat([cls_mask, ob_mask], dim=1)
 
-        ob_emb = ob_emb + self.ob_pos_encoding[
-            :, : ob_emb.size(1), :
-        ].to(device)
-        ob_out = self.ob_encoder(
-            ob_emb, src_key_padding_mask=~ob_mask
+        ob_emb = ob_emb + self.ob_pos_encoding[:, : ob_emb.size(1), :].to(
+            device
         )
+        ob_out = self.ob_encoder(ob_emb, src_key_padding_mask=~ob_mask)
         ob_global = ob_out[:, 0, :]
 
         # Combine time and OB features

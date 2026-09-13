@@ -104,7 +104,8 @@ def cdl_belthold(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """Universal Belt Hold pattern with strict mode and optional symmetric mode.
+    """Universal Belt Hold pattern with strict mode and optional symmetric
+        mode.
 
     If symmetric=False and TA-Lib is available -> TA-Lib is used.
     If symmetric=True -> TA-Lib is skipped and Numba is always used.
@@ -176,6 +177,7 @@ def cdl_belthold_polars(
     max_shadow_factor=1.0,
     output_col="CDL_BELTHOLD",
 ):
+    """See module docs."""
     out = cdl_belthold(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

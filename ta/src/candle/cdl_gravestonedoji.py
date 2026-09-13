@@ -150,6 +150,7 @@ def cdl_gravestonedoji_polars(
     max_shadow_factor: float = 0.5,
     output_col: str = "CDL_GRAVESTONEDOJI",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_gravestonedoji(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

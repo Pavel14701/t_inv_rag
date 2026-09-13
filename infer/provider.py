@@ -44,6 +44,7 @@ def _column(df: pl.DataFrame, name: str) -> pl.Series:
 
 def build_manifest() -> dict[str, Any]:
     """Manifest of series and indicators available at inference."""
+
     def _params(**kw):
         return {"parameters": kw} if kw else {}
 
@@ -175,7 +176,7 @@ class BarSeriesProvider(IndicatorProvider):
             value = float(arr[idx])
         if np.isnan(value):
             raise WarmupNotReady(
-                f'{indicator}(length={params.get("length")}): warmup NaN '
-                f'at bar {idx}'
+                f"{indicator}(length={params.get('length')}): warmup NaN "
+                f"at bar {idx}"
             )
         return value

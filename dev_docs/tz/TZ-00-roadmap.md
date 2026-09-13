@@ -63,17 +63,17 @@ ta ──(TaProvider, TZ-03)──► dsl ──► backtest (TZ-04) ──► �
 | 0 | TZ-14 quality baseline | ⬜ стартовая точка | mypy/линтеры/тесты/языковая дисциплина (EN-only: Numba молча деградирует на не-ASCII) — без безопасной базы рефакторинг TZ-02+ не проверяем |
 | 1 | TZ-01 dsl hardening | ✅ (DslValidationError, resolve_history, манифест-маршрутизация в коде) | Все контракты (исключения, провайдеры) строятся на DSL; чинить после появления клиентов дороже |
 | 2 | TZ-06 ai stabilization | ✅ (bundle, predict_p_win, YAML, device; остаток — батчеризация OB, замер < 5 мс) | torch в зависимостях, утечка валидации, model bundle — до любого использования ai |
-| 3 | TZ-02 strategies + единая OHLC | ⬜ следующий шаг | Формат стратегии и схема данных — склейка ta/dsl/ai; конфликт схем блокирует всё дальше |
-| 4 | TZ-03 ta-dsl provider | ⬜ (частично: BarSeriesProvider в infer; TaProvider индикаторов нет) | Прокидывание индикаторов в DSL; нужен формат данных из TZ-02 |
-| 5 | TZ-04 backtest | ⬜ | Честный бэктест ДО RAG и ДО ML-инференса на реальных данных |
+| 3 | TZ-02 strategies + единая OHLC | ✅ (25 тестов: единая схема + Strategy + валидация + реестр + AST + лейбл-генератор) | Формат стратегии и схема данных — склейка ta/dsl/ai; конфликт схем блокирует всё дальше |
+| 4 | TZ-03 ta-dsl provider | 🔨 (волна 1: 4 индикатора + TaProvider + 11 тестов; осталось: 7 групп, multi-output, resolve_history) | Прокидывание индикаторов в DSL; нужен формат данных из TZ-02 |
+| 5 | TZ-04 backtest | ✅ (34 теста: execution + portfolio + engine + metrics + validation + baseline gate) | Честный бэктест ДО RAG и ДО ML-инференса на реальных данных |
 | 6 | TZ-05 inference | ✅ (CLI, конвейер, --ml; остался ручной прогон на T-Invest) | Скрипт сигналов — «бэктест на живом хвосте»; зависит от TZ-02/03/04 (формат стратегии — заготовка) |
-| 7 | TZ-09 api bridge | ⬜ | Транспорт white API ↔ локаль; нужны форматы отчётов (TZ-04) и сигналов (TZ-05) |
-| 8 | TZ-10 white api skeleton | ⬜ | Каркас ingest + REST; после контрактов очередей (TZ-09) |
-| 9 | TZ-07 rag | 🔨 (LLM-слой ✅; ingestion/retrieval/generation ⬜, блокируется TZ-02 manifest_hash) | RAG поверх готового формата стратегий и валидатора DSL |
-| 10 | TZ-08 contracts/DI | ⬜ | Финальная склейка; фактически ведётся параллельно с TZ-02 |
+| 7 | TZ-09 api bridge | 🔨 (транспорт готов: контракты + ACL + FastStream-мост WhiteBridge/LocalBridge, reconnect/backoff, heartbeat; осталось: живой RabbitMQ, TLS) | Транспорт white API ↔ локаль; нужны форматы отчётов (TZ-04) и сигналов (TZ-05) |
+| 8 | TZ-10 white api skeleton | 🔨 (WhiteAPI stores + REST на aiohttp по карте эндпоинтов, 7 тестов; осталось: PostgreSQL/Alembic, FastStream↔PG склейка, aiogram) | Каркас ingest + REST; после контрактов очередей (TZ-09) |
+| 9 | TZ-07 rag | 🔨 (ядро RAG готово: LLM-слой, ingestion, vectorstore/embeddings/retrieval, pipeline + pass@1/pass@N метрики, 47 тестов; осталось: pass@1 eval-скрипт, живой Qdrant/Ollama) | RAG поверх готового формата стратегий и валидатора DSL |
+| 10 | TZ-08 contracts/DI | 🔨 (DI собрана: 4 контура + rag/Ollama/Qdrant/bundle-провайдеры с Protocol-ключами, 15 тестов; осталось: PostgreSQL provider) | Финальная склейка; фактически ведётся параллельно с TZ-02 |
 | 11 | TZ-11 risk engine | 🔨 (спека config-driven; скелет dte-risk: конфиг+реестр правил+check()+22 теста зелёные) | Ключевая фича детерминизма; после TZ-04 (движок исполнения) |
-| 12 | TZ-12 ta benchmarks | ⬜ | Публичное доказательство производительности Numba-ядер |
-| 13 | TZ-13 ci | ⬜ | ruff + mypy + pytest matrix по членам workspace |
+| 12 | TZ-12 ta benchmarks | 🔨 (runner ta/benchmarks/run.py: 7 сценариев × pandas/numpy/TA-Lib базлайны, cold/warm JIT, --save в results/*.md; осталось: README-раздел, воспроизводимость ±10%) | Публичное доказательство производительности Numba-ядер |
+| 13 | TZ-13 ci | ✅ (GitHub Actions: lint + mypy + EN-only + 8 pytest matrix) |
 
 > Отступление от порядка: TZ-05 выполнен до TZ-02/03/04 (смок на синтетике допустим —
 > формат стратегии в infer остаётся заготовкой до TZ-02).

@@ -75,13 +75,15 @@ def _cdl_counterattack_nb(
 
         direction = 0.0
 
-        # Bearish counterattack: first bullish, second bearish, gap up, close near previous close
+        # Bearish counterattack: first bullish, second bearish, gap up, close
+        # near previous close
         if bull1 and bear0:
             if o0 > h1 and c0 < c1:
                 if abs(c0 - c1) <= 0.25 * (r0 + r1):
                     direction = -1.0
 
-        # Bullish counterattack: first bearish, second bullish, gap down, close near previous close
+        # Bullish counterattack: first bearish, second bullish, gap down,
+        # close near previous close
         elif bear1 and bull0:
             if o0 < l1 and c0 > c1:
                 if abs(c0 - c1) <= 0.25 * (r0 + r1):
@@ -188,6 +190,7 @@ def cdl_counterattack_polars(
     max_shadow_factor=0.5,
     output_col="CDL_COUNTERATTACK",
 ):
+    """See module docs."""
     out = cdl_counterattack(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

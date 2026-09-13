@@ -149,6 +149,7 @@ def cdl_hammer_polars(
     max_shadow_factor: float = 0.3,
     output_col: str = "CDL_HAMMER",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_hammer(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

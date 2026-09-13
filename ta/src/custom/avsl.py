@@ -39,7 +39,7 @@ def avsl_numpy(
         if not arr.flags.c_contiguous:
             arr = np.ascontiguousarray(arr)
     # Common base
-    vpc, vpr, vm, vpci, deviation_raw = _avs_base(
+    vpc, vpr, _vm, vpci, deviation_raw = _avs_base(
         close, volume, fast, slow, stand_div, use_talib
     )
     # Apply optional deviation cap

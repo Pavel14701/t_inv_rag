@@ -486,7 +486,7 @@ def test_hilo_polars_ema_mode(df_random_walk: pl.DataFrame) -> None:
     high_arr = df["high"].to_numpy()
     low_arr = df["low"].to_numpy()
     close_arr = df["close"].to_numpy()
-    hilo_np, long_np, short_np = _hilo_numba(
+    hilo_np, _long_np, _short_np = _hilo_numba(
         high_arr,
         low_arr,
         close_arr,
@@ -508,7 +508,7 @@ def test_hilo_numba_with_nan(prices_with_nan):
     high = prices_with_nan + 1.0
     low = prices_with_nan - 1.0
     close = prices_with_nan
-    hilo, long_, short_ = _hilo_numba(
+    hilo, _, _ = _hilo_numba(
         high,
         low,
         close,
@@ -526,7 +526,7 @@ def test_hilo_numba_with_inf(prices_with_inf):
     high = prices_with_inf + 1.0
     low = prices_with_inf - 1.0
     close = prices_with_inf
-    hilo, long_, short_ = _hilo_numba(
+    hilo, _, _ = _hilo_numba(
         high,
         low,
         close,
@@ -579,7 +579,7 @@ def test_hilo_numba_extreme_values(prices_extreme):
     high = prices_extreme
     low = prices_extreme
     close = prices_extreme
-    hilo, long_, short_ = _hilo_numba(
+    hilo, _, _ = _hilo_numba(
         high,
         low,
         close,

@@ -252,7 +252,8 @@ def generate_block_candidates(
         block_types,
         idx_list,
         break_idx_list,
-        strength_list, strict=False,
+        strength_list,
+        strict=False,
     ):
         block_type = "supply" if bt == 0 else "demand"
         candidates.append(

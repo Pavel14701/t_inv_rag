@@ -1,3 +1,6 @@
+> **Статус: ✅ реализован** (`.github/workflows/ci.yml`: lint job (ruff + format),
+> mypy job (risk/infer/ai strict), EN-only guard job, 8 pytest matrix jobs по пакетам).
+
 # TZ-13. CI (GitHub Actions)
 
 ## 1. Контекст

@@ -1,5 +1,20 @@
 # TZ-10. White API: каркас публичного сервиса
 
+> **Статус: 🔨 ядро готово (7 REST-тестов + stores).**
+> ✅ main/src/api.py: WhiteAPI — CandleStore (идемпотентный ingest по
+> (inst_id, ts), дубль не дублирует — тест), JobStore (202 + job_id pattern),
+> SignalStore (latest N), ACL-проверка на submit_backtest.
+> ✅ main/src/rest.py: REST по карте п.2.2 на aiohttp (без новых зависимостей —
+> aiohttp уже идёт с aiogram): POST /ingest/candles, GET /strategies,
+> GET /strategies/{id}, POST /backtests (202), GET /backtests/{job_id},
+> GET /signals?ticker=, POST /rag/generate (503 без rag-контура).
+> Валидация входов msgspec-структурами из contracts/, 400 на битый JSON.
+> ⬜ PostgreSQL вместо in-memory stores + Alembic-миграции
+> (strategies/backtest_jobs/signals/candles).
+> ⬜ FastStream-приложение: consumers md.* → PG, publishers cmd.* (бридж из
+> TZ-09 готов, нужна склейка с PG-сторами).
+> ⬜ aiogram-бот поверх тех же контрактов; JWT-аутентификация.
+
 ## 1. Контекст
 
 `main/src` — сейчас скрипт к T-Invest API. Нужен каркас публичного контура: ingest биржевых

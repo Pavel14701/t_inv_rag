@@ -18,14 +18,14 @@ Example:
     >>> from dsl import evaluate_dsl, Context, InProcessProvider
     >>>
     >>> def resolver(indicator, params, attributes, offset):
-    ...     if indicator == 'rsi':
+    ...     if indicator == "rsi":
     ...         return 25.0
     ...     return 50.0
     >>>
-    >>> manifest = {'indicators': {'rsi': {'attributes': ['value']}}}
+    >>> manifest = {"indicators": {"rsi": {"attributes": ["value"]}}}
     >>> provider = InProcessProvider(manifest, resolver)
     >>> context = Context([provider])
-    >>> result = evaluate_dsl('rsi.value < 30', context)
+    >>> result = evaluate_dsl("rsi.value < 30", context)
     >>> print(result)  # True
 
 """

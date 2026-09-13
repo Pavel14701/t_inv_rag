@@ -55,9 +55,7 @@ def _midpoint_reference(
 
 
 @pytest.mark.overlap
-@pytest.mark.parametrize(
-    "length", [2, 3, 5], ids=["len2", "len3", "len5"]
-)
+@pytest.mark.parametrize("length", [2, 3, 5], ids=["len2", "len3", "len5"])
 def test_midpoint_numba_core_basic(length: int) -> None:
     """Test _midpoint_numba_core against the pure-Python reference."""
     close = np.array(

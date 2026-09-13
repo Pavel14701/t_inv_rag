@@ -57,7 +57,8 @@ class InferenceResult:
 
 
 class _CachedContext(Context):
-    """Context with a validation cache keyed by (indicator, params, attributes).
+    """Context with a validation cache keyed by (indicator, params,
+        attributes).
 
     ``Context._validate`` is deterministic for this key, but it runs on
     every indicator access on every bar -- with 5000 bars that means
@@ -174,14 +175,16 @@ def run_inference(
                 entry_flags[t] = False
                 ml_filtered += 1
 
-    signals = pl.DataFrame({
-        "date": dates,
-        "entry_signal": entry_flags,
-        "exit_signal": exit_flags,
-        "p_win": [
-            float(v) if v is not None else float("nan") for v in p_wins
-        ],
-    })
+    signals = pl.DataFrame(
+        {
+            "date": dates,
+            "entry_signal": entry_flags,
+            "exit_signal": exit_flags,
+            "p_win": [
+                float(v) if v is not None else float("nan") for v in p_wins
+            ],
+        }
+    )
     elapsed = (_time.perf_counter() - started) * 1000.0
     return InferenceResult(
         signals=signals,
@@ -218,7 +221,7 @@ def predict_p_win_at(predictor, df: pl.DataFrame, t: int) -> float | None:
     seq_len = predictor.bundle.seq_len
     if t + 1 < seq_len:
         return None
-    window = df[t + 1 - seq_len: t + 1]
+    window = df[t + 1 - seq_len : t + 1]
 
     canon = ["open", "high", "low", "close", "volume"]
     series = {}

@@ -35,8 +35,8 @@ def _cdl_mathold_nb(
             o = open_[i - k]
             c = close[i - k]
             h = high[i - k]
-            l = low[i - k]
-            rng = h - l
+            low_ = low[i - k]
+            rng = h - low_
             body = abs(c - o)
             if rng <= 0.0:
                 pullback_ok = False
@@ -46,7 +46,7 @@ def _cdl_mathold_nb(
                 pullback_ok = False
                 break
             # must stay within body of candle 1
-            if h > c1 or l < o1:
+            if h > c1 or low_ < o1:
                 pullback_ok = False
                 break
         if not pullback_ok:

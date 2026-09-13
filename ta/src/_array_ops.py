@@ -1,7 +1,10 @@
-"""Numba-accelerated array operations for rolling windows, NaN handling, and offset shifts.
+"""Numba-accelerated array operations for rolling windows, NaN handling, and
+    offset shifts.
 
-All floating-point operations strictly follow IEEE 754 rules (no fastmath optimisations).
-NaN and Inf propagate naturally, and no exceptions are raised for extreme values.
+All floating-point operations strictly follow IEEE 754 rules (no fastmath
+    optimisations).
+NaN and Inf propagate naturally, and no exceptions are raised for extreme
+    values.
 """
 
 import numpy as np
@@ -27,10 +30,12 @@ def _apply_offset_fillna(
     """Apply a shift (offset) and optionally fill NaN values in a single pass.
 
     The function creates a new array where the data is shifted by `offset`
-    positions. Positive offset shifts the data forward (past values move to later
+    positions. Positive offset shifts the data forward (past values move to
+        later
     positions), negative offset shifts backward. The first `abs(offset)`
     positions (or last for negative offset) are filled with `fillna` (or NaN if
-    None). Additionally, any NaN in the original array is replaced with `fillna`
+    None). Additionally, any NaN in the original array is replaced with
+        `fillna`
     if provided.
 
     Parameters
@@ -52,7 +57,8 @@ def _apply_offset_fillna(
     Notes
     -----
     - Empty arrays return an empty array.
-    - All operations are IEEE 754 compliant (NaN and Inf are handled gracefully).
+    - All operations are IEEE 754 compliant (NaN and Inf are handled
+        gracefully).
 
     """
     n = len(arr)
@@ -177,7 +183,8 @@ def _rolling_max_numba(arr: np.ndarray, window: int) -> np.ndarray:
         size += 1
 
         if i >= window - 1:
-            # The head of the queue contains the index of the maximum (non-NaN).
+            # The head of the queue contains the index of the maximum
+            # (non-NaN).
             out[i] = arr[dq[head]]
 
     return out
@@ -264,7 +271,8 @@ def _rolling_min_numba(arr: np.ndarray, window: int) -> np.ndarray:
         size += 1
 
         if i >= window - 1:
-            # The head of the queue contains the index of the minimum (non-NaN).
+            # The head of the queue contains the index of the minimum
+            # (non-NaN).
             out[i] = arr[dq[head]]
 
     return out
@@ -289,7 +297,8 @@ def _fill_nan_policy_numba(arr: np.ndarray, nan_policy: str) -> None:
         1D float64 array (assumed to be a copy, modified in-place).
     nan_policy : str
         One of 'ffill', 'bfill', or 'both'. 'ffill' propagates last valid value
-        forward; 'bfill' propagates next valid value backward; 'both' does both.
+        forward; 'bfill' propagates next valid value backward; 'both' does
+            both.
 
     Notes
     -----

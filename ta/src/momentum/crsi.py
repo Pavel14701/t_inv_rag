@@ -46,7 +46,8 @@ def _percent_rank_numba(close: np.ndarray, length: int) -> np.ndarray:
     n = len(close)
     out = np.full(n, np.nan, dtype=np.float64)
     if n < length or length < 2:
-        # Percent rank requires at least 2 periods to compute meaningful percentage
+        # Percent rank requires at least 2 periods to compute meaningful
+        # percentage
         return out
     for i in range(length - 1, n):
         current = close[i]
@@ -98,6 +99,11 @@ def crsi_numpy(
     normalize : bool
         If True, replace any remaining NaN in the final CRSI with 50.0
         (neutral value). Useful for machine learning pipelines.
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------
@@ -173,7 +179,8 @@ def crsi_numpy(
     # ---- Normalize (replace NaN with 50.0) if requested ----
     if normalize:
         crsi = np.where(np.isnan(crsi), 50.0, crsi)
-    # Apply offset and fillna (fillna only affects remaining NaN if normalize=False)
+    # Apply offset and fillna (fillna only affects remaining NaN if
+    # normalize=False)
     return _apply_offset_fillna(crsi, offset, fillna)
 
 
@@ -231,7 +238,27 @@ def crsi_polars(
     rsi_length, streak_length, rank_length, scalar, \
         offset, fillna, use_talib, nan_policy, normalize : as above.
     output_col : str, optional
-        Output column name (default f"CRSI_{rsi_length}_{streak_length}_{rank_length}").
+        Output column name (default
+            f"CRSI_{rsi_length}_{streak_length}_{rank_length}").
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    nan_policy : str, optional
+        See the module guide; default mirrors the numpy path.
+    normalize : see notes
+        Documented in the matching numpy implementation.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    rank_length : see notes
+        Documented in the matching numpy implementation.
+    rsi_length : see notes
+        Documented in the matching numpy implementation.
+    scalar : float, optional
+        See the module guide; default mirrors the numpy path.
+    streak_length : see notes
+        Documented in the matching numpy implementation.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

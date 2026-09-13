@@ -21,15 +21,15 @@ def _cdl_marubozu_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         body = abs(c - o)
         if body <= 0.0:
             continue
         upper = h - max(o, c)
-        lower = min(o, c) - l
+        lower = min(o, c) - low_
         # Marubozu: body ~= the whole range, shadows minimal
         if upper > 0.05 * rng:
             continue

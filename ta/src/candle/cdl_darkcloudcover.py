@@ -118,7 +118,8 @@ def cdl_darkcloudcover(
 ) -> np.ndarray:
     """Dark Cloud Cover pattern with strict support.
 
-    If symmetric=False and TA-Lib is available -> TA-Lib CDLDARKCLOUDCOVER is used.
+    If symmetric=False and TA-Lib is available -> TA-Lib CDLDARKCLOUDCOVER is
+        used.
     If symmetric=True -> TA-Lib is skipped and Numba is always used.
     """
     if isinstance(open_, pl.Series):
@@ -183,6 +184,7 @@ def cdl_darkcloudcover_polars(
     max_shadow_factor: float = 0.5,
     output_col: str = "CDL_DARKCLOUDCOVER",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_darkcloudcover(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

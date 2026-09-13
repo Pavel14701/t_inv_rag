@@ -160,9 +160,7 @@ def compute_ob_distances(
     is_in_zone = np.zeros(n, dtype=np.float32)
     strongest_strength = np.full(n, -np.inf, dtype=np.float64)
     if not order_blocks:
-        return (
-            nearest_supply, nearest_demand, strongest_dist, is_in_zone
-        )
+        return (nearest_supply, nearest_demand, strongest_dist, is_in_zone)
     supply_blocks = [
         ob for ob in order_blocks if ob.block_type.lower() == "supply"
     ]
@@ -178,10 +176,7 @@ def compute_ob_distances(
             if start >= end:
                 continue
             zone_mid = (ob.zone_low + ob.zone_high) / 2.0
-            dist = (
-                np.abs(close[start:end] - zone_mid)
-                / atr_series[start:end]
-            )
+            dist = np.abs(close[start:end] - zone_mid) / atr_series[start:end]
             np.minimum(
                 target_array[start:end], dist, out=target_array[start:end]
             )
@@ -193,9 +188,8 @@ def compute_ob_distances(
             end = min(n, ob.end_idx + 1)
             if start >= end:
                 continue
-            inside = (
-                (close[start:end] >= ob.zone_low)
-                & (close[start:end] <= ob.zone_high)
+            inside = (close[start:end] >= ob.zone_low) & (
+                close[start:end] <= ob.zone_high
             )
             is_in_zone[start:end] = np.maximum(
                 is_in_zone[start:end], inside.astype(np.float32)
@@ -209,10 +203,7 @@ def compute_ob_distances(
             if start >= end:
                 continue
             zone_mid = (ob.zone_low + ob.zone_high) / 2.0
-            dist = (
-                np.abs(close[start:end] - zone_mid)
-                / atr_series[start:end]
-            )
+            dist = np.abs(close[start:end] - zone_mid) / atr_series[start:end]
             seg_strength = strongest_strength[start:end]
             take = ob.strength > seg_strength
             seg_strength[take] = ob.strength
@@ -223,9 +214,7 @@ def compute_ob_distances(
     _update_distances(demand_blocks, nearest_demand)
     _update_strongest(list(order_blocks))
     _update_zone_flags(list(order_blocks))
-    return (
-        nearest_supply, nearest_demand, strongest_dist, is_in_zone
-    )
+    return (nearest_supply, nearest_demand, strongest_dist, is_in_zone)
 
 
 class PositionState(NamedTuple):
@@ -313,10 +302,11 @@ def _check_rr(
 
     """
     if (
-        (direction == "long"
-        and (sl_price >= entry_price or tp_price <= entry_price))
-        or (direction != "long"
-        and (sl_price <= entry_price or tp_price >= entry_price))
+        direction == "long"
+        and (sl_price >= entry_price or tp_price <= entry_price)
+    ) or (
+        direction != "long"
+        and (sl_price <= entry_price or tp_price >= entry_price)
     ):
         return False
     if direction == "long":
@@ -644,32 +634,38 @@ def generate_labels_from_strategy(
     """
     # ---------- Risk parameter resolution (TZ-06 item 10) ----------
     # explicit kwarg > risk config > legacy default
-    _r = risk
+    risk_cfg = risk
     min_rr = (
-        min_rr if min_rr is not None
-        else (_r.min_rr if _r is not None else 1 / 3)
+        min_rr
+        if min_rr is not None
+        else (risk_cfg.min_rr if risk_cfg is not None else 1 / 3)
     )
     use_r_multiple = (
-        use_r_multiple if use_r_multiple is not None
-        else (_r.use_r_multiple if _r is not None else False)
+        use_r_multiple
+        if use_r_multiple is not None
+        else (risk_cfg.use_r_multiple if risk_cfg is not None else False)
     )
     use_structure_filter = (
-        use_structure_filter if use_structure_filter is not None
-        else (_r.use_structure_filter if _r is not None else False)
+        use_structure_filter
+        if use_structure_filter is not None
+        else (risk_cfg.use_structure_filter if risk_cfg is not None else False)
     )
-    if trend_filter is None and _r is not None:
-        trend_filter = _r.trend_filter
+    if trend_filter is None and risk_cfg is not None:
+        trend_filter = risk_cfg.trend_filter
     commission_pct = (
-        commission_pct if commission_pct is not None
-        else (_r.commission_pct if _r is not None else 0.001)
+        commission_pct
+        if commission_pct is not None
+        else (risk_cfg.commission_pct if risk_cfg is not None else 0.001)
     )
     slippage_pct = (
-        slippage_pct if slippage_pct is not None
-        else (_r.slippage_pct if _r is not None else 0.0005)
+        slippage_pct
+        if slippage_pct is not None
+        else (risk_cfg.slippage_pct if risk_cfg is not None else 0.0005)
     )
     max_bars_hold = (
-        max_bars_hold if max_bars_hold is not None
-        else (_r.max_bars_hold if _r is not None else 20)
+        max_bars_hold
+        if max_bars_hold is not None
+        else (risk_cfg.max_bars_hold if risk_cfg is not None else 20)
     )
 
     n = df.height
@@ -685,8 +681,16 @@ def generate_labels_from_strategy(
     i = 0
     while i < n - 1:  # a decision on the last bar can never be filled
         direction, ob = _find_decision(
-            i, high[i], low[i], close[i], tp[i], sl[i],
-            order_blocks, use_structure_filter, trend_filter, min_rr,
+            i,
+            high[i],
+            low[i],
+            close[i],
+            tp[i],
+            sl[i],
+            order_blocks,
+            use_structure_filter,
+            trend_filter,
+            min_rr,
         )
         if direction is None or ob is None:
             i += 1

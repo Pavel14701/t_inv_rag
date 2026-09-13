@@ -28,6 +28,13 @@ def coppock_numpy(
         WMA smoothing period.
     offset, fillna, use_talib : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray

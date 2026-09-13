@@ -23,8 +23,8 @@ def _cdl_invertedhammer_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         # Body
@@ -33,7 +33,7 @@ def _cdl_invertedhammer_nb(
             continue
         # Upper / lower shadows
         upper = h - (c if c > o else o)
-        lower = (c if c > o else o) - l
+        lower = (c if c > o else o) - low_
         # Inverted Hammer shape:
         #  - long upper shadow
         #  - small body

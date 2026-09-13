@@ -54,6 +54,27 @@ def kst_numpy(
         SMA length of the signal line (>= 1).
     offset, fillna : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    roc1 : int, optional
+        Rate-of-change window for this component.
+    roc2 : int, optional
+        Rate-of-change window for this component.
+    roc3 : int, optional
+        Rate-of-change window for this component.
+    roc4 : int, optional
+        Rate-of-change window for this component.
+    sma1 : see notes
+        Documented in the matching numpy implementation.
+    sma2 : see notes
+        Documented in the matching numpy implementation.
+    sma3 : see notes
+        Documented in the matching numpy implementation.
+    sma4 : see notes
+        Documented in the matching numpy implementation.
+
     Returns
     -------
     tuple of np.ndarray

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Ehlers 3-Pole Super Smoother Filter (SSF3) - Numba-accelerated with Polars integration."""
+"""Ehlers 3-Pole Super Smoother Filter (SSF3) - Numba-accelerated with Polars
+integration.
+"""
 
 from typing import Optional
 
@@ -130,6 +132,17 @@ def ssf3_polars(
     length, pi, sqrt3, offset, fillna : as above.
     output_col : str, optional
         Output column name (default f"SSF3_{length}").
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    pi : see notes
+        Documented in the matching numpy implementation.
+    sqrt3 : see notes
+        Documented in the matching numpy implementation.
 
     Returns
     -------

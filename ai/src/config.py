@@ -1,6 +1,7 @@
 """YAML configuration for the ai package.
 
-Single source of parameters (TZ-06 item 10): risk management/labels, architecture
+Single source of parameters (TZ-06 item 10): risk management/labels,
+    architecture
 model, training and compute backend. Defaults equal the former
 hardcoded constants, so the existing code behaves identically.
 

@@ -52,6 +52,13 @@ def roc_numpy(
         Multiplier (e.g., 100 for percent).
     offset, fillna, use_talib : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray
@@ -113,6 +120,17 @@ def roc_polars(
     length, scalar, offset, fillna, use_talib : as above.
     output_col : str, optional
         Output column name (default f"ROC_{length}").
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    scalar : float, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

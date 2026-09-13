@@ -48,6 +48,17 @@ def stochrsi_numpy(
         Moving average mode for %K and %D smoothing.
     offset, fillna, use_talib, nan_policy, trim : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    nan_policy : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    trim : see notes
+        Documented in the matching numpy implementation.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     (stoch_k, stoch_d) as numpy arrays.
@@ -101,12 +112,15 @@ def stochrsi_numpy(
     if trim:
         # Minimum required length: RSI needs rsi_length,
         # then we need length for min/max,
-        # then k and d for smoothing. The first valid value of %D appears at index:
+        # then k and d for smoothing. The first valid value of %D appears at
+        # index:
         # rsi_length - 1 + (length - 1) + (k - 1) + (d - 1) = rsi_length + length + k + d - 4  # noqa: E501
-        # But we'll use a simpler conservative approach: trim = True returns only values
+        # But we'll use a simpler conservative approach: trim = True returns
+        # only values
         # where all components are defined. Usually this is the
         # last `len - (rsi_length + length + k + d - 4)`.
-        # However, to keep consistent with other indicators, we'll just return from
+        # However, to keep consistent with other indicators, we'll just
+        # return from
         # the index where stoch_d is first non-NaN.
         first_valid = np.where(~np.isnan(stoch_d))[0]
         if len(first_valid) > 0:
@@ -185,11 +199,33 @@ def stochrsi_polars(
         Input DataFrame.
     close_col : str
         Column with close prices.
-    length, rsi_length, k, d, mamode, offset, fillna, use_talib, nan_policy : as above.
+    length, rsi_length, k, d, mamode, offset, fillna, use_talib, nan_policy :
+        as above.
     output_col_k : str, optional
-        Output column name for %K (default "STOCHRSIk_{length}_{rsi_length}_{k}_{d}").
+        Output column name for %K (default
+            "STOCHRSIk_{length}_{rsi_length}_{k}_{d}").
     output_col_d : str, optional
-        Output column name for %D (default "STOCHRSId_{length}_{rsi_length}_{k}_{d}").
+        Output column name for %D (default
+            "STOCHRSId_{length}_{rsi_length}_{k}_{d}").
+
+    d : int, optional
+        See the module guide; default mirrors the numpy path.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    k : int, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    mamode : str, optional
+        See the module guide; default mirrors the numpy path.
+    nan_policy : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    rsi_length : see notes
+        Documented in the matching numpy implementation.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

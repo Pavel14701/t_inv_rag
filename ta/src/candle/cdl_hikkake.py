@@ -154,6 +154,7 @@ def cdl_hikkake_polars(
     lookahead: int = 3,
     output_col: str = "CDL_HIKKAKE",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_hikkake(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

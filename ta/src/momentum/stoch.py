@@ -64,6 +64,11 @@ def stoch_numpy(
     use_talib : bool
         Prefer TA-Lib when ``mamode`` is supported by it.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     tuple of np.ndarray

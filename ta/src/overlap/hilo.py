@@ -176,8 +176,9 @@ def _hilo_numba_core(
         (hilo, long, short) - all arrays have the same length as `close`.
         The first element is NaN; subsequent elements follow the rules:
         - if close[i] > high_ma[i-1]  -> hilo[i] = low_ma[i], long = low_ma[i]
-        - if close[i] < low_ma[i-1]   -> hilo[i] = high_ma[i], short = high_ma[i]
-        - else                        -> hilo[i] = hilo[i-1], long & short = hilo[i-1]
+        - if close[i] < low_ma[i-1] -> hilo[i] = high_ma[i],
+    -   short = high_ma[i]
+        - else -> hilo[i] = hilo[i-1], long & short = hilo[i-1]
 
     """
     n = len(close)

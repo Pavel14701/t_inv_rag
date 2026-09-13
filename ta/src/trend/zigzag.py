@@ -150,6 +150,7 @@ def zigzag_peaks_valleys(
     rel_height: float,
     plateau_size: int | None,
 ):
+    """Detect ZigZag peaks/valleys on the full series (offline)."""
     plateau = plateau_size if plateau_size is not None else -1
     width_ = width if width is not None else -1.0
     wlen_ = wlen if wlen is not None else -1
@@ -188,7 +189,8 @@ def zigzag_numpy(
     rel_height: float = 0.5,
     plateau_size: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Detect peaks (in high) and valleys (in low) using custom Numba peak detection.
+    """Detect peaks (in high) and valleys (in low) using custom Numba peak
+        detection.
 
     Parameters
     ----------

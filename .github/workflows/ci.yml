@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  lint:
+    name: Ruff (lint + format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: latest
+      - run: uv sync --all-packages
+      - run: uv run ruff check ta dsl ai infer rag risk strategies main backtest
+      - run: uv run ruff format --check ta dsl ai infer rag risk strategies main backtest
+
+  mypy:
+    name: mypy (risk + infer + ai strict)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: latest
+      - run: uv sync --all-packages
+      - run: uv run mypy risk infer ai
+      # Wave 3+: extend to ta, dsl, rag when clean
+
+  en-only:
+    name: EN-only source guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for Cyrillic in .py files
+        run: |
+          if grep -rlP '[\x{0400}-\x{04FF}]' --include='*.py' ta dsl ai infer rag risk strategies main backtest; then
+            echo "ERROR: Cyrillic characters found in .py files (TZ-14 item 2.1)"
+            exit 1
+          fi
+
+  test-dsl:
+    name: pytest dsl
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-dsl
+      - run: uv run --package dte-dsl pytest dsl/tests
+
+  test-ta:
+    name: pytest ta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-ta
+      - run: |
+          sudo apt-get update && sudo apt-get install -y libta-lib0 || true
+          uv run --package dte-ta pytest ta/tests -m "not slow"
+
+  test-ai:
+    name: pytest ai
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-ai
+      - run: uv run --package dte-ai pytest ai/tests
+
+  test-infer:
+    name: pytest infer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-infer
+      - run: uv run --package dte-infer pytest infer/tests
+
+  test-rag:
+    name: pytest rag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-rag
+      - run: uv run --package dte-rag pytest rag/tests
+
+  test-risk:
+    name: pytest risk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-risk
+      - run: uv run --package dte-risk pytest risk/tests
+
+  test-strategies:
+    name: pytest strategies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-strategies
+      - run: uv run --package dte-strategies pytest strategies/tests
+
+  test-backtest:
+    name: pytest backtest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --package dte-backtest
+      - run: uv run --package dte-backtest pytest backtest/tests

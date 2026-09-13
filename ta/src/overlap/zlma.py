@@ -191,6 +191,17 @@ def zlma_polars(
     output_col : str, optional
         Name of the output column (default: f"ZL_{mamode.upper()}_{length}").
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    mamode : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     pl.DataFrame

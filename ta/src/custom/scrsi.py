@@ -69,6 +69,11 @@ def scrsi_numpy(
             part (first `domcycle//2 + (vibration-1)//2 -1` values removed).
     offset, fillna : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     (rsi_scaled, crsi, lower_bound, upper_bound)
@@ -114,8 +119,16 @@ def scrsi_numpy(
     with np.errstate(divide="ignore", invalid="ignore"):
         rs = up / down
         rsi = 100.0 - 100.0 / (1.0 + rs)
-        rsi = np.where(down == 0.0, 100.0, rsi)  # if down=0, RSI=100  # noqa: RUF069 - exact IEEE zero/sign check
-        rsi = np.where(up == 0.0, 0.0, rsi)  # if up=0, RSI=0  # noqa: RUF069 - exact IEEE zero/sign check
+        rsi = np.where(
+            down == 0.0,  # noqa: RUF069 - exact zero: no losses
+            100.0,
+            rsi,
+        )  # if down=0, RSI=100
+        rsi = np.where(
+            up == 0.0,  # noqa: RUF069 - exact zero: no gains
+            0.0,
+            rsi,
+        )  # if up=0, RSI=0
         # When both zero, set to 50 (neutral) instead of NaN for stability
         rsi = np.where((up == 0.0) & (down == 0.0), 50.0, rsi)  # noqa: RUF069 - exact IEEE zero/sign check
     rsi = np.clip(rsi, 0.0, 100.0)
@@ -198,15 +211,33 @@ def scrsi_polars(
         Input DataFrame.
     close_col : str
         Column with close prices.
-    domcycle, vibration, leveling, nan_policy, offset, fillna : as in scrsi_numpy.
+    domcycle, vibration, leveling, nan_policy, offset, fillna : as in
+        scrsi_numpy.
     output_col_scaled : str, optional
-        Name for scaled RSI column (default f"SCRSI_scaled_{domcycle}_{vibration}").
+        Name for scaled RSI column (default
+            f"SCRSI_scaled_{domcycle}_{vibration}").
     output_col_crsi : str, optional
-        Name for smoothed CRSI column (default f"SCRSI_crsi_{domcycle}_{vibration}").
+        Name for smoothed CRSI column (default
+            f"SCRSI_crsi_{domcycle}_{vibration}").
     output_col_lb : str, optional
-        Name for lower bound column (default f"SCRSI_lb_{domcycle}_{vibration}").
+        Name for lower bound column (default
+            f"SCRSI_lb_{domcycle}_{vibration}").
     output_col_ub : str, optional
-        Name for upper bound column (default f"SCRSI_ub_{domcycle}_{vibration}").
+        Name for upper bound column (default
+            f"SCRSI_ub_{domcycle}_{vibration}").
+
+    domcycle : see notes
+        Documented in the matching numpy implementation.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    leveling : see notes
+        Documented in the matching numpy implementation.
+    nan_policy : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    vibration : see notes
+        Documented in the matching numpy implementation.
 
     Returns
     -------
@@ -239,9 +270,7 @@ def scrsi_polars(
         [
             pl.Series(output_col_scaled, rsi_scaled),
             pl.Series(output_col_crsi, crsi),
-            pl.Series(
-                output_col_lb, [lb] * len(df)
-            ),  # constant for all rows
+            pl.Series(output_col_lb, [lb] * len(df)),  # constant for all rows
             pl.Series(output_col_ub, [ub] * len(df)),
         ]
     )

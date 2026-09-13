@@ -52,6 +52,7 @@ def ma_mode(
     source: np.ndarray | pl.Series | None = None,
     **kwargs,
 ) -> list[str] | np.ndarray:
+    """Dispatch a moving average by ``ma_mode`` (numpy path)."""
     if mamode is None and source is None:
         return list(_MA_MAP.keys())
     if source is None:

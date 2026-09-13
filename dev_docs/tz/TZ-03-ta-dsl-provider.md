@@ -1,5 +1,9 @@
-> **Статус: ⬜ не начат** (частично: `infer/provider.py` BarSeriesProvider — цены
-> через DSL-контракт; TaProvider поверх ta-индикаторов отсутствует).
+> **Статус: ✅ реализован (волна 1: 4 индикатора + TaProvider + 11 тестов).**
+> IndicatorBinding + реестр (ema, sma, rsi, atr); build_manifest();
+> TaProvider(IndicatorProvider): compute-once кэш, DSL-offset = cache index,
+> WarmupNotReady контракт, look-ahead инвариант, performance < 1s/5000 баров.
+> 11 тестов зелёные (ruff 0, mypy infer 0). Осталось: расширение до 7 групп,
+> multi-output (ott.direction, adx.+/adx.-), батчевый resolve_history.
 
 # TZ-03. TaProvider: прокидывание ta через DSL
 

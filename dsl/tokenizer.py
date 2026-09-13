@@ -74,10 +74,7 @@ class Tokenizer:
             ("UNKNOWN", r"."),
         ]
         self.regex = re.compile(
-            "|".join(
-                f"(?P<{name}>{pattern})" for name,
-                pattern in self.spec
-            )
+            "|".join(f"(?P<{name}>{pattern})" for name, pattern in self.spec)
         )
 
     def tokenize(self, code: str) -> list[Token]:

@@ -8,7 +8,7 @@ __all__ = (
     "IndicatorSchema",
     "Manifest",
     "ManifestValidator",
-    "ParameterSchema"
+    "ParameterSchema",
 )
 
 
@@ -76,7 +76,9 @@ class Manifest:
                     param_dict["min"] = param_schema.min
                 if param_schema.max is not None:
                     param_dict["max"] = param_schema.max
-                result["indicators"][name]["parameters"][param_name] = param_dict  # noqa: E501
+                result["indicators"][name]["parameters"][param_name] = (
+                    param_dict
+                )
         return result
 
     @classmethod
@@ -118,9 +120,7 @@ class ManifestValidator:
     """
 
     def __init__(
-        self,
-        manifest: Manifest,
-        allow_undefined: bool = False
+        self, manifest: Manifest, allow_undefined: bool = False
     ) -> None:
         """Initialize with a manifest.
 
@@ -145,9 +145,7 @@ class ManifestValidator:
         return attribute in schema.attributes
 
     def validate_attributes(
-        self,
-        indicator: str,
-        attributes: list[str]
+        self, indicator: str, attributes: list[str]
     ) -> bool:
         """Check if all given attributes exist for the indicator.
 
@@ -168,10 +166,7 @@ class ManifestValidator:
         return all(attr in valid_attrs for attr in attributes)
 
     def validate_parameter(
-        self,
-        indicator: str,
-        param_name: str,
-        value: Any
+        self, indicator: str, param_name: str, value: Any
     ) -> bool:
         """Validate a single parameter against the manifest schema.
 

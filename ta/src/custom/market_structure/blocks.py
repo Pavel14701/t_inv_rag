@@ -52,11 +52,13 @@ def identify_order_blocks(
             cfg.online_reversal_pct,
         )
         pivots = zz.update_series(high, low)
-        peak_indices, valley_indices, confirm, nxt = confirmed_pivot_arrays(
+        peak_indices, valley_indices, _confirm, nxt = confirmed_pivot_arrays(
             pivots,
         )
         pivot_confirm = {p.idx: p.confirm_idx for p in pivots}
-        pivot_next_extreme = {p.idx: int(n) for p, n in zip(pivots, nxt, strict=False)}
+        pivot_next_extreme = {
+            p.idx: int(n) for p, n in zip(pivots, nxt, strict=False)
+        }
     else:
         peak_indices, valley_indices = zigzag_peaks_valleys(
             high,

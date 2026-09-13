@@ -43,7 +43,7 @@ def precompute_indicators(
         "zone_high": zone_high,
     }
     if cfg.use_adx_filter:
-        adx, adxr, di_plus, di_minus = adx_ind(
+        adx, _adxr, di_plus, di_minus = adx_ind(
             high,
             low,
             close,

@@ -15,7 +15,8 @@ from .._array_ops import _apply_offset_fillna
 @lru_cache(maxsize=128)
 def _symmetric_weights(length: int) -> np.ndarray:
     """Generate normalized symmetric triangle weights.
-    For length n, weights form a symmetric triangle: [1,2,...,2,1] (or [1,2,...,2,1]).
+    For length n, weights form a symmetric triangle: [1,2,...,2,1] (or
+        [1,2,...,2,1]).
     Normalized so sum = 1.
     """
     if length % 2 == 0:

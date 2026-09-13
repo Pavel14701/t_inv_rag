@@ -167,6 +167,7 @@ def cdl_haramicross_polars(
     max_shadow_factor: float = 0.5,
     output_col: str = "CDL_HARAMICROSS",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_haramicross(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

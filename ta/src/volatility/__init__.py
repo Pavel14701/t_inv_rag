@@ -1,3 +1,5 @@
+"""Volatility indicators (ATR, BBands, ...)."""
+
 # -*- coding: utf-8 -*-
 # from .aberration import aberration
 # from .accbands import accbands

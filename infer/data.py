@@ -41,8 +41,7 @@ def normalize(df: pl.DataFrame) -> pl.DataFrame:
                 break
         else:
             raise ValueError(
-                "no date column found; expected one of "
-                f"{_DATE_CANDIDATES}"
+                f"no date column found; expected one of {_DATE_CANDIDATES}"
             )
     return df
 
@@ -50,11 +49,13 @@ def normalize(df: pl.DataFrame) -> pl.DataFrame:
 def load_synthetic(n_bars: int = 1000, seed: int = 42) -> pl.DataFrame:
     """Synthetic GBM series with trend regimes (for tests)."""
     rng = np.random.default_rng(seed)
-    drift = np.concatenate([
-        np.full(n_bars // 3, 0.0005),
-        np.full(n_bars // 3, -0.0004),
-        np.full(n_bars - 2 * (n_bars // 3), 0.0002),
-    ])
+    drift = np.concatenate(
+        [
+            np.full(n_bars // 3, 0.0005),
+            np.full(n_bars // 3, -0.0004),
+            np.full(n_bars - 2 * (n_bars // 3), 0.0002),
+        ]
+    )
     ret = drift + rng.normal(0, 0.01, n_bars)
     close = 100.0 * np.exp(np.cumsum(ret))
     open_ = np.concatenate([[close[0]], close[:-1]])
@@ -66,14 +67,16 @@ def load_synthetic(n_bars: int = 1000, seed: int = 42) -> pl.DataFrame:
         "date",
         [dt.date(2024, 1, 1) + dt.timedelta(days=i) for i in range(n_bars)],
     ).cast(pl.Datetime("us"))
-    return pl.DataFrame({
-        "date": dates[:n_bars],
-        "open": open_,
-        "high": high,
-        "low": low,
-        "close": close,
-        "volume": volume,
-    })
+    return pl.DataFrame(
+        {
+            "date": dates[:n_bars],
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+        }
+    )
 
 
 def load_parquet(path: str) -> pl.DataFrame:
@@ -85,24 +88,34 @@ def load_yfinance(ticker: str, period_from: str, period_to: str):
     """Dev fallback via yfinance (daily candles)."""
     import yfinance as yf
 
-    raw = yf.download(ticker, start=period_from, end=period_to,
-                      progress=False, auto_adjust=False)
+    raw = yf.download(
+        ticker,
+        start=period_from,
+        end=period_to,
+        progress=False,
+        auto_adjust=False,
+    )
     if raw is None or raw.empty:
         raise ValueError(f"yfinance returned no data for {ticker!r}")
-    if isinstance(raw.columns, __import__(
-        "pandas"
-    ).MultiIndex):
+    if isinstance(raw.columns, __import__("pandas").MultiIndex):
         raw.columns = raw.columns.get_level_values(0)
     df = pl.from_pandas(raw.reset_index())
-    df = df.rename({
-        "Date": "date", "Open": "open", "High": "high",
-        "Low": "low", "Close": "close", "Volume": "volume",
-    })
+    df = df.rename(
+        {
+            "Date": "date",
+            "Open": "open",
+            "High": "high",
+            "Low": "low",
+            "Close": "close",
+            "Volume": "volume",
+        }
+    )
     return normalize(df)
 
 
-def load_tinvest(ticker: str, period_from: str, period_to: str,
-                 interval: str = "1d"):
+def load_tinvest(
+    ticker: str, period_from: str, period_to: str, interval: str = "1d"
+):
     """Primary source: T-Invest (t_tech.invest). Requires INVEST_TOKEN.
 
     Lazy import: the trading API package is not needed for dev runs.

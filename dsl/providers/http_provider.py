@@ -27,10 +27,7 @@ class HTTPProvider(IndicatorProvider):
     """
 
     def __init__(
-        self,
-        base_url: str,
-        timeout: float = 5.0,
-        http_version: str = "h2"
+        self, base_url: str, timeout: float = 5.0, http_version: str = "h2"
     ) -> None:
         """Initialize the HTTP provider.
 
@@ -60,7 +57,7 @@ class HTTPProvider(IndicatorProvider):
             else:
                 raise ValueError(
                     f"Unsupported HTTP version: {self.http_version}.",
-                    "Use 'h2' or 'h3'."
+                    "Use 'h2' or 'h3'.",
                 )
 
             self._session = niquests.Session(
@@ -152,10 +149,7 @@ class AsyncHTTPProvider(AsyncIndicatorProvider):
     """
 
     def __init__(
-        self,
-        base_url: str,
-        timeout: float = 5.0,
-        http_version: str = "h3"
+        self, base_url: str, timeout: float = 5.0, http_version: str = "h3"
     ) -> None:
         """Initialize the asynchronous HTTP provider.
 

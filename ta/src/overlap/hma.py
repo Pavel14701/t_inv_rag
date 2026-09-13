@@ -2,7 +2,8 @@
 """Hull Moving Average (HMA) implementation.
 
 The Hull Moving Average reduces lag while maintaining smoothness. It is
-calculated as: HMA = MA(2 * MA(close, length/2) - MA(close, length), sqrt(length)).
+calculated as: HMA = MA(2 * MA(close, length/2) - MA(close, length),
+    sqrt(length)).
 
 This module provides:
 - Numba-accelerated implementation with configurable base MA

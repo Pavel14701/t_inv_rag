@@ -1,7 +1,12 @@
-> **Статус: ⬜ не начат — СЛЕДУЮЩИЙ ШАГ по TZ-00.** Пакет — `dte-strategies` (uv workspace).
-> Замечание монорепо (TZ-14): легаси-адаптеры `infrastructure/indicators/` (pandas/pandas_ta/TA-Lib)
-> **удалены** — они дублировали каузальные ядра `ta/`. Формат `Strategy` пишется сразу
-> на ядрах `dte-ta`; пакет на текущей итерации содержит только `PriceDataFramePolars` (polars).
+> **Статус: ✅ реализован (ядро: единая схема + Strategy + валидация + реестр + AST).**
+> Реализовано: единая OHLC-схема (`open/high/low/close`) с legacy-маппингом
+> `*__price` в `PriceDataFramePolars`; `Strategy` + `Metrics` (frozen dataclass);
+> `validate_strategy(s, manifest)` = parse + indicator-manifest check;
+> `StrategyRegistry` (JSON-файлы в `strategies/data/`, auto-pins manifest_hash);
+> `indicators_used(expr)` через рекурсивный walk AST to_dict;
+> 25 тестов зелёные. Лейбл-генератор реализован: labels.py -> generate_labels() ->
+> action/outcome массивы для ai/src/dataset.py (вход close > open -> сигнал через
+> TaProvider -> backtest engine -> action=1/2 + R-multiple). Look-ahead инвариант зелёный.
 
 # TZ-02. Слой стратегий и единая схема данных
 

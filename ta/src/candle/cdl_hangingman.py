@@ -154,6 +154,7 @@ def cdl_hangingman_polars(
     max_shadow_factor: float = 0.3,
     output_col: str = "CDL_HANGINGMAN",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_hangingman(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

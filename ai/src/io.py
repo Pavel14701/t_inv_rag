@@ -124,7 +124,7 @@ def merge_features_labels(
             raise ValueError(
                 f"Row count mismatch: df_feat has {len(df_feat)} rows, "
                 f"df_lbl has {len(df_lbl)} rows. Cannot hstack without",
-                "'bar_index'."
+                "'bar_index'.",
             )
         # Ensure action and outcome columns exist; if not, add with defaults
         lbl_cols = []

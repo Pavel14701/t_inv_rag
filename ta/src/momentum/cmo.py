@@ -97,6 +97,11 @@ def cmo_numpy(
     use_talib : bool
         If True and TA-Lib is available, use talib.CMO; else use Numba core.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray
@@ -168,6 +173,19 @@ def cmo_polars(
     length, scalar, drift, offset, fillna, use_talib : as above.
     output_col : str, optional
         Output column name (default f"CMO_{length}").
+
+    drift : int, optional
+        See the module guide; default mirrors the numpy path.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    scalar : float, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

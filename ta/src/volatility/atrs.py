@@ -139,7 +139,7 @@ def atrts_numpy(
         use_talib=use_talib,
     )
     atr = atr * k
-    _ma = ma_mode(
+    ma_series = ma_mode(
         source=close,
         length=ma_length,
         mamode=mamode,
@@ -147,7 +147,10 @@ def atrts_numpy(
         fillna=None,
         use_talib=use_talib,
     )
-    atrts, _, _ = _atrts_numba_core(close, _ma, atr, length, ma_length)
+    assert isinstance(
+        ma_series, np.ndarray
+    )  # ma_mode returns a list only without source
+    atrts, _, _ = _atrts_numba_core(close, ma_series, atr, length, ma_length)
     if percent:
         atrts = atrts * 100.0 / close
     return _apply_offset_fillna(atrts, offset, fillna)
@@ -218,9 +221,29 @@ def atrts_polars(
         Input data.
     high_col, low_col, close_col : str
         Column names for prices.
-    length, ma_length, k, mamode, drift, offset, fillna, use_talib, percent : as above.
+    length, ma_length, k, mamode, drift, offset, fillna, use_talib, percent :
+        as above.
     output_col : str, optional
         Output column name (default f"ATRTS_{length}_{ma_length}_{k}").
+
+    drift : int, optional
+        See the module guide; default mirrors the numpy path.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    k : int, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    ma_length : see notes
+        Documented in the matching numpy implementation.
+    mamode : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    percent : see notes
+        Documented in the matching numpy implementation.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------

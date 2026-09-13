@@ -133,6 +133,9 @@ def cg_polars(
     output_col : str, optional
         Output column name (default f"CG_{length}").
 
+    date_col : see notes
+        Documented in the matching numpy implementation.
+
     Returns
     -------
     pl.DataFrame
