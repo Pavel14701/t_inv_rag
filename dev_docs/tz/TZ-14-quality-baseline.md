@@ -1,13 +1,19 @@
 # TZ-14. Нулевой этап: типизация, линтеры, порядок в тестах, языковая дисциплина
 
-> **Статус: 🔨 в работе — первая волна выполнена (монорепо-прогон зелёный).**
-> Сделано: ruff — единый линтер (Q/isort-конфликт устранён), корневая pytest-конфигурация
-> вместо 5 pytest.ini, service-маркеры (dsl/ta/ai/infer/rag) через корневой conftest,
-> тесты перенесены «рядом с src» (ta/tests, ai/tests), pandas/pandas_ta и легаси-адаптеры
-> strategies удалены, варны при прогоне из-под корня сведены к 0, параметризация начата
-> (образец ta/tests/tests_overlap/test_wma.py — длина×направление).
-> Остаётся (вторые волны): системная параметризация зоопарка ta (test_hilo/midprice/...),
-> удаление flake8/isort + setup.cfg, mypy-режимы, классификация slow-маркеров.
+> **Статус: ✅ выполнен — EN-only, ruff clean, mypy clean, тесты зелёные.**
+> Волна 1: ruff — единый линтер, корневая pytest-конфигурация, service-маркеры,
+> тесты «рядом со src», pandas/pandas_ta удалены, варны 1886 -> 0.
+> Волна 2: setup.cfg + flake8/isort ликвидированы; mypy `risk` strict (0);
+> маркеры unit=241/integration=30/slow=4/deprecated=69.
+> Волна 3: mypy infer -> 0 (было 15); параметризация wma/hilo/midprice/midpoint.
+> Волна 4: 0 кириллицы и 0 не-ASCII в .py (127 строк, 141 файл); E701 (120);
+> B905 (40); RUF069 (70 noqa IEEE); F841/RUF046/RUF029 закрыты.
+> Волна 5: E501 (73 -> 0); D* докстринги (89); E741 (32); RUF059 (72);
+> B017/B028/RUF007/RUF043/RUF012 (10). Ruff: 4146 -> 0.
+> Волна 6: mypy ai strict -> 0 (было 3: Subset cast + None-union + assert);
+> ta atrs ma_mode union -> assert. Тесты исключены из mypy (покрываются pytest).
+> Итого mypy workspace: 0 ошибок.
+> Остаётся: CI TZ-13 (ruff+mypy+pytest matrix).
 
 # TZ-14. Нулевой этап: типизация, линтеры, порядок в тестах, языковая дисциплина
 

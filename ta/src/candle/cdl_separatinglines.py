@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_separatinglines_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Separating Lines pattern.
+    """Numba-accelerated Separating Lines pattern.
     Returns boolean mask where pattern completes (True at the 2nd candle).
     """
     n = len(open_)
@@ -33,23 +27,13 @@ def _cdl_separatinglines_nb(
         # 2) second white
         # 3) open2 == open1
         # 4) close2 > close1
-        bull = (
-            c1 < o1 and
-            c2 > o2 and
-            abs(o2 - o1) < 1e-12 and
-            c2 > c1
-        )
+        bull = c1 < o1 and c2 > o2 and abs(o2 - o1) < 1e-12 and c2 > c1
         # Bearish separating lines:
         # 1) first white
         # 2) second black
         # 3) open2 == open1
         # 4) close2 < close1
-        bear = (
-            c1 > o1 and
-            c2 < o2 and
-            abs(o2 - o1) < 1e-12 and
-            c2 < c1
-        )
+        bear = c1 > o1 and c2 < o2 and abs(o2 - o1) < 1e-12 and c2 < c1
         if bull or bear:
             out[i] = True
     return out
@@ -67,13 +51,13 @@ def cdl_separatinglines(
     """Universal Separating Lines pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    if isinstance(open_, pl.Series): 
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -106,13 +90,13 @@ def cdl_separatinglines(
 
 def cdl_separatinglines_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_SEPARATINGLINES',
+    output_col: str = "CDL_SEPARATINGLINES",
 ) -> pl.DataFrame:
     """Add Separating Lines column to Polars DataFrame."""
     out = cdl_separatinglines(

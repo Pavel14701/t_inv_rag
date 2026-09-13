@@ -3,7 +3,7 @@
 Each sample includes price, indicator, signal, TP/SL tensors,
 a list of relevant order blocks, action/outcome targets,
 optionally pattern targets, the global positional start index,
-and a stable bar identifier for safe pseudo‑label alignment.
+and a stable bar identifier for safe pseudo-label alignment.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from .datatypes import OrderBlock
 
 
 class TradingDataset(Dataset):
-    """Sliding-window dataset for order‑block based trading.
+    """Sliding-window dataset for order-block based trading.
 
     The underlying data array is assumed to have the following layout
     (last dimension):
@@ -78,12 +78,10 @@ class TradingDataset(Dataset):
         if bar_index is not None:
             self.bar_index = torch.tensor(bar_index, dtype=torch.long)
 
-        # TZ-06 п.2.6: order blocks sorted by end_idx so that each window
+        # TZ-06 item 2.6: order blocks sorted by end_idx so that each window
         # only scans the prefix of blocks that could fall inside it
         # (bisect instead of a full scan over all blocks).
-        self._ob_sorted = sorted(
-            self.order_blocks, key=lambda ob: ob.end_idx
-        )
+        self._ob_sorted = sorted(self.order_blocks, key=lambda ob: ob.end_idx)
         self._ob_end_idx = np.asarray(
             [ob.end_idx for ob in self._ob_sorted], dtype=np.int64
         )
@@ -104,7 +102,7 @@ class TradingDataset(Dataset):
                     start_bar, bar_idx)
 
         """
-        window = self.data[idx: idx + self.seq_len]
+        window = self.data[idx : idx + self.seq_len]
         prices = window[:, : self.price_feats]
 
         ind_start = self.price_feats
@@ -115,7 +113,7 @@ class TradingDataset(Dataset):
         sig_end = sig_start + self.sig_feats
         signals = window[:, sig_start:sig_end]
 
-        tp_sl = window[:, -self.tp_sl_feats:]
+        tp_sl = window[:, -self.tp_sl_feats :]
         tp = tp_sl[:, 0:1]
         sl = tp_sl[:, 1:2]
 
@@ -123,22 +121,16 @@ class TradingDataset(Dataset):
         end_bar = idx + self.seq_len - 1
         # blocks with end_idx <= end_bar form a prefix (sorted); among
         # them keep those whose end is not before the window start
-        prefix = int(
-            np.searchsorted(self._ob_end_idx, end_bar, side='right')
-        )
+        prefix = int(np.searchsorted(self._ob_end_idx, end_bar, side="right"))
         ob_window = [
-            ob
-            for ob in self._ob_sorted[:prefix]
-            if ob.end_idx >= start_bar
+            ob for ob in self._ob_sorted[:prefix] if ob.end_idx >= start_bar
         ]
 
-        action_target = self.action_targets[idx: idx + self.seq_len]
-        outcome_target = self.outcome_targets[idx: idx + self.seq_len]
+        action_target = self.action_targets[idx : idx + self.seq_len]
+        outcome_target = self.outcome_targets[idx : idx + self.seq_len]
 
         if self.pattern_targets is not None:
-            pattern_target = self.pattern_targets[
-                idx: idx + self.seq_len
-            ]
+            pattern_target = self.pattern_targets[idx : idx + self.seq_len]
         else:
             pattern_target = torch.zeros(self.seq_len, 0)
 
@@ -154,8 +146,8 @@ class TradingDataset(Dataset):
             action_target,
             outcome_target,
             pattern_target,
-            start_bar,   # positional index (idx)
-            bar_idx,     # stable identifier (or idx if not provided)
+            start_bar,  # positional index (idx)
+            bar_idx,  # stable identifier (or idx if not provided)
         )
 
 
@@ -182,12 +174,8 @@ def collate_ob(batch):
     action_targets = torch.stack([item[6] for item in batch])
     outcome_targets = torch.stack([item[7] for item in batch])
     pattern_targets = torch.stack([item[8] for item in batch])
-    start_indices = torch.tensor(
-        [item[9] for item in batch], dtype=torch.long
-    )
-    bar_indices = torch.tensor(
-        [item[10] for item in batch], dtype=torch.long
-    )
+    start_indices = torch.tensor([item[9] for item in batch], dtype=torch.long)
+    bar_indices = torch.tensor([item[10] for item in batch], dtype=torch.long)
     return (
         prices,
         indicators,

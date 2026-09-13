@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_tasukigap_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Tasuki Gap pattern.
+    """Numba-accelerated Tasuki Gap pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -40,9 +34,7 @@ def _cdl_tasukigap_nb(
         # --- Bullish Tasuki Gap ---
         # Candle1 white, Candle2 white with gap up
         bull = (
-            c1 > o1 and
-            c2 > o2 and
-            l2 > h1  # gap up
+            c1 > o1 and c2 > o2 and l2 > h1  # gap up
         )
         if bull:
             # Candle3 black
@@ -56,9 +48,7 @@ def _cdl_tasukigap_nb(
         # --- Bearish Tasuki Gap ---
         # Candle1 black, Candle2 black with gap down
         bear = (
-            c1 < o1 and
-            c2 < o2 and
-            h2 < l1  # gap down
+            c1 < o1 and c2 < o2 and h2 < l1  # gap down
         )
         if bear:
             # Candle3 white
@@ -84,13 +74,13 @@ def cdl_tasukigap(
     """Universal Tasuki Gap pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    if isinstance(open_, pl.Series): 
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -123,13 +113,13 @@ def cdl_tasukigap(
 
 def cdl_tasukigap_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_TASUKIGAP',
+    output_col: str = "CDL_TASUKIGAP",
 ) -> pl.DataFrame:
     """Add Tasuki Gap column to Polars DataFrame."""
     out = cdl_tasukigap(

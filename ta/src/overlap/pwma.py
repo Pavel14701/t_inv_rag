@@ -4,13 +4,14 @@
 Weights are binomial coefficients from row (length-1) of Pascal's
 triangle, normalized to sum to 1. Note: Pascal's triangle rows are
 symmetric (C(n, k) == C(n, n - k)), so the weights are symmetric and
-the `asc` flag is effectively a no-op — it is kept for API
+the `asc` flag is effectively a no-op -- it is kept for API
 compatibility.
 
 All floating-point operations follow IEEE 754 rules (no fastmath
 optimisations): NaN in a window makes that window's PWMA NaN and
 infinite values propagate naturally through the weighted sum.
 """
+
 from functools import lru_cache
 
 import numpy as np
@@ -88,11 +89,11 @@ def pwma_numba(
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
     """PWMA using Numba (raw numpy version)."""
     if length < 1:
-        raise ValueError('PWMA length must be >= 1')
+        raise ValueError("PWMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -111,7 +112,7 @@ def pwma_ind(
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> np.ndarray:
     """Universal PWMA (always uses Numba)."""
     if isinstance(close, pl.Series):
@@ -124,12 +125,12 @@ def pwma_ind(
 # ----------------------------------------------------------------------
 def pwma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str | None = None
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add PWMA column to Polars DataFrame.
 
@@ -158,5 +159,5 @@ def pwma_polars(
     """
     close = df[close_col].to_numpy()
     result = pwma_ind(close, length, asc, offset, fillna)
-    out_name = output_col or f'PWMA_{length}'
+    out_name = output_col or f"PWMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

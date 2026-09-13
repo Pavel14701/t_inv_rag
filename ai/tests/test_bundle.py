@@ -1,4 +1,4 @@
-"""Tests for TZ-06 п.2.4/2.5 (model bundle + predict_p_win)."""
+"""Tests for TZ-06 item 2.4/2.5 (model bundle + predict_p_win)."""
 
 from __future__ import annotations
 

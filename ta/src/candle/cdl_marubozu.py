@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_marubozu_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑a  ccelerated Marubozu pattern.
+    """Numba-a  ccelerated Marubozu pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -27,16 +21,16 @@ def _cdl_marubozu_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         body = abs(c - o)
         if body <= 0.0:
             continue
         upper = h - max(o, c)
-        lower = min(o, c) - l
-        # Marubozu: тело ≈ весь диапазон, тени минимальны
+        lower = min(o, c) - low_
+        # Marubozu: body ~= the whole range, shadows minimal
         if upper > 0.05 * rng:
             continue
         if lower > 0.05 * rng:
@@ -59,14 +53,14 @@ def cdl_marubozu(
     """Universal Marubozu pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    # Polars → numpy
-    if isinstance(open_, pl.Series): 
+    # Polars -> numpy
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     # Ensure float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -89,7 +83,7 @@ def cdl_marubozu(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLMARUBOZU(open_, high, low, close)
         result = (talib_out != 0).astype(np.float64)
@@ -102,13 +96,13 @@ def cdl_marubozu(
 
 def cdl_marubozu_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_MARUBOZU',
+    output_col: str = "CDL_MARUBOZU",
 ) -> pl.DataFrame:
     """Add Marubozu column to Polars DataFrame."""
     out = cdl_marubozu(

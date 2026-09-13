@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Bollinger Bands (BBANDS) – Numba‑accelerated with Polars integration."""
+"""Bollinger Bands (BBANDS) - Numba-accelerated with Polars integration."""
 
 from typing import Optional, cast
 
@@ -17,12 +17,12 @@ def bbands_numpy(
     lower_std: float = 2.0,
     upper_std: float = 2.0,
     ddof: int = 1,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Numpy‑based Bollinger Bands calculation.
+    """Numpy-based Bollinger Bands calculation.
 
     Returns (lower, mid, upper, bandwidth, percent_b) as numpy arrays.
 
@@ -39,14 +39,22 @@ def bbands_numpy(
     """
     close = np.asarray(close, dtype=np.float64, copy=False)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if lower_std < 0 or upper_std < 0:
-        raise ValueError('std multipliers must be >= 0')
+        raise ValueError("std multipliers must be >= 0")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
-    mid = cast(np.ndarray, ma_mode(
-            mamode, close, length=length, offset=0, fillna=None, use_talib=use_talib
-    ))
+    mid = cast(
+        np.ndarray,
+        ma_mode(
+            mamode,
+            close,
+            length=length,
+            offset=0,
+            fillna=None,
+            use_talib=use_talib,
+        ),
+    )
     std = stdev_ind(close, length=length, ddof=ddof, use_talib=use_talib)
     lower_deviations = lower_std * std
     upper_deviations = upper_std * std
@@ -54,7 +62,7 @@ def bbands_numpy(
     upper = mid + upper_deviations
     # Bandwidth and %B; 0/0 can legitimately occur (zero deviation) and
     # must yield NaN/0 silently instead of raising RuntimeWarnings.
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         ulr = upper - lower
         bandwidth = 100.0 * ulr / mid
         percent_b = (close - lower) / ulr
@@ -73,7 +81,7 @@ def bbands(
     lower_std: float = 2.0,
     upper_std: float = 2.0,
     ddof: int = 1,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
@@ -99,16 +107,16 @@ def bbands(
 
 def bbands_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 20,
     lower_std: float = 2.0,
     upper_std: float = 2.0,
     ddof: int = 1,
-    mamode: str = 'sma',
+    mamode: str = "sma",
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add Bollinger Bands columns to Polars DataFrame.
 
@@ -125,9 +133,28 @@ def bbands_polars(
         Input data.
     close_col : str
         Column with close prices.
-    length, lower_std, upper_std, ddof, mamode, offset, fillna, use_talib : as above.
+    length, lower_std, upper_std, ddof, mamode, offset, fillna, use_talib : as
+        above.
     suffix : str
-        Custom suffix for column names (default f"_{length}_{lower_std}_{upper_std}").
+        Custom suffix for column names (default
+            f"_{length}_{lower_std}_{upper_std}").
+
+    ddof : int, optional
+        See the module guide; default mirrors the numpy path.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    lower_std : see notes
+        Documented in the matching numpy implementation.
+    mamode : str, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    upper_std : see notes
+        Documented in the matching numpy implementation.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------
@@ -148,11 +175,13 @@ def bbands_polars(
         use_talib=use_talib,
     )
 
-    suffix = suffix or f'_{length}_{lower_std}_{upper_std}'
-    return df.with_columns([
-        pl.Series(f'BBL{suffix}', lower),
-        pl.Series(f'BBM{suffix}', mid),
-        pl.Series(f'BBU{suffix}', upper),
-        pl.Series(f'BBB{suffix}', bandwidth),
-        pl.Series(f'BBP{suffix}', percent_b),
-    ])
+    suffix = suffix or f"_{length}_{lower_std}_{upper_std}"
+    return df.with_columns(
+        [
+            pl.Series(f"BBL{suffix}", lower),
+            pl.Series(f"BBM{suffix}", mid),
+            pl.Series(f"BBU{suffix}", upper),
+            pl.Series(f"BBB{suffix}", bandwidth),
+            pl.Series(f"BBP{suffix}", percent_b),
+        ]
+    )

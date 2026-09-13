@@ -16,6 +16,7 @@ optimisations). Infinite values are replaced with NaN before calculation.
 A NaN in the input poisons the recursive filter from that point onward
 (consistent with other recursive moving averages such as EMA).
 """
+
 import numpy as np
 import polars as pl
 
@@ -30,7 +31,7 @@ from ..external import talib, talib_available
 
 
 # ----------------------------------------------------------------------
-# CMO (Chande Momentum Oscillator) – Numba version
+# CMO (Chande Momentum Oscillator) - Numba version
 # ----------------------------------------------------------------------
 @jit(nopython=True, cache=True, fastmath=False)
 def _cmo_numba(close: np.ndarray, length: int, drift: int) -> np.ndarray:
@@ -69,7 +70,7 @@ def _cmo_numba(close: np.ndarray, length: int, drift: int) -> np.ndarray:
         pos_sum = cum_pos[i + 1] - cum_pos[i - length + 1]
         neg_sum = cum_neg[i + 1] - cum_neg[i - length + 1]
         denom = pos_sum + neg_sum
-        if denom != 0.0:
+        if denom != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             cmo[i] = (pos_sum - neg_sum) / denom
         else:
             cmo[i] = 0.0  # avoid division by zero
@@ -85,7 +86,7 @@ def vidya_numba(
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """VIDYA using Numba with IEEE 754 compliant NaN/Inf handling.
 
@@ -127,26 +128,26 @@ def vidya_numba(
 
     """
     if length < 1:
-        raise ValueError(f'VIDYA length must be >= 1, got {length}.')
+        raise ValueError(f"VIDYA length must be >= 1, got {length}.")
     if drift < 1:
-        raise ValueError(f'VIDYA drift must be >= 1, got {drift}.')
-    if nan_policy not in ('raise', 'ignore', 'ffill', 'bfill', 'both'):
+        raise ValueError(f"VIDYA drift must be >= 1, got {drift}.")
+    if nan_policy not in ("raise", "ignore", "ffill", "bfill", "both"):
         raise ValueError(
-            f'Unknown nan_policy: {nan_policy}. '
+            f"Unknown nan_policy: {nan_policy}. "
             "Use 'raise', 'ignore', 'ffill', 'bfill', or 'both'."
         )
     close = np.asarray(close, dtype=np.float64)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
 
     n = len(close)
     if n < length + drift:
         raise ValueError(
-            f'Input series too short: need at least {length + drift} '
-            f'elements, got {n}.'
+            f"Input series too short: need at least {length + drift} "
+            f"elements, got {n}."
         )
 
     alpha = 2.0 / (length + 1.0)
@@ -169,7 +170,7 @@ def vidya_numba(
 
 
 # ----------------------------------------------------------------------
-# VIDYA using TA‑Lib (if available)
+# VIDYA using TA-Lib (if available)
 # ----------------------------------------------------------------------
 def vidya_talib(
     close: np.ndarray,
@@ -214,9 +215,9 @@ def vidya_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib not available')
+        raise ImportError("TA-Lib not available")
     if length < 1:
-        raise ValueError(f'VIDYA length must be >= 1, got {length}.')
+        raise ValueError(f"VIDYA length must be >= 1, got {length}.")
     close = np.asarray(close, dtype=np.float64)
     close = close.copy()
     replace_inf_with_nan(close)
@@ -226,8 +227,8 @@ def vidya_talib(
     n = len(close)
     if n < length + 1:
         raise ValueError(
-            f'Input series too short: need at least {length + 1} '
-            f'elements, got {n}.'
+            f"Input series too short: need at least {length + 1} "
+            f"elements, got {n}."
         )
 
     alpha = 2.0 / (length + 1.0)
@@ -256,7 +257,7 @@ def vidya_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal VIDYA with automatic backend selection.
 
@@ -302,13 +303,13 @@ def vidya_ind(
 # ----------------------------------------------------------------------
 def vidya_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 14,
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add VIDYA column to Polars DataFrame.
@@ -354,5 +355,5 @@ def vidya_polars(
         use_talib=use_talib,
         nan_policy=nan_policy,
     )
-    out_name = output_col or f'VIDYA_{length}'
+    out_name = output_col or f"VIDYA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

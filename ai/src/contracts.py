@@ -40,19 +40,18 @@ def _check_tensor(
 
     """
     if not isinstance(t, torch.Tensor):
-        raise TypeError(f'{name}: expected torch.Tensor, got {type(t)}')
+        raise TypeError(f"{name}: expected torch.Tensor, got {type(t)}")
     if t.ndim != expected_dims:
         raise ValueError(
-            f'{name}: expected {expected_dims}D tensor, '
-            f'got {t.ndim}D'
+            f"{name}: expected {expected_dims}D tensor, got {t.ndim}D"
         )
     if t.dtype not in allowed_dtypes:
         raise TypeError(
-            f'{name}: dtype must be one of {allowed_dtypes}, '
-            f'got {t.dtype}. float32 is recommended.'
+            f"{name}: dtype must be one of {allowed_dtypes}, "
+            f"got {t.dtype}. float32 is recommended."
         )
     if not torch.isfinite(t).all():
-        raise ValueError(f'{name}: contains NaN or Inf')
+        raise ValueError(f"{name}: contains NaN or Inf")
 
 
 def validate_prices(prices: torch.Tensor, n_price_feats: int):
@@ -71,16 +70,15 @@ def validate_prices(prices: torch.Tensor, n_price_feats: int):
         If any price value <= 0, indicating possible missing normalization.
 
     """
-    _check_tensor(prices, 'prices', 3)
+    _check_tensor(prices, "prices", 3)
     if prices.shape[-1] != n_price_feats:
         raise ValueError(
-            f'prices: last dim must be {n_price_feats}, '
-            f'got {prices.shape[-1]}'
+            f"prices: last dim must be {n_price_feats}, got {prices.shape[-1]}"
         )
     if prices.min() <= 0:
         logger.warning(
-            'prices contain non-positive values. Ensure proper '
-            'normalization (e.g., z-score or ATR).'
+            "prices contain non-positive values. Ensure proper "
+            "normalization (e.g., z-score or ATR)."
         )
 
 
@@ -103,17 +101,17 @@ def validate_indicators(indicators: torch.Tensor, n_ind_feats: int):
         If ``n_ind_feats=0`` but the tensor has non-zero feature size.
 
     """
-    _check_tensor(indicators, 'indicators', 3)
+    _check_tensor(indicators, "indicators", 3)
     if n_ind_feats > 0:
         if indicators.shape[-1] != n_ind_feats:
             raise ValueError(
-                f'indicators: last dim must be {n_ind_feats}, '
-                f'got {indicators.shape[-1]}'
+                f"indicators: last dim must be {n_ind_feats}, "
+                f"got {indicators.shape[-1]}"
             )
     elif indicators.shape[-1] != 0:
         logger.warning(
-            'n_ind_feats=0 but indicators has %d features; '
-            'they will be ignored by the model.',
+            "n_ind_feats=0 but indicators has %d features; "
+            "they will be ignored by the model.",
             indicators.shape[-1],
         )
 
@@ -135,16 +133,16 @@ def validate_signals(signals: torch.Tensor, n_sig_feats: int):
         If ``n_sig_feats=0`` but the tensor has non-zero feature size.
 
     """
-    _check_tensor(signals, 'signals', 3)
+    _check_tensor(signals, "signals", 3)
     if n_sig_feats > 0:
         if signals.shape[-1] != n_sig_feats:
             raise ValueError(
-                f'signals: last dim must be {n_sig_feats}, '
-                f'got {signals.shape[-1]}'
+                f"signals: last dim must be {n_sig_feats}, "
+                f"got {signals.shape[-1]}"
             )
     elif signals.shape[-1] != 0:
         logger.warning(
-            'n_sig_feats=0 but signals has %d features.',
+            "n_sig_feats=0 but signals has %d features.",
             signals.shape[-1],
         )
 
@@ -163,20 +161,16 @@ def validate_tp_sl(tp: torch.Tensor, sl: torch.Tensor):
         TypeError/ValueError: From ``_check_tensor``.
 
     """
-    for name, t in [('tp', tp), ('sl', sl)]:
+    for name, t in [("tp", tp), ("sl", sl)]:
         _check_tensor(t, name, 3)
         if t.shape[-1] != 1:
-            raise ValueError(
-                f'{name}: last dim must be 1, got {t.shape[-1]}'
-            )
+            raise ValueError(f"{name}: last dim must be 1, got {t.shape[-1]}")
     if tp.shape != sl.shape:
         raise ValueError(
-            f'tp and sl shapes mismatch: {tp.shape} vs {sl.shape}'
+            f"tp and sl shapes mismatch: {tp.shape} vs {sl.shape}"
         )
     if tp.min() <= 0 or sl.min() <= 0:
-        raise ValueError(
-            'TP and SL must be positive absolute prices.'
-        )
+        raise ValueError("TP and SL must be positive absolute prices.")
 
 
 def _validate_single_ob(ob: OrderBlock, seq_len: int, locator: str):
@@ -195,21 +189,21 @@ def _validate_single_ob(ob: OrderBlock, seq_len: int, locator: str):
     """
     if ob.start_idx < 0 or ob.end_idx < 0:
         raise ValueError(
-            f'OrderBlock {ob.id} at {locator}: start_idx/end_idx '
-            'must be non-negative'
+            f"OrderBlock {ob.id} at {locator}: start_idx/end_idx "
+            "must be non-negative"
         )
     if ob.end_idx >= seq_len:
         raise ValueError(
-            f'OrderBlock {ob.id} at {locator}: end_idx ({ob.end_idx}) '
-            f'exceeds seq_len-1 ({seq_len - 1})'
+            f"OrderBlock {ob.id} at {locator}: end_idx ({ob.end_idx}) "
+            f"exceeds seq_len-1 ({seq_len - 1})"
         )
     if ob.zone_low >= ob.zone_high:
         raise ValueError(
-            f'OrderBlock {ob.id} at {locator}: zone_low must be < zone_high'
+            f"OrderBlock {ob.id} at {locator}: zone_low must be < zone_high"
         )
     if ob.strength < 0:
         raise ValueError(
-            f'OrderBlock {ob.id} at {locator}: strength must be >= 0'
+            f"OrderBlock {ob.id} at {locator}: strength must be >= 0"
         )
 
 
@@ -239,24 +233,20 @@ def validate_order_blocks(
 
     """
     if not isinstance(order_blocks_list, list):
-        raise TypeError('order_blocks must be a list of lists')
+        raise TypeError("order_blocks must be a list of lists")
     if len(order_blocks_list) != expected_batch_size:
         raise ValueError(
-            f'order_blocks batch size {len(order_blocks_list)} '
-            f'!= {expected_batch_size}'
+            f"order_blocks batch size {len(order_blocks_list)} "
+            f"!= {expected_batch_size}"
         )
 
     for b, obs in enumerate(order_blocks_list):
         if not isinstance(obs, list):
-            raise TypeError(
-                f'order_blocks[{b}] must be a list of OrderBlock'
-            )
+            raise TypeError(f"order_blocks[{b}] must be a list of OrderBlock")
         for i, ob in enumerate(obs):
             if not isinstance(ob, OrderBlock):
-                raise TypeError(
-                    f'order_blocks[{b}][{i}] is not an OrderBlock'
-                )
-            _validate_single_ob(ob, seq_len, f'order_blocks[{b}][{i}]')
+                raise TypeError(f"order_blocks[{b}][{i}] is not an OrderBlock")
+            _validate_single_ob(ob, seq_len, f"order_blocks[{b}][{i}]")
 
 
 def validate_action_targets(action_targets: torch.Tensor):
@@ -275,26 +265,24 @@ def validate_action_targets(action_targets: torch.Tensor):
     """
     if not isinstance(action_targets, torch.Tensor):
         raise TypeError(
-            'action_targets: expected torch.Tensor, ',
-            f'got {type(action_targets)}'
+            "action_targets: expected torch.Tensor, ",
+            f"got {type(action_targets)}",
         )
     if action_targets.ndim != 2:
         raise ValueError(
-            'action_targets: expected 2D tensor, ',
-            f'got {action_targets.ndim}D'
+            "action_targets: expected 2D tensor, ",
+            f"got {action_targets.ndim}D",
         )
     allowed = {-100, 0, 1, 2}
     unique = action_targets.unique().tolist()
     if invalid := [v for v in unique if v not in allowed]:
         raise ValueError(
-            f'action_targets contains invalid values: {invalid}. '
-            f'Allowed: {allowed}'
+            f"action_targets contains invalid values: {invalid}. "
+            f"Allowed: {allowed}"
         )
 
 
-def validate_outcome_targets(
-    outcome_targets: torch.Tensor, outcome_mode: str
-):
+def validate_outcome_targets(outcome_targets: torch.Tensor, outcome_mode: str):
     """Validate outcome labels based on the prediction mode.
 
     For 'binary' and 'multiclass' modes, finite values must be 0, 1, or 2
@@ -313,21 +301,21 @@ def validate_outcome_targets(
         If regression targets contain values with absolute magnitude > 1e6.
 
     """
-    _check_tensor(outcome_targets, 'outcome_targets', 2)
-    if outcome_mode in {'binary', 'multiclass'}:
+    _check_tensor(outcome_targets, "outcome_targets", 2)
+    if outcome_mode in {"binary", "multiclass"}:
         valid_values = {0.0, 1.0, 2.0}
         finite_mask = torch.isfinite(outcome_targets)
         unique_finite = outcome_targets[finite_mask].unique().tolist()
         if invalid := [v for v in unique_finite if v not in valid_values]:
             raise ValueError(
-                f'outcome_targets contains invalid finite values: '
-                f'{invalid}. Allowed: {valid_values} or NaN.'
+                f"outcome_targets contains invalid finite values: "
+                f"{invalid}. Allowed: {valid_values} or NaN."
             )
-    elif outcome_mode == 'regression':
+    elif outcome_mode == "regression":
         if outcome_targets.abs().max() > 1e6:
             logger.warning(
-                'outcome_targets has very large values; consider '
-                'normalization.'
+                "outcome_targets has very large values; consider "
+                "normalization."
             )
 
 
@@ -362,9 +350,7 @@ def validate_batch(
 
     """
     if len(batch) != 11:
-        raise ValueError(
-            f'Expected batch of 11 elements, got {len(batch)}'
-        )
+        raise ValueError(f"Expected batch of 11 elements, got {len(batch)}")
     (
         prices,
         indicators,
@@ -390,43 +376,40 @@ def validate_batch(
     t = prices.shape[1]
     if t != seq_len:
         raise ValueError(
-            f'Sequence length mismatch: expected {seq_len}, got {t}'
+            f"Sequence length mismatch: expected {seq_len}, got {t}"
         )
     for name, tensor in [
-        ('indicators', indicators),
-        ('signals', signals),
-        ('tp', tp),
-        ('sl', sl),
-        ('action_targets', action_tgt),
-        ('outcome_targets', outcome_tgt),
-        ('pattern_targets', pattern_tgt),
+        ("indicators", indicators),
+        ("signals", signals),
+        ("tp", tp),
+        ("sl", sl),
+        ("action_targets", action_tgt),
+        ("outcome_targets", outcome_tgt),
+        ("pattern_targets", pattern_tgt),
     ]:
         if tensor.shape[0] != b or tensor.shape[1] != t:
             raise ValueError(
-                f'{name} shape {tensor.shape} inconsistent '
-                f'with (B={b}, T={t})'
+                f"{name} shape {tensor.shape} inconsistent with (B={b}, T={t})"
             )
     if start_indices.shape != (b,):
         raise ValueError(
-            f'start_indices shape {start_indices.shape} != ({b},)'
+            f"start_indices shape {start_indices.shape} != ({b},)"
         )
     if bar_indices.shape != (b,):
-        raise ValueError(
-            f'bar_indices shape {bar_indices.shape} != ({b},)'
-        )
+        raise ValueError(f"bar_indices shape {bar_indices.shape} != ({b},)")
     if pattern_tgt.dtype not in (torch.float32, torch.float64):
         logger.warning(
-            'pattern_targets should be float32; got %s.',
+            "pattern_targets should be float32; got %s.",
             pattern_tgt.dtype,
         )
     if prices.dtype == torch.float64:
         logger.warning(
-            'prices are float64; consider converting to float32 '
-            'for performance.'
+            "prices are float64; consider converting to float32 "
+            "for performance."
         )
     if prices.dtype == torch.float16:
         logger.warning(
-            'float16 detected. Use mixed precision (torch.amp), '
-            'otherwise instability may occur.'
+            "float16 detected. Use mixed precision (torch.amp), "
+            "otherwise instability may occur."
         )
-    logger.debug('Batch validation passed.')
+    logger.debug("Batch validation passed.")

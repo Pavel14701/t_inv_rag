@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_morningstar_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Morning Star pattern.
+    """Numba-accelerated Morning Star pattern.
     Returns boolean mask where pattern completes (True at the 3rd candle).
     """
     n = len(open_)
@@ -81,7 +75,7 @@ def cdl_morningstar(
     """Universal Morning Star pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    # Polars → numpy
+    # Polars -> numpy
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
     if isinstance(high, pl.Series):
@@ -110,7 +104,7 @@ def cdl_morningstar(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLMORNINGSTAR(open_, high, low, close)
         result = (talib_out != 0).astype(np.float64)
@@ -123,13 +117,13 @@ def cdl_morningstar(
 
 def cdl_morningstar_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_MORNINGSTAR',
+    output_col: str = "CDL_MORNINGSTAR",
 ) -> pl.DataFrame:
     """Add Morning Star column to Polars DataFrame."""
     out = cdl_morningstar(

@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 """Market structure classification (HH/HL/LH/LL and trend direction)."""
+
 from __future__ import annotations
 
 import numpy as np
 
-from numba import float64, int8, int64, njit  # type: ignore[attr-defined]
+from numba import float64, int64, njit  # type: ignore[attr-defined]
 
 
-@njit((int64[:], int64[:], float64[:], float64[:], int64, int64),
-      cache=True, fastmath=True)
+@njit(
+    (int64[:], int64[:], float64[:], float64[:], int64, int64),
+    cache=True,
+    fastmath=True,
+)
 def _classify_market_structure_nb(
     peaks, valleys, high, low, lookback, min_consecutive
 ) -> tuple[int, int, int]:
@@ -36,14 +40,14 @@ def _classify_market_structure_nb(
     if total_len == 0:
         return 2, 2, 2
     # Merge two sorted lists of types
-    combined_types = np.empty(total_len, dtype=int8)
+    combined_types = np.empty(total_len, dtype=np.int8)
     i = j = k = 0
     while i < len(rec_peaks) and j < len(rec_valleys):
         if rec_peaks[i] < rec_valleys[j]:
-            combined_types[k] = 1   # peak
+            combined_types[k] = 1  # peak
             i += 1
         else:
-            combined_types[k] = 0   # valley
+            combined_types[k] = 0  # valley
             j += 1
         k += 1
     while i < len(rec_peaks):
@@ -60,22 +64,23 @@ def _classify_market_structure_nb(
     down_streak = 0
     for idx in range(start, total_len):
         t = combined_types[idx]
-        if t == 1:  # peak
+        if t == 1:
+            # peak
             if peak_higher == 1:
                 up_streak += 1
             elif peak_higher == 0:
                 down_streak += 1
-        else:       # valley
+        else:  # valley
             if valley_higher == 1:
                 up_streak += 1
             elif valley_higher == 0:
                 down_streak += 1
     if up_streak >= min_consecutive:
-        trend_code = 0   # up
+        trend_code = 0  # up
     elif down_streak >= min_consecutive:
-        trend_code = 1   # down
+        trend_code = 1  # down
     else:
-        trend_code = 2   # unknown
+        trend_code = 2  # unknown
     return peak_higher, valley_higher, trend_code
 
 
@@ -93,29 +98,36 @@ def classify_market_structure(
     peaks_arr = np.array(peaks, dtype=np.int64)
     valleys_arr = np.array(valleys, dtype=np.int64)
     peak_code, valley_code, trend_code = _classify_market_structure_nb(
-        peaks_arr, valleys_arr, high_prices, low_prices, lookback,
+        peaks_arr,
+        valleys_arr,
+        high_prices,
+        low_prices,
+        lookback,
         min_consecutive,
     )
-    peak_map = {0: 'LH', 1: 'HH', 2: '?'}
-    valley_map = {0: 'LL', 1: 'HL', 2: '?'}
-    trend_map = {0: 'up', 1: 'down', 2: None}
-    peak_label = peak_map.get(peak_code, '?')
-    valley_label = valley_map.get(valley_code, '?')
-    structure_label = f'{peak_label}/{valley_label}' if '?' not in (
-        peak_label, valley_label
-    ) else None
+    peak_map = {0: "LH", 1: "HH", 2: "?"}
+    valley_map = {0: "LL", 1: "HL", 2: "?"}
+    trend_map = {0: "up", 1: "down", 2: None}
+    peak_label = peak_map.get(peak_code, "?")
+    valley_label = valley_map.get(valley_code, "?")
+    structure_label = (
+        f"{peak_label}/{valley_label}"
+        if "?" not in (peak_label, valley_label)
+        else None
+    )
     trend_direction = trend_map.get(trend_code)
     return structure_label, trend_direction
 
 
 def is_block_aligned_with_trend(
-    block_type: str, trend_dir: str | None,
+    block_type: str,
+    trend_dir: str | None,
 ) -> bool:
     """True when the block type agrees with the trend direction."""
     if trend_dir is None:
         return True
-    if block_type == 'supply' and trend_dir == 'down':
+    if block_type == "supply" and trend_dir == "down":
         return True
-    if block_type == 'demand' and trend_dir == 'up':
+    if block_type == "demand" and trend_dir == "up":
         return True
     return False

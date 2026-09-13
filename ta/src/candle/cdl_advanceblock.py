@@ -9,25 +9,36 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_advanceblock_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
     """Numba-accelerated Advance Block pattern with optional strict filtering
     and optional symmetric bullish variant.
 
     Returns:
-        -1.0 → bearish Advance Block (canonical TA-Lib version)
-         1.0 → bullish mirrored variant (only if symmetric=True)
-         0.0 → none
+        -1.0 -> bearish Advance Block (canonical TA-Lib version)
+         1.0 -> bullish mirrored variant (only if symmetric=True)
+         0.0 -> none
 
     """
     n = len(open_)
@@ -45,24 +56,33 @@ def _cdl_advanceblock_nb(
 
         direction = 0.0
 
-        # ---------------- Bearish Advance Block (TA-Lib canonical) ----------------
+        # ---------------- Bearish Advance Block (TA-Lib canonical)
+        # ----------------
         bear = (
-            (c2 > o2) and (c1 > o1) and (c0 > o0) and     # three bullish candles
-            (c1 > c2) and (c0 > c1) and                   # rising closes
-            (o1 > o2) and (o0 > o1) and                   # rising opens
-            ((c1 - o1) < (c2 - o2)) and                   # body shrinking
-            ((c0 - o0) < (c1 - o1))                       # body shrinking again
+            (c2 > o2)
+            and (c1 > o1)
+            and (c0 > o0)  # three bullish candles
+            and (c1 > c2)
+            and (c0 > c1)  # rising closes
+            and (o1 > o2)
+            and (o0 > o1)  # rising opens
+            and ((c1 - o1) < (c2 - o2))  # body shrinking
+            and ((c0 - o0) < (c1 - o1))  # body shrinking again
         )
 
         # ---------------- Mirrored bullish variant (optional) ----------------
         bull = False
         if symmetric:
             bull = (
-                (c2 < o2) and (c1 < o1) and (c0 < o0) and     # three bearish candles
-                (c1 < c2) and (c0 < c1) and                   # falling closes
-                (o1 < o2) and (o0 < o1) and                   # falling opens
-                ((o1 - c1) < (o2 - c2)) and                   # body shrinking
-                ((o0 - c0) < (o1 - c1))                       # body shrinking again
+                (c2 < o2)
+                and (c1 < o1)
+                and (c0 < o0)  # three bearish candles
+                and (c1 < c2)
+                and (c0 < c1)  # falling closes
+                and (o1 < o2)
+                and (o0 < o1)  # falling opens
+                and ((o1 - c1) < (o2 - c2))  # body shrinking
+                and ((o0 - c0) < (o1 - c1))  # body shrinking again
             )
 
         if bear:
@@ -85,9 +105,11 @@ def _cdl_advanceblock_nb(
             b0 = abs(c0 - o0)
 
             # Minimum body size filter
-            if (b2 < min_body_factor * r2 or
-                b1 < min_body_factor * r1 or
-                b0 < min_body_factor * r0):
+            if (
+                b2 < min_body_factor * r2
+                or b1 < min_body_factor * r1
+                or b0 < min_body_factor * r0
+            ):
                 continue
 
             # Shadows (fast version without max/min)
@@ -104,9 +126,11 @@ def _cdl_advanceblock_nb(
             sh0 = (h0 - up0) + (lo0 - l0)
 
             # Maximum shadow filter
-            if (sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = direction
@@ -115,7 +139,10 @@ def _cdl_advanceblock_nb(
 
 
 def cdl_advanceblock(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -124,16 +151,21 @@ def cdl_advanceblock(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """Universal Advance Block pattern with strict mode and optional symmetric variant.
+    """Universal Advance Block pattern with strict mode and optional symmetric
+        variant.
 
-    If symmetric=False and TA-Lib is available → TA-Lib is used.
-    If symmetric=True → TA-Lib is skipped and Numba is always used.
+    If symmetric=False and TA-Lib is available -> TA-Lib is used.
+    If symmetric=True -> TA-Lib is skipped and Numba is always used.
     """
-    # Polars → NumPy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Polars -> NumPy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     # float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -141,14 +173,22 @@ def cdl_advanceblock(
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
 
-    if not open_.flags.c_contiguous: open_ = np.ascontiguousarray(open_)
-    if not open_.flags.writeable: open_ = open_.copy()
-    if not high.flags.c_contiguous: high = np.ascontiguousarray(high)
-    if not high.flags.writeable: high = high.copy()
-    if not low.flags.c_contiguous: low = np.ascontiguousarray(low)
-    if not low.flags.writeable: low = low.copy()
-    if not close.flags.c_contiguous: close = np.ascontiguousarray(close)
-    if not close.flags.writeable: close = close.copy()
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
 
     # TA-Lib branch (only if symmetric=False)
     if use_talib and talib_available and not symmetric:
@@ -158,27 +198,33 @@ def cdl_advanceblock(
 
     # Numba branch
     out = _cdl_advanceblock_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_advanceblock_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col='CDL_ADVANCEBLOCK',
+    output_col="CDL_ADVANCEBLOCK",
 ):
+    """See module docs."""
     out = cdl_advanceblock(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

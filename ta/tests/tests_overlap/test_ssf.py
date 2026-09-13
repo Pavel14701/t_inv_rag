@@ -98,7 +98,7 @@ def test_ssf_variants_agree_for_same_pi(
 def test_ssf_pi_precision_changes_result(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
-    """Using a different pi (np.pi) changes the output only slightly —
+    """Using a different pi (np.pi) changes the output only slightly --
     the variants differ historically only in pi precision.
     """
     close = prices_random_walk

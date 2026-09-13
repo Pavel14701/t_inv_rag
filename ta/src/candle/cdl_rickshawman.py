@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_rickshawman_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Rickshaw Man pattern.
+    """Numba-accelerated Rickshaw Man pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -27,15 +21,15 @@ def _cdl_rickshawman_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         body = abs(c - o)
         if body > 0.1 * rng:
             continue  # doji-like
         upper = h - max(o, c)
-        lower = min(o, c) - l
+        lower = min(o, c) - low_
         # long, roughly symmetric shadows
         if upper < 0.4 * rng:
             continue
@@ -98,13 +92,13 @@ def cdl_rickshawman(
 
 def cdl_rickshawman_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_RICKSHAWMAN',
+    output_col: str = "CDL_RICKSHAWMAN",
 ) -> pl.DataFrame:
     """Add Rickshaw Man column to Polars DataFrame."""
     out = cdl_rickshawman(

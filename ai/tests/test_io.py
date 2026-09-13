@@ -156,9 +156,9 @@ def test_load_order_blocks_parquet(
             and loaded_obs[i].zone_high == sample_order_blocks[i].zone_high
             and loaded_obs[i].strength == sample_order_blocks[i].strength
             and loaded_obs[i].structure_label
-            == sample_order_blocks[i].structure_label  # noqa: E501
+            == sample_order_blocks[i].structure_label
             and loaded_obs[i].trend_direction
-            == sample_order_blocks[i].trend_direction  # noqa: E501
+            == sample_order_blocks[i].trend_direction
             and loaded_obs[i].start_idx == sample_order_blocks[i].start_idx
             and loaded_obs[i].end_idx == sample_order_blocks[i].end_idx
             for i in range(len(sample_order_blocks))

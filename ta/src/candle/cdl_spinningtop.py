@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_spinningtop_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Spinning Top pattern.
+    """Numba-accelerated Spinning Top pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -27,13 +21,13 @@ def _cdl_spinningtop_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         body = abs(c - o)
         upper = h - max(o, c)
-        lower = min(o, c) - l
+        lower = min(o, c) - low_
         # Small body, but not doji
         if body < 0.1 * rng:
             continue
@@ -60,13 +54,13 @@ def cdl_spinningtop(
     """Universal Spinning Top pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    if isinstance(open_, pl.Series): 
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -99,13 +93,13 @@ def cdl_spinningtop(
 
 def cdl_spinningtop_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_SPINNINGTOP',
+    output_col: str = "CDL_SPINNINGTOP",
 ) -> pl.DataFrame:
     """Add Spinning Top column to Polars DataFrame."""
     out = cdl_spinningtop(

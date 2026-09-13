@@ -294,9 +294,7 @@ def test_rma_polars_custom_col(
 @pytest.mark.overlap
 def test_rma_polars_with_offset_fillna(df_random_walk) -> None:
     """rma_polars applies offset and fillna."""
-    offset = 2
-    fillna = 0.0
-    close_arr = df_random_walk["close"].to_numpy()
+    df_random_walk["close"].to_numpy()
 
 
 # -----------------------------------------------------------------------------

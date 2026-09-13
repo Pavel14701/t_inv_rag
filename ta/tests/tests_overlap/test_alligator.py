@@ -163,7 +163,7 @@ def test_alligator_ind_with_pl_series(
 ) -> None:
     s = pl.Series(prices_random_walk)
     jaw, teeth, lips = 5, 3, 2
-    jaw_arr, teeth_arr, lips_arr = alligator_ind(
+    jaw_arr, _teeth_arr, _lips_arr = alligator_ind(
         s, jaw=jaw, teeth=teeth, lips=lips
     )
     assert isinstance(jaw_arr, np.ndarray)

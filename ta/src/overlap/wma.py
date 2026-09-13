@@ -7,7 +7,7 @@ price is `length` (or 1 if `asc=False`).
 
 This module provides:
 - Numba-accelerated implementation (`wma_numba`)
-- TA-Lib backend (`wma_talib`) – only for `asc=True`
+- TA-Lib backend (`wma_talib`) - only for `asc=True`
 - Universal wrapper (`wma_ind`)
 - Polars integration (`wma_polars`)
 
@@ -106,7 +106,7 @@ def wma_numba(
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Weighted Moving Average using Numba.
@@ -147,7 +147,7 @@ def wma_numba(
 
     """
     if length < 1:
-        raise ValueError('WMA length must be >= 1')
+        raise ValueError("WMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
 
     # Replace infinities with NaN (IEEE 754 compliance)
@@ -155,15 +155,15 @@ def wma_numba(
     replace_inf_with_nan(close)
 
     # Apply NaN policy
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
 
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least {length} elements, '
-            f'got {len(close)}.'
+            f"Input series too short: need at least {length} elements, "
+            f"got {len(close)}."
         )
 
     weights = _get_wma_weights(length, asc)
@@ -187,7 +187,7 @@ def wma_talib(
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Weighted Moving Average via TA-Lib (asc=True only).
@@ -228,17 +228,17 @@ def wma_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     if length < 1:
-        raise ValueError('WMA length must be >= 1')
+        raise ValueError("WMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least {length} elements, '
-            f'got {len(close)}.'
+            f"Input series too short: need at least {length} elements, "
+            f"got {len(close)}."
         )
     wma = talib.WMA(close, timeperiod=length)
     if trim:
@@ -260,7 +260,7 @@ def wma_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Universal Weighted Moving Average with automatic backend selection.
@@ -332,13 +332,13 @@ def wma_ind(
 # ----------------------------------------------------------------------
 def wma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add WMA column to a Polars DataFrame.
@@ -386,5 +386,5 @@ def wma_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars always returns full length
     )
-    out_name = output_col or f'WMA_{length}'
+    out_name = output_col or f"WMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

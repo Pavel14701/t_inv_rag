@@ -164,9 +164,9 @@ def test_tsi_ind_numpy_and_series(prices_random_walk) -> None:
     expected = tsi_numpy(close)
     from_arrays = tsi_ind(close)
     from_series = tsi_ind(pl.Series(close))
-    for res, exp in zip(from_arrays, expected):
+    for res, exp in zip(from_arrays, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
-    for res, exp in zip(from_series, expected):
+    for res, exp in zip(from_series, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 
@@ -193,5 +193,5 @@ def test_tsi_readonly_input(prices_random_walk) -> None:
     arr = prices_random_walk.copy()
     arr.setflags(write=False)
     expected = tsi_numpy(prices_random_walk)
-    for res, exp in zip(tsi_numpy(arr), expected):
+    for res, exp in zip(tsi_numpy(arr), expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)

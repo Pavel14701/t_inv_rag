@@ -21,6 +21,8 @@ members = [
     "infer",
     "rag",
     "risk",
+    "backtest",
+    "contracts",
     "main",
 ]
 
@@ -31,14 +33,7 @@ dev = [
     "pytest==9.1.1",
     "pytest-mock>=3.15.1",
     "pytest-asyncio>=1.4.0",
-    "flake8==7.3.0",
-    "flake8-docstrings==1.7.0",
-    "pep8-naming==0.15.1",
-    "pycodestyle==2.14.0",
     "ruff==0.15.20",
-    "isort==8.0.1",
-    "flake8-pyproject==1.2.4",
-    "flake8-pie>=0.16.0",
 ]
 
 [[tool.uv.index]]
@@ -75,12 +70,16 @@ ignore = [
 preview = true
 
 [tool.ruff.lint.per-file-ignores]
-# Тесты: без требования докстрингов, но E/F/B/RUF/I действуют
-# (EN-only дисциплина распространяется и на тесты, TZ-14 п.2.1).
-"tests/**" = ["D"]
-"**/tests/**" = ["D"]
-"test_*.py" = ["D"]
-"conftest.py" = ["D"]
+# Tests: docstrings not required, but E/F/B/RUF/I still apply
+# (EN-only discipline covers tests too, TZ-14 item 2.1).
+# RUF069 is relaxed here: exact-literal float checks (== 0.0, == 1.0) in
+# tests are intentional for IEEE-semantics assertions; new tests should
+# prefer pytest.approx (see dev_docs/testing_convention.md section 4).
+"tests/**" = ["D", "RUF069"]
+"**/tests/**" = ["D", "RUF069"]
+"test_*.py" = ["D", "RUF069"]
+"conftest.py" = ["D", "RUF069"]
+"**/__init__.py" = ["RUF067"]
 # Легаси-адаптеры strategies/src/infrastructure: переписываются в TZ-02;
 # держим только критичные правила (F, E, RUF).
 "strategies/src/infrastructure/**" = ["D", "N"]
@@ -104,54 +103,34 @@ lines-after-imports = 2
 lines-between-types = 1
 combine-as-imports = true
 
-[tool.isort]
-profile = "black"
-line_length = 79
-lines_after_imports = 2
-lines_between_types = 1
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-combine_as_imports = true
-force_single_line = false
-
-[tool.flake8]
-max-line-length = 79
-max-complexity = 10
-ignore = [
-    "W503",
-    "F811",
-    "D100",
-    "D107",
-    "D203",
-    "D205",
-    "D213",
-    "D400",
-    "D401",
-    "N806",
-    "N818",
-]
-exclude = [
-    "tests/",
-    "venv/",
-    "env/",
-    ".venv/",
-    "src/",
-    "node_modules/"
-]
-
-
 [tool.mypy]
+# Staged strictness (TZ-14 п.2.2): global baseline is lenient; modules are
+# promoted to strict per wave. `disallow_untyped_defs` for a module means
+# every public function must be annotated - regressions block.
+python_version = "3.12"
 ignore_missing_imports = true
-explicit_package_bases = true 
+explicit_package_bases = true
 namespace_packages = true
+exclude = ["migrations", ".venv", "ta/tests", "dsl/tests", "ai/src/tests", "ai/tests", "rag/tests", "risk/tests", "strategies/tests", "infer/tests", "main/src/tests"]
+
+# Wave 1 (done): new packages are born strict.
+[tool.mypy-risk]
+disallow_untyped_defs = true
+warn_return_any = true
+check_untyped_defs = true
+
+# Wave 2 (planned): ai, infer - promote when error count reaches zero.
+[tool.mypy-ai.src]
+disallow_untyped_defs = true
+warn_return_any = true
+check_untyped_defs = true
+[tool.mypy-infer]
+disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
-# Единая точка конфигурации pytest (TZ-14 п.2.3): per-package pytest.ini
-# ликвидированы. Прогон работает одинаково из корня и из пакета:
-#   uv run pytest                          # весь монорепозиторий
+# Single source of pytest config (TZ-14 п.2.3): per-package pytest.ini
+# files are removed. Runs identically from the root and from a package:
+#   uv run pytest                          # whole monorepo
 #   uv run --package dte-dsl pytest dsl/tests
 pythonpath = ["."]
 testpaths = [
@@ -161,30 +140,37 @@ testpaths = [
     "infer/tests",
     "rag/tests",
     "risk/tests",
+    "strategies/tests",
+    "backtest/tests",
+    "contracts/tests",
+    "main/tests",
 ]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 addopts = "-v --tb=short --strict-markers -m \"not deprecated\""
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 markers = [
-    # --- сквозные (внутренние) маркеры ---
+    # --- cross-cutting markers ---
     "unit: fast isolated tests",
     "integration: tests touching services/network/files",
     "slow: > 5s tests (opt-in via -m slow)",
     "deprecated: scheduled for removal (excluded by default)",
-    # --- service-маркеры (разделение по сервисам, TZ-14 п.2.3) ---
-    # Проставляются автоматически hook'ом pytest_collection_modifyitems
-    # в conftest.py каждого пакета; вручную не дублировать.
+    # --- service markers (per-service separation, TZ-14 п.2.3) ---
+    # Applied automatically by the root conftest.py path hook; do not
+    # mark tests manually.
     "dsl: belongs to the dte-dsl package",
     "ta: belongs to the dte-ta package",
     "ai: belongs to the dte-ai package",
     "infer: belongs to the dte-infer package",
     "rag: belongs to the dte-rag package",
     "risk: belongs to the dte-risk package",
+    "backtest: belongs to the dte-backtest package",
     "main: belongs to the dte-main package",
     "strategies: belongs to the dte-strategies package",
-    # --- доменные маркеры (унаследованы из per-package pytest.ini) ---
+    # --- domain markers (inherited from the former per-package inis) ---
     "candle: [ta] candle-pattern indicators",
     "custom: [ta] custom indicators",
     "momentum: [ta] momentum indicators",
@@ -208,12 +194,11 @@ markers = [
 ]
 
 filterwarnings = [
-    # Сторонний шум, на который мы не влияем:
+    # Third-party noise we cannot influence:
     "ignore:The PyTorch API of nested tensors is in prototype stage.*:UserWarning",
     "ignore:Type google._upb._message.*:DeprecationWarning",
     "ignore::DeprecationWarning:numba.*",
     "ignore::PendingDeprecationWarning",
-    # TA-Lib опционален; отсутствие — штатный фолбэк, а не ошибка данных:
+    # TA-Lib is optional; its absence is a normal fallback, not an error:
     "ignore:TA-Lib not installed.*:UserWarning:ta\\.src\\.external",
 ]
-

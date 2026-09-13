@@ -27,9 +27,7 @@ from ..external import talib, talib_available
 
 @jit(nopython=True, fastmath=False, cache=True)
 def _variance_numba_core(
-    close: np.ndarray,
-    length: int,
-    ddof: int
+    close: np.ndarray, length: int, ddof: int
 ) -> np.ndarray:
     """Numba-compiled core for rolling variance.
 
@@ -117,9 +115,9 @@ def variance_numba(
     """
     close = np.asarray(close, dtype=np.float64)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if ddof < 0 or ddof >= length:
-        raise ValueError('ddof must satisfy 0 <= ddof < length')
+        raise ValueError("ddof must satisfy 0 <= ddof < length")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
@@ -162,7 +160,7 @@ def variance_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -223,7 +221,7 @@ def variance_ind(
 
 def variance_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 30,
     ddof: int = 1,
     offset: int = 0,
@@ -282,5 +280,5 @@ def variance_polars(
         fillna=fillna,
         use_talib=use_talib,
     )
-    out_name = output_col or f'VAR_{length}'
+    out_name = output_col or f"VAR_{length}"
     return pl.Series(out_name, result)

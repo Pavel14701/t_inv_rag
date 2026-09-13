@@ -6,6 +6,7 @@ Consists of:
 - Three heads: action (hold/entry/exit), outcome, and pattern (unused in
     current training).
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as functional
@@ -54,7 +55,7 @@ class EntryExitTransformer(nn.Module):
         max_seq_len: int = 1024,
         max_ob_seq_len: int = 256,
         n_action_classes: int = 3,
-        outcome_mode: str = 'binary',
+        outcome_mode: str = "binary",
         n_outcome_classes: int = 2,
         n_patterns: int = 10,
         ob_embedding_dim: int = 32,
@@ -80,7 +81,7 @@ class EntryExitTransformer(nn.Module):
             nhead=num_heads,
             dim_feedforward=hidden_size * 4,
             dropout=dropout,
-            activation='gelu',
+            activation="gelu",
             batch_first=True,
         )
         self.time_encoder = nn.TransformerEncoder(time_layer, num_layers)
@@ -102,7 +103,7 @@ class EntryExitTransformer(nn.Module):
             nhead=num_heads,
             dim_feedforward=hidden_size * 4,
             dropout=dropout,
-            activation='gelu',
+            activation="gelu",
             batch_first=True,
         )
         self.ob_encoder = nn.TransformerEncoder(ob_layer, num_layers)
@@ -116,14 +117,14 @@ class EntryExitTransformer(nn.Module):
             nn.Linear(hidden_size, n_action_classes),
         )
 
-        if outcome_mode in {'binary', 'regression'}:
+        if outcome_mode in {"binary", "regression"}:
             self.outcome_head = nn.Sequential(
                 nn.Linear(hidden_size * 2, hidden_size),
                 nn.GELU(),
                 nn.Dropout(dropout),
                 nn.Linear(hidden_size, 1),
             )
-        elif outcome_mode == 'multiclass':
+        elif outcome_mode == "multiclass":
             self.outcome_head = nn.Sequential(
                 nn.Linear(hidden_size * 2, hidden_size),
                 nn.GELU(),
@@ -131,7 +132,7 @@ class EntryExitTransformer(nn.Module):
                 nn.Linear(hidden_size, n_outcome_classes),
             )
         else:
-            raise ValueError('Unknown outcome_mode')
+            raise ValueError("Unknown outcome_mode")
 
         self.pattern_head = nn.Sequential(
             nn.Linear(hidden_size * 2, hidden_size),
@@ -140,9 +141,7 @@ class EntryExitTransformer(nn.Module):
             nn.Linear(hidden_size, n_patterns),
         )
 
-    def _positional_encoding(
-        self, max_len: int, d_model: int
-    ) -> torch.Tensor:
+    def _positional_encoding(self, max_len: int, d_model: int) -> torch.Tensor:
         """Create a sinusoidal positional encoding table.
 
         Args:
@@ -191,10 +190,10 @@ class EntryExitTransformer(nn.Module):
             dtype=torch.float32,
         )
 
-        type_id = 0 if ob.block_type.lower() == 'supply' else 1
-        structure_map = {'valid': 0, 'broken': 1, 'weak': 2, None: 3}
+        type_id = 0 if ob.block_type.lower() == "supply" else 1
+        structure_map = {"valid": 0, "broken": 1, "weak": 2, None: 3}
         structure_id = structure_map.get(ob.structure_label, 3)
-        trend_map = {'up': 0, 'down': 1, None: 2}
+        trend_map = {"up": 0, "down": 1, None: 2}
         trend_id = trend_map.get(ob.trend_direction, 2)
 
         return numeric, type_id, structure_id, trend_id
@@ -233,9 +232,7 @@ class EntryExitTransformer(nn.Module):
             [prices, indicators, signals, tp_levels, sl_levels], dim=-1
         )
         time_emb = self.time_input_proj(time_feats)
-        time_emb = time_emb + self.time_pos_encoding[
-            :, :seq_len, :
-        ].to(device)
+        time_emb = time_emb + self.time_pos_encoding[:, :seq_len, :].to(device)
         time_out = self.time_encoder(time_emb)
 
         # Order block encoder
@@ -297,12 +294,10 @@ class EntryExitTransformer(nn.Module):
         cls_mask = torch.ones(batch, 1, dtype=torch.bool, device=device)
         ob_mask = torch.cat([cls_mask, ob_mask], dim=1)
 
-        ob_emb = ob_emb + self.ob_pos_encoding[
-            :, : ob_emb.size(1), :
-        ].to(device)
-        ob_out = self.ob_encoder(
-            ob_emb, src_key_padding_mask=~ob_mask
+        ob_emb = ob_emb + self.ob_pos_encoding[:, : ob_emb.size(1), :].to(
+            device
         )
+        ob_out = self.ob_encoder(ob_emb, src_key_padding_mask=~ob_mask)
         ob_global = ob_out[:, 0, :]
 
         # Combine time and OB features

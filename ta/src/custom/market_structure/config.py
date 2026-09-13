@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Configuration for order block detection."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -69,7 +70,7 @@ class OrderBlockConfig:
     require_fvg: bool = False
     fvg_tolerance: float = 0.0
     fvg_volume_multiplier: float = 0.0
-    fvg_volume_mode: Literal['any', 'center', 'first', 'last'] = 'any'
+    fvg_volume_mode: Literal["any", "center", "first", "last"] = "any"
     fvg_bonus_multiplier: float = 1.0
 
     # Breaker block filter
@@ -85,7 +86,7 @@ class OrderBlockConfig:
     shift_require_extremes: bool = True
 
     # Zone entry mode
-    zone_entry_mode: Literal['wick', 'close', 'any'] = 'wick'
+    zone_entry_mode: Literal["wick", "close", "any"] = "wick"
 
     # Mitigation / closure filter
     require_closure_outside: bool = False
@@ -123,7 +124,7 @@ class OrderBlockConfig:
     strength_age_penalty: bool = False
     strength_age_halflife: int = 20
     strength_max_multiplier: float = 10.0
-    strength_reaction_cap: float = 3.0   # maximum allowed reaction factor
+    strength_reaction_cap: float = 3.0  # maximum allowed reaction factor
 
     # Clustering
     cluster_blocks: bool = False
@@ -140,30 +141,30 @@ class OrderBlockConfig:
         """Validate cross-field invariants."""
         if self.strength_reaction_cap <= 0:
             raise ValueError(
-                f'strength_reaction_cap must be positive; \
-                    got {self.strength_reaction_cap}'
+                f"strength_reaction_cap must be positive; \
+                    got {self.strength_reaction_cap}"
             )
         if self.strength_reaction_cap > self.strength_max_multiplier:
             raise ValueError(
-                'strength_reaction_cap must not exceed '
-                'strength_max_multiplier; '
-                f'got strength_reaction_cap={self.strength_reaction_cap}, '
-                f'strength_max_multiplier={self.strength_max_multiplier}'
+                "strength_reaction_cap must not exceed "
+                "strength_max_multiplier; "
+                f"got strength_reaction_cap={self.strength_reaction_cap}, "
+                f"strength_max_multiplier={self.strength_max_multiplier}"
             )
         if self.min_extreme_gap < 0:
             raise ValueError(
-                f'min_extreme_gap must be >= 0; got {self.min_extreme_gap}'
+                f"min_extreme_gap must be >= 0; got {self.min_extreme_gap}"
             )
         if self.online_reversal is not None and self.online_reversal <= 0:
             raise ValueError(
-                f'online_reversal must be positive; got {self.online_reversal}'
+                f"online_reversal must be positive; got {self.online_reversal}"
             )
         if self.online_reversal_pct is not None and not (
             0 < self.online_reversal_pct < 1
         ):
             raise ValueError(
-                'online_reversal_pct must be in (0, 1); '
-                f'got {self.online_reversal_pct}'
+                "online_reversal_pct must be in (0, 1); "
+                f"got {self.online_reversal_pct}"
             )
 
     @property

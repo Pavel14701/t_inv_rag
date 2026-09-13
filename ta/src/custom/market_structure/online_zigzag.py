@@ -19,6 +19,7 @@ Semantics
 - The pending (latest, unconfirmed) leg extreme is NOT returned as a
   pivot - it may still move or disappear.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -30,10 +31,10 @@ import numpy as np
 class Pivot:
     """A confirmed ZigZag pivot."""
 
-    idx: int            # bar of the extreme
-    price: float        # extreme price
-    kind: int           # +1 peak (in high), -1 valley (in low)
-    confirm_idx: int    # bar at which the pivot became final
+    idx: int  # bar of the extreme
+    price: float  # extreme price
+    kind: int  # +1 peak (in high), -1 valley (in low)
+    confirm_idx: int  # bar at which the pivot became final
 
 
 @dataclass
@@ -63,18 +64,18 @@ class OnlineZigZag:
         reversal_pct: float | None = None,
     ) -> None:
         if reversal <= 0:
-            raise ValueError(f'reversal must be positive; got {reversal}')
+            raise ValueError(f"reversal must be positive; got {reversal}")
         if reversal_pct is not None and not 0 < reversal_pct < 1:
             raise ValueError(
-                f'reversal_pct must be in (0, 1); got {reversal_pct}'
+                f"reversal_pct must be in (0, 1); got {reversal_pct}"
             )
         self.reversal = float(reversal)
         self.reversal_pct = reversal_pct
         self._confirmed: list[Pivot] = []
-        self._direction = 0          # 0 undetermined, +1 up leg, -1 down leg
+        self._direction = 0  # 0 undetermined, +1 up leg, -1 down leg
         self._leg = _Leg(-1, np.nan)  # tentative extreme of the current leg
         self._other = _Leg(-1, np.nan)  # opposite extreme (init phase)
-        self._n = 0                  # bars processed
+        self._n = 0  # bars processed
 
     # ------------------------------------------------------------------
     # Public API
@@ -94,7 +95,7 @@ class OnlineZigZag:
     def update(self, high: float, low: float) -> list[Pivot]:
         """Feed the next bar; return pivots confirmed by this bar."""
         if not (np.isfinite(high) and np.isfinite(low)):
-            raise ValueError('high/low must be finite numbers')
+            raise ValueError("high/low must be finite numbers")
         i = self._n
         self._n += 1
         new_pivots: list[Pivot] = []
@@ -109,9 +110,7 @@ class OnlineZigZag:
                 self._other = _Leg(i, low)
             if self._leg.value - low >= thr_h:
                 # Reversal down from the running high: peak confirmed.
-                new_pivots.append(
-                    Pivot(self._leg.idx, self._leg.value, +1, i)
-                )
+                new_pivots.append(Pivot(self._leg.idx, self._leg.value, +1, i))
                 self._direction = -1
                 self._leg = _Leg(i, low)
                 self._other = _Leg(-1, np.nan)
@@ -126,18 +125,14 @@ class OnlineZigZag:
             if high > self._leg.value:
                 self._leg = _Leg(i, high)
             elif self._leg.value - low >= self._threshold(self._leg.value):
-                new_pivots.append(
-                    Pivot(self._leg.idx, self._leg.value, +1, i)
-                )
+                new_pivots.append(Pivot(self._leg.idx, self._leg.value, +1, i))
                 self._direction = -1
                 self._leg = _Leg(i, low)
         else:
             if low < self._leg.value:
                 self._leg = _Leg(i, low)
             elif high - self._leg.value >= self._threshold(self._leg.value):
-                new_pivots.append(
-                    Pivot(self._leg.idx, self._leg.value, -1, i)
-                )
+                new_pivots.append(Pivot(self._leg.idx, self._leg.value, -1, i))
                 self._direction = +1
                 self._leg = _Leg(i, high)
         self._confirmed.extend(new_pivots)
@@ -152,9 +147,9 @@ class OnlineZigZag:
         high = np.asarray(high, dtype=np.float64)
         low = np.asarray(low, dtype=np.float64)
         if len(high) != len(low):
-            raise ValueError('high and low must have the same length')
+            raise ValueError("high and low must have the same length")
         out: list[Pivot] = []
-        for h, lo in zip(high, low):
+        for h, lo in zip(high, low, strict=False):
             out.extend(self.update(float(h), float(lo)))
         return out
 
@@ -183,9 +178,9 @@ def zigzag_reversal_numpy(
     high = np.asarray(high, dtype=np.float64)
     low = np.asarray(low, dtype=np.float64)
     if len(high) != len(low):
-        raise ValueError('high and low must have the same length')
+        raise ValueError("high and low must have the same length")
     zz = OnlineZigZag(reversal, reversal_pct)
-    for h, lo in zip(high, low):
+    for h, lo in zip(high, low, strict=False):
         zz.update(float(h), float(lo))
     return zz.confirmed
 
@@ -200,10 +195,12 @@ def confirmed_pivot_arrays(
     kind), or sentinel ``-1`` when there is none.
     """
     peaks = np.array(
-        [p.idx for p in pivots if p.kind == +1], dtype=np.int64,
+        [p.idx for p in pivots if p.kind == +1],
+        dtype=np.int64,
     )
     valleys = np.array(
-        [p.idx for p in pivots if p.kind == -1], dtype=np.int64,
+        [p.idx for p in pivots if p.kind == -1],
+        dtype=np.int64,
     )
     confirm = np.array([p.confirm_idx for p in pivots], dtype=np.int64)
     idxs = np.array([p.idx for p in pivots], dtype=np.int64)

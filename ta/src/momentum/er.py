@@ -16,6 +16,7 @@ IEEE 754 notes
 - a fully flat window (numerator and denominator both zero) is
   ``0/0`` -> NaN (undefined), never a fabricated value.
 """
+
 import numpy as np
 import polars as pl
 
@@ -43,7 +44,7 @@ def _er_numba(close: np.ndarray, length: int) -> np.ndarray:
             volatility += np.abs(diff)
         if bad:
             continue  # NaN window stays NaN (IEEE 754 propagation)
-        if volatility != 0.0:
+        if volatility != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             out[i] = change / volatility
         # else: flat market -> 0/0 -> NaN (undefined)
     return out
@@ -80,7 +81,7 @@ def er_numpy(
 
     """
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.writeable:
         close = close.copy()
@@ -104,7 +105,7 @@ def er_ind(
 
 def er_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
@@ -116,5 +117,5 @@ def er_polars(
     """
     close = df[close_col].cast(pl.Float64).to_numpy()
     result = er_numpy(close, length=length, offset=offset, fillna=fillna)
-    out_name = output_col or f'ER_{length}'
+    out_name = output_col or f"ER_{length}"
     return df.with_columns(pl.Series(out_name, result))

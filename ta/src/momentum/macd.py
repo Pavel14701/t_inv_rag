@@ -2,6 +2,7 @@
 """MACD (Moving Average Convergence Divergence) indicator implementation.
 Supports NumPy arrays, Polars DataFrames, and optional TA-Lib acceleration.
 """
+
 import numpy as np
 import polars as pl
 
@@ -19,7 +20,7 @@ def macd_numpy(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'ignore',
+    nan_policy: str = "ignore",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute MACD using NumPy.
 
@@ -83,16 +84,10 @@ def macd_numpy(
         macd, _, _ = talib.MACD(close, fast, slow, signal)
     else:
         fast_ema = ema_ind(
-            close,
-            length=fast,
-            use_talib=False,
-            nan_policy=nan_policy
+            close, length=fast, use_talib=False, nan_policy=nan_policy
         )
         slow_ema = ema_ind(
-            close,
-            length=slow,
-            use_talib=False,
-            nan_policy=nan_policy
+            close, length=slow, use_talib=False, nan_policy=nan_policy
         )
         macd = fast_ema - slow_ema
     # ---- Compute signal line and histogram using our logic ----
@@ -103,13 +98,10 @@ def macd_numpy(
         macd_filled[:first_valid] = macd[first_valid]
     # 2. Compute EMA of the filled macd (signal line)
     signalma = ema_ind(
-        macd_filled,
-        length=signal,
-        use_talib=False,
-        nan_policy='ignore'
+        macd_filled, length=signal, use_talib=False, nan_policy="ignore"
     )
     # 3. Mask initial values to NaN: first (slow + signal - 2) elements
-    signalma[:slow + signal - 2] = np.nan
+    signalma[: slow + signal - 2] = np.nan
     # 4. Histogram = macd - signalma
     hist = macd - signalma
     # ---- AS mode (if requested) ----
@@ -121,12 +113,9 @@ def macd_numpy(
         if not np.isnan(macd[first_valid]):
             macd_filled[:first_valid] = macd[first_valid]
         signalma = ema_ind(
-            macd_filled,
-            length=signal,
-            use_talib=False,
-            nan_policy='ignore'
+            macd_filled, length=signal, use_talib=False, nan_policy="ignore"
         )
-        signalma[:slow + signal - 2] = np.nan
+        signalma[: slow + signal - 2] = np.nan
         hist = macd - signalma
     # ---- Apply offset and fillna ----
     macd = _apply_offset_fillna(macd, offset, fillna)
@@ -144,7 +133,7 @@ def macd_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'ignore',
+    nan_policy: str = "ignore",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Universal wrapper for MACD that accepts either a NumPy
     array or a Polars Series.
@@ -154,15 +143,22 @@ def macd_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return macd_numpy(
-        close, fast, slow, signal,
-        asmode, offset, fillna, use_talib, nan_policy
+        close,
+        fast,
+        slow,
+        signal,
+        asmode,
+        offset,
+        fillna,
+        use_talib,
+        nan_policy,
     )
 
 
 def macd_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
-    date_col: str = 'date',
+    close_col: str = "close",
+    date_col: str = "date",
     fast: int = 12,
     slow: int = 26,
     signal: int = 9,
@@ -170,8 +166,8 @@ def macd_polars(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = '',
-    nan_policy: str = 'ignore',
+    suffix: str = "",
+    nan_policy: str = "ignore",
 ) -> pl.DataFrame:
     """Add MACD columns to a Polars DataFrame.
 
@@ -212,14 +208,23 @@ def macd_polars(
     """
     close = df[close_col].to_numpy()
     macd_line, signal_line, hist = macd_numpy(
-        close, fast, slow, signal,
-        asmode, offset, fillna, use_talib, nan_policy
+        close,
+        fast,
+        slow,
+        signal,
+        asmode,
+        offset,
+        fillna,
+        use_talib,
+        nan_policy,
     )
     if not suffix:
-        suffix = f'_{fast}_{slow}_{signal}'
-    prefix = 'MACDAS' if asmode else 'MACD'
-    return df.with_columns([
-        pl.Series(f'{prefix}{suffix}', macd_line),
-        pl.Series(f'{prefix}s{suffix}', signal_line),
-        pl.Series(f'{prefix}h{suffix}', hist),
-    ])
+        suffix = f"_{fast}_{slow}_{signal}"
+    prefix = "MACDAS" if asmode else "MACD"
+    return df.with_columns(
+        [
+            pl.Series(f"{prefix}{suffix}", macd_line),
+            pl.Series(f"{prefix}s{suffix}", signal_line),
+            pl.Series(f"{prefix}h{suffix}", hist),
+        ]
+    )

@@ -10,8 +10,14 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.float64, types.float64, types.boolean, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
@@ -29,9 +35,9 @@ def _cdl_haramicross_nb(
     """Optimized Harami Cross pattern.
 
     Returns:
-        1.0 → bullish harami cross
-       -1.0 → bearish harami cross
-        0.0 → none
+        1.0 -> bullish harami cross
+       -1.0 -> bearish harami cross
+        0.0 -> none
 
     """
     n = len(open_)
@@ -61,15 +67,15 @@ def _cdl_haramicross_nb(
         if b0 > min_body_factor * r0:
             continue
         direction = 0.0
-        # Bullish Harami Cross: big bearish → doji inside
+        # Bullish Harami Cross: big bearish -> doji inside
         if bear1:
             if o0 >= c1 and c0 <= o1:
                 direction = 1.0
-        # Bearish Harami Cross: big bullish → doji inside
+        # Bearish Harami Cross: big bullish -> doji inside
         elif bull1:
             if o0 <= c1 and c0 >= o1:
                 direction = -1.0
-        if direction == 0.0:
+        if direction == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             continue
         if strict:
             # First body must be relatively large
@@ -135,27 +141,33 @@ def cdl_haramicross(
         result = talib_out.astype(np.float64) / 100.0
         return _apply_offset_fillna(result, offset, fillna)
     out = _cdl_haramicross_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric,
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_haramicross_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.1,
     max_shadow_factor: float = 0.5,
-    output_col: str = 'CDL_HARAMICROSS',
+    output_col: str = "CDL_HARAMICROSS",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_haramicross(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

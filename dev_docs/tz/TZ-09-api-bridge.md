@@ -1,9 +1,16 @@
-> **Статус: ⬜ не начат.** Контракт очередей — msgspec-структуры из `dev_docs/api.md`
-> (единые перечисления InstType/Side/OrderType/TdMode/PosSide, transport — niquests
-> со строгой валидацией и ретраями-параметром). Пункт «msgspec добавить в pyproject»
-> закрыт при TZ-09: зависимость кладётся в `main/pyproject.toml` (или отдельного
-> члена workspace `dte-contracts`, если контракт шарится между узлами — решить при
-> старте TZ-09).
+> **Статус: 🔨 транспорт готов (11 тестов моста + 14 контрактов).**
+> ✅ msgspec-структуры (Candle, OhlcvBatch, AggBar, SignalEvent, ReportEvent,
+> BacktestCommand, TrainCommand); QueueName enum + topology; ACL
+> (can_publish/can_consume per node); инвариант «нет команды изменения
+> риск-лимитов» (тест).
+> ✅ волна 2: main/src/bridge.py — WhiteBridge (паблиш md.*/cmd.* с ACL-проверкой,
+> консьюмеры evt.report/evt.signals → WhiteAPI-сторы), LocalBridge (консьюмеры
+> md.ohlcv/cmd.backtest с schema-version tolerance, паблиш evt.*), ReconnectPolicy
+> (экспоненциальный backoff с капом), HeartbeatMonitor (last-seen per queue,
+> stale_queues для мониторинга lag). Тесты: сквозной прогон cmd.backtest →
+> мок-локаль → evt.report → отчёт в WhiteAPI через TestRabbitBroker (in-memory,
+> без RabbitMQ), идемпотентность md.ohlcv, ACL-инварианты.
+> Осталось: живой RabbitMQ (docker-compose), TLS/токены, lag-метрики в Prometheus.
 
 # TZ-09. API-мост: публичный контур ↔ локальный GPU-узел
 

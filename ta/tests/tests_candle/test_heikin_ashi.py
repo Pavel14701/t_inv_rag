@@ -66,7 +66,7 @@ def test_heikin_ashi_with_pl_series():
     high_s = pl.Series([101, 103, 105, 107])
     low_s = pl.Series([99, 101, 103, 105])
     close_s = pl.Series([102, 104, 106, 108])
-    ha_o, ha_h, ha_l, ha_c = ha(open_s, high_s, low_s, close_s)
+    ha_o, _ha_h, _ha_l, _ha_c = ha(open_s, high_s, low_s, close_s)
     # Check types and shapes
     assert isinstance(ha_o, np.ndarray)
     assert ha_o.shape == (4,)

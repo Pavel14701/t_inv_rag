@@ -9,24 +9,35 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_closingmarubozu_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
     """Optimized Closing Marubozu pattern.
 
     Returns:
-        1.0 → bullish closing marubozu
-       -1.0 → bearish closing marubozu
-        0.0 → none
+        1.0 -> bullish closing marubozu
+       -1.0 -> bearish closing marubozu
+        0.0 -> none
 
     """
     n = len(open_)
@@ -35,10 +46,10 @@ def _cdl_closingmarubozu_nb(
     for i in range(n):
         o = open_[i]
         h = high[i]
-        l = low[i]
+        low_ = low[i]
         c = close[i]
 
-        rng = h - l
+        rng = h - low_
         if rng <= 0.0:
             continue
 
@@ -46,7 +57,7 @@ def _cdl_closingmarubozu_nb(
         bull = (c > o) and (c == h)
 
         # Bearish: close == low
-        bear = (c < o) and (c == l)
+        bear = (c < o) and (c == low_)
 
         if bull:
             direction = 1.0
@@ -65,7 +76,7 @@ def _cdl_closingmarubozu_nb(
             # Shadows (fast, no max/min)
             up = o if o > c else c
             lo = c if o > c else o
-            shadow = (h - up) + (lo - l)
+            shadow = (h - up) + (lo - low_)
 
             if shadow > max_shadow_factor * rng:
                 continue
@@ -76,7 +87,10 @@ def _cdl_closingmarubozu_nb(
 
 
 def cdl_closingmarubozu(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -86,11 +100,15 @@ def cdl_closingmarubozu(
     max_shadow_factor=0.2,
 ):
     """Closing Marubozu with strict and symmetric support."""
-    # Polars → NumPy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Polars -> NumPy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -121,27 +139,33 @@ def cdl_closingmarubozu(
 
     # Numba branch
     out = _cdl_closingmarubozu_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_closingmarubozu_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.5,
     max_shadow_factor=0.2,
-    output_col='CDL_CLOSINGMARUBOZU',
+    output_col="CDL_CLOSINGMARUBOZU",
 ):
+    """See module docs."""
     out = cdl_closingmarubozu(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

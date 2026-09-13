@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_mathold_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Mat Hold pattern.
+    """Numba-accelerated Mat Hold pattern.
     Returns boolean mask where pattern completes (True at the 5th candle).
     """
     n = len(open_)
@@ -35,14 +29,14 @@ def _cdl_mathold_nb(
         body1 = c1 - o1
         if rng1 <= 0.0 or body1 < 0.6 * rng1:
             continue  # must be long bullish candle
-        # --- Candles 2–4: small pullback candles ---
+        # --- Candles 2-4: small pullback candles ---
         pullback_ok = True
         for k in range(3, 0, -1):  # i-3, i-2, i-1
             o = open_[i - k]
             c = close[i - k]
             h = high[i - k]
-            l = low[i - k]
-            rng = h - l
+            low_ = low[i - k]
+            rng = h - low_
             body = abs(c - o)
             if rng <= 0.0:
                 pullback_ok = False
@@ -52,7 +46,7 @@ def _cdl_mathold_nb(
                 pullback_ok = False
                 break
             # must stay within body of candle 1
-            if h > c1 or l < o1:
+            if h > c1 or low_ < o1:
                 pullback_ok = False
                 break
         if not pullback_ok:
@@ -81,14 +75,14 @@ def cdl_mathold(
     """Universal Mat Hold pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    # Polars → numpy
-    if isinstance(open_, pl.Series): 
+    # Polars -> numpy
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     # Ensure float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -111,7 +105,7 @@ def cdl_mathold(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLMATHOLD(open_, high, low, close)
         result = (talib_out != 0).astype(np.float64)
@@ -124,13 +118,13 @@ def cdl_mathold(
 
 def cdl_mathold_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_MATHOLD',
+    output_col: str = "CDL_MATHOLD",
 ) -> pl.DataFrame:
     """Add Mat Hold column to Polars DataFrame."""
     out = cdl_mathold(

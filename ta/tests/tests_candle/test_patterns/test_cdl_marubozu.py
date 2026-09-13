@@ -6,7 +6,7 @@ from ta.src.candle.cdl_marubozu import cdl_marubozu, cdl_marubozu_polars
 from ._helpers import pattern_suite
 
 
-# (almost) no shadows, body ≈ range
+# (almost) no shadows, body ~= range
 BULL = [
     (100.0, 103.0, 99.9, 102.95),
 ]

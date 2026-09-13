@@ -22,7 +22,7 @@ from ..external import talib, talib_available
 
 
 @njit(
-    'int8[:](float64[:], float64[:], float64[:], float64[:])',
+    "int8[:](float64[:], float64[:], float64[:], float64[:])",
     cache=True,
     fastmath=False,
 )
@@ -177,7 +177,7 @@ def cdl_tristar(
         close = close.copy()
     if use_talib and talib_available:
         talib_out = talib.CDLTRISTAR(open_, high, low, close)
-        out = (talib_out != 0).astype(np.float64)  # TA-Lib returns ±100
+        out = (talib_out != 0).astype(np.float64)  # TA-Lib returns +/-100
     else:
         mask = _cdl_tristar_nb(open_, high, low, close)
         out = mask.astype(np.float64)
@@ -187,13 +187,13 @@ def cdl_tristar(
 
 def cdl_tristar_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_TRISTAR',
+    output_col: str = "CDL_TRISTAR",
 ) -> pl.DataFrame:
     """Add Tristar pattern column to a Polars DataFrame.
 
@@ -224,23 +224,25 @@ def cdl_tristar_polars(
     Examples
     --------
     >>> import polars as pl
-    >>> df = pl.DataFrame({
-    ...     "open": [100, 105, 110],
-    ...     "high": [101, 106, 111],
-    ...     "low": [99, 104, 109],
-    ...     "close": [100, 105, 110],
-    ... })
+    >>> df = pl.DataFrame(
+    ...     {
+    ...         "open": [100, 105, 110],
+    ...         "high": [101, 106, 111],
+    ...         "low": [99, 104, 109],
+    ...         "close": [100, 105, 110],
+    ...     }
+    ... )
     >>> cdl_tristar_polars(df, output_col="PATTERN")
     shape: (3, 5)
-    ┌──────┬──────┬──────┬───────┬─────────┐
-    │ open ┆ high ┆ low  ┆ close ┆ PATTERN │
-    │ ---  ┆ ---  ┆ ---  ┆ ---   ┆ ---     │
-    │ f64  ┆ f64  ┆ f64  ┆ f64   ┆ f64     │
-    ╞══════╪══════╪══════╪═══════╪═════════╡
-    │ 100  ┆ 101  ┆ 99   ┆ 100   ┆ 0.0     │
-    │ 105  ┆ 106  ┆ 104  ┆ 105   ┆ 0.0     │
-    │ 110  ┆ 111  ┆ 109  ┆ 110   ┆ 1.0     │
-    └──────┴──────┴──────┴───────┴─────────┘
+    +------+------+------+-------+---------+
+    | open | high | low  | close | PATTERN |
+    | ---  | ---  | ---  | ---   | ---     |
+    | f64  | f64  | f64  | f64   | f64     |
+    +======+======+======+=======+=========+
+    | 100  | 101  | 99   | 100   | 0.0     |
+    | 105  | 106  | 104  | 105   | 0.0     |
+    | 110  | 111  | 109  | 110   | 1.0     |
+    +------+------+------+-------+---------+
 
     """
     out = cdl_tristar(

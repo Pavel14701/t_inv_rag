@@ -49,7 +49,7 @@ def _ppo_reference(
 def test_ppo_matches_reference(prices) -> None:
     expected = _ppo_reference(prices)
     line, signalma, hist = ppo_numpy(prices, use_talib=False)
-    for res, exp in zip((line, signalma, hist), expected):
+    for res, exp in zip((line, signalma, hist), expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 
@@ -154,9 +154,9 @@ def test_ppo_ind_numpy_and_series(prices) -> None:
     expected = ppo_numpy(prices)
     from_arrays = ppo_ind(prices)
     from_series = ppo_ind(pl.Series(prices))
-    for res, exp in zip(from_series, expected):
+    for res, exp in zip(from_series, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
-    for res, exp in zip(from_arrays, expected):
+    for res, exp in zip(from_arrays, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 
@@ -182,5 +182,5 @@ def test_ppo_readonly_input(prices) -> None:
     arr.setflags(write=False)
     expected = ppo_numpy(prices)
     result = ppo_numpy(arr)
-    for res, exp in zip(result, expected):
+    for res, exp in zip(result, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)

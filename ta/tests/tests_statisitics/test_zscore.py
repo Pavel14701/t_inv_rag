@@ -197,7 +197,8 @@ def test_zscore_polars_with_offset_fillna(
 def test_zscore_numba_algorithms_consistency(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
-    """Test that Numba online and two_pass algorithms produce similar results."""
+    """Test that Numba online and two_pass algorithms produce similar
+    results."""
     close = prices_random_walk
     result_online = zscore_numpy(
         close, length=30, use_talib=False, algorithm="online"
@@ -221,7 +222,8 @@ def test_zscore_numba_algorithms_consistency(
 def test_zscore_talib_vs_numba(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
-    """Test TA-Lib vs Numba (using two_pass for accuracy) with tight tolerance."""
+    """Test TA-Lib vs Numba (using two_pass for accuracy) with tight
+    tolerance."""
     close = prices_random_walk
     result_talib = zscore_numpy(close, length=30, use_talib=True)
     result_numba = zscore_numpy(

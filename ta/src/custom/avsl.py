@@ -16,7 +16,7 @@ from .avs_base import (
 # AVSL (support)
 # ----------------------------------------------------------------------
 def avsl_numpy(
-    high: np.ndarray,      # not used for support, kept for symmetry
+    high: np.ndarray,  # not used for support, kept for symmetry
     low: np.ndarray,
     close: np.ndarray,
     volume: np.ndarray,
@@ -28,7 +28,7 @@ def avsl_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Adaptive Volume Support Level (AVSL) – Numpy version.
+    """Adaptive Volume Support Level (AVSL) - Numpy version.
     Returns support line as numpy array.
     """
     # Ensure contiguous
@@ -39,7 +39,7 @@ def avsl_numpy(
         if not arr.flags.c_contiguous:
             arr = np.ascontiguousarray(arr)
     # Common base
-    vpc, vpr, vm, vpci, deviation_raw = _avs_base(
+    vpc, vpr, _vm, vpci, deviation_raw = _avs_base(
         close, volume, fast, slow, stand_div, use_talib
     )
     # Apply optional deviation cap
@@ -48,9 +48,9 @@ def avsl_numpy(
     else:
         deviation = deviation_raw
     # Dynamic parameters
-    lenV = _compute_len_v(vpc, vpci)
-    VPCc = _compute_vpcc(vpc)
-    # Volume‑adjusted factor
+    lenV = _compute_len_v(vpc, vpci)  # noqa: N806 - formula symbol
+    VPCc = _compute_vpcc(vpc)  # noqa: N806 - formula symbol
+    # Volume-adjusted factor
     price_v = _price_v_rolling(low, vpr, lenV, VPCc)
     # Adjusted series (support formula)
     adjusted = low - price_v + deviation
@@ -81,8 +81,17 @@ def avsl_ind(
     # high is not needed for AVSL, pass a dummy array of same length
     high = np.zeros_like(low)
     return avsl_numpy(
-        high, low, close, volume,
-        fast, slow, stand_div, max_deviation, offset, fillna, use_talib
+        high,
+        low,
+        close,
+        volume,
+        fast,
+        slow,
+        stand_div,
+        max_deviation,
+        offset,
+        fillna,
+        use_talib,
     )
 
 
@@ -90,26 +99,32 @@ def avsl_polars(
     df: pl.DataFrame,
     fast: int,
     slow: int,
-    low_col: str = 'low',
-    close_col: str = 'close',
-    volume_col: str = 'volume',
-    date_col: str = 'date',
+    low_col: str = "low",
+    close_col: str = "close",
+    volume_col: str = "volume",
+    date_col: str = "date",
     stand_div: float = 1.0,
     max_deviation: float | None = None,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    output_col: str = 'avsl',
+    output_col: str = "avsl",
 ) -> pl.DataFrame:
     """Add AVSL column to Polars DataFrame."""
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     volume = df[volume_col].to_numpy()
     result = avsl_numpy(
-        np.zeros_like(low), low, close, volume,
-        fast, slow, stand_div, max_deviation, offset, fillna, use_talib
+        np.zeros_like(low),
+        low,
+        close,
+        volume,
+        fast,
+        slow,
+        stand_div,
+        max_deviation,
+        offset,
+        fillna,
+        use_talib,
     )
-    return pl.DataFrame({
-        date_col: df[date_col],
-        output_col: result
-    })
+    return pl.DataFrame({date_col: df[date_col], output_col: result})

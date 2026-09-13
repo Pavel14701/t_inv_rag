@@ -396,7 +396,7 @@ def test_rising_node(context_with_sample_data) -> None:
     # insufficient history, should be False
     assert interp.visit(node) is False
     # invalid expression
-    with pytest.raises(EvaluationError, match="rising.*indicator expression"):
+    with pytest.raises(EvaluationError, match=r"rising.*indicator expression"):
         interp.visit(Rising(expr=Number(value=5), n=2))
 
 

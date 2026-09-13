@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Ehlers 3‑Pole Super Smoother Filter (SSF3) – Numba‑accelerated with Polars integration."""
+"""Ehlers 3-Pole Super Smoother Filter (SSF3) - Numba-accelerated with Polars
+integration.
+"""
 
 from typing import Optional
 
@@ -16,12 +18,9 @@ from .._array_ops import _apply_offset_fillna
 # ----------------------------------------------------------------------
 @njit(cache=True)
 def _ssf3_numba_core(
-    close: np.ndarray,
-    length: int,
-    pi: float,
-    sqrt3: float
+    close: np.ndarray, length: int, pi: float, sqrt3: float
 ) -> np.ndarray:
-    """John F. Ehlers' 3‑pole Super Smoother Filter (Everget variant)."""
+    """John F. Ehlers' 3-pole Super Smoother Filter (Everget variant)."""
     n = len(close)
     if n == 0:
         return np.empty(0, dtype=np.float64)
@@ -42,8 +41,9 @@ def _ssf3_numba_core(
     d2 = b + c
     d1 = 1.0 - d2 - d3 - d4
     for i in range(3, n):
-        out[i] = d1 * close[i] + d2 * \
-            out[i - 1] + d3 * out[i - 2] + d4 * out[i - 3]
+        out[i] = (
+            d1 * close[i] + d2 * out[i - 1] + d3 * out[i - 2] + d4 * out[i - 3]
+        )
     return out
 
 
@@ -56,9 +56,9 @@ def ssf3_numba(
     pi: float = 3.14159,
     sqrt3: float = 1.732,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
-    """3‑pole Super Smoother Filter using Numba.
+    """3-pole Super Smoother Filter using Numba.
 
     Parameters
     ----------
@@ -67,9 +67,9 @@ def ssf3_numba(
     length : int
         Filter period.
     pi : float
-        Value of π (default 3.14159).
+        Value of pi (default 3.14159).
     sqrt3 : float
-        Value of √3 (default 1.732).
+        Value of sqrt3 (default 1.732).
     offset : int
         Shift result.
     fillna : float, optional
@@ -85,7 +85,7 @@ def ssf3_numba(
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
 
     result = _ssf3_numba_core(close, length, pi, sqrt3)
     return _apply_offset_fillna(result, offset, fillna)
@@ -100,9 +100,9 @@ def ssf3_ind(
     pi: float = 3.14159,
     sqrt3: float = 1.732,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
-    """Universal 3‑pole Super Smoother Filter (always uses Numba)."""
+    """Universal 3-pole Super Smoother Filter (always uses Numba)."""
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return ssf3_numba(close, length, pi, sqrt3, offset, fillna)
@@ -113,13 +113,13 @@ def ssf3_ind(
 # ----------------------------------------------------------------------
 def ssf3_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 20,
     pi: float = 3.14159,
     sqrt3: float = 1.732,
     offset: int = 0,
     fillna: Optional[float] = None,
-    output_col: Optional[str] = None
+    output_col: Optional[str] = None,
 ) -> pl.DataFrame:
     """Add SSF3 column to Polars DataFrame.
 
@@ -133,6 +133,17 @@ def ssf3_polars(
     output_col : str, optional
         Output column name (default f"SSF3_{length}").
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    pi : see notes
+        Documented in the matching numpy implementation.
+    sqrt3 : see notes
+        Documented in the matching numpy implementation.
+
     Returns
     -------
     pl.DataFrame
@@ -141,5 +152,5 @@ def ssf3_polars(
     """
     close = df[close_col].to_numpy()
     result = ssf3_ind(close, length, pi, sqrt3, offset, fillna)
-    out_name = output_col or f'SSF3_{length}'
+    out_name = output_col or f"SSF3_{length}"
     return df.with_columns([pl.Series(out_name, result)])

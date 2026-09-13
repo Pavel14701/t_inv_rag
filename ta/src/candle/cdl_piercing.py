@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_piercing_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Piercing pattern.
+    """Numba-accelerated Piercing pattern.
     Returns boolean mask where pattern completes (True at the second candle).
     """
     n = len(open_)
@@ -69,14 +63,14 @@ def cdl_piercing(
     """Universal Piercing pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    # Polars → numpy
-    if isinstance(open_, pl.Series): 
+    # Polars -> numpy
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     # Ensure float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -99,7 +93,7 @@ def cdl_piercing(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLPIERCING(open_, high, low, close)
         result = (talib_out != 0).astype(np.float64)
@@ -112,13 +106,13 @@ def cdl_piercing(
 
 def cdl_piercing_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_PIERCING',
+    output_col: str = "CDL_PIERCING",
 ) -> pl.DataFrame:
     """Add Piercing pattern column to Polars DataFrame."""
     out = cdl_piercing(

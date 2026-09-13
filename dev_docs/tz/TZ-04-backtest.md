@@ -1,5 +1,16 @@
-> **Статус: ⬜ не начат** (каталога `backtest/` нет; TP/SL-логика пока живёт
-> в `ai/src/features.py` — по TZ-04 п.0 переносится в единый движок).
+> **Статус: ✅ реализовано ядро (34 теста зелёные).**
+> execution.py: fill open[t+1], slippage, пессимистический SL-first, ATR-динамические TP/SL.
+> portfolio.py: TP1 (50%) + TP2, trailing callback, max_bars_hold, equity + unrealised PnL.
+> engine.py: бар-за-баром цикл, look-ahead safe, reproducibility.
+> metrics.py: PF, Sharpe (годовой), MaxDD, win_rate, avg_hold.
+> validation.py: temporal split, walk-forward folds, baseline gate (pass/fail/simplify),
+> report validator (обязательные: B&H, LR, RF, XGBoost + gate status).
+> ✅ волна 2: risk-gate интеграция (TZ-11 п.4.5) — run_backtest(risk_config=...)
+> прогоняет каждый вход через risk.engine.check(); reject'ы хранятся в
+> metrics.risk_rejects (bar_idx, rule, reason, params-снапшот) — 12 тестов
+> в test_risk_integration.py (config-driven e2e, инвариант «пермиссивный gate
+> == бейслайн», audit trail).
+> Осталось: SIV интеграционный прогон, msgspec-контракты, live-контур.
 
 # TZ-04. Модуль бэктестирования `backtest/`
 

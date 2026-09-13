@@ -67,7 +67,7 @@ def test_dual_loss_multiclass() -> None:
     action_targets: Tensor = torch.randint(0, 3, (batch_size, seq_len))
     outcome_targets: Tensor = torch.randint(0, 3, (batch_size, seq_len))
     outcome_targets[0, 2] = 2  # ignore
-    total_loss, action_loss, outcome_loss, pattern_loss = dual_loss(
+    total_loss, _action_loss, _outcome_loss, _pattern_loss = dual_loss(
         action_logits,
         outcome_logits,
         action_targets,
@@ -94,7 +94,7 @@ def test_dual_loss_regression() -> None:
     action_targets: Tensor = torch.randint(0, 3, (batch_size, seq_len))
     # regression targets
     outcome_targets: Tensor = torch.randn(batch_size, seq_len)
-    total_loss, action_loss, outcome_loss, pattern_loss = dual_loss(
+    total_loss, _action_loss, _outcome_loss, _pattern_loss = dual_loss(
         action_logits,
         outcome_logits,
         action_targets,
@@ -128,7 +128,7 @@ def test_dual_loss_with_pattern() -> None:
     outcome_targets: Tensor = torch.randint(
         0, 3, (batch_size, seq_len)
     ).float()
-    total_loss, action_loss, outcome_loss, pattern_loss = dual_loss(
+    total_loss, _action_loss, _outcome_loss, pattern_loss = dual_loss(
         action_logits,
         outcome_logits,
         action_targets,

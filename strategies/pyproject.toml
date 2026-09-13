@@ -1,13 +1,17 @@
 [project]
 name = "dte-strategies"
 version = "0.1.0"
-description = "Strategy layer: PriceDataFramePolars, strategy format and registry (TZ-02)"
+description = "Strategy layer: PriceDataFramePolars, Strategy format, validation, registry (TZ-02)"
 requires-python = ">=3.12"
 dependencies = [
     # pandas / pandas-ta удалены из проекта (TZ-14): легаси-адаптеры
     # infrastructure/indicators, дублировавшие ta/, ликвидированы.
     # Индикаторы — только каузальные ядра dte-ta; формат Strategy — TZ-02.
     "polars>=1.42.1",
+    # dsl нужен для validate_strategy (parse + ManifestValidator).
+    # Члены workspace — виртуальные пакеты (package = false), поэтому
+    # кросс-пакетные зависимости объявляются напрямую (TZ-00 п.3).
+    "niquests>=3.20.1",
 ]
 
 [dependency-groups]

@@ -79,7 +79,7 @@ def _skew_numba_core(close: np.ndarray, length: int) -> np.ndarray:
             continue
         std = np.sqrt(m2 / (length - 1))  # sample standard deviation
         # Fisher-Pearson skewness (bias-corrected)
-        out[i] = (length * m3) / ((length - 1) * (length - 2) * (std ** 3))
+        out[i] = (length * m3) / ((length - 1) * (length - 2) * (std**3))
     return out
 
 
@@ -118,7 +118,7 @@ def skew_numba(
     """
     close = np.asarray(close, dtype=np.float64)
     if length < 3:
-        raise ValueError('length must be >= 3')
+        raise ValueError("length must be >= 3")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
@@ -171,7 +171,7 @@ def skew_ind(
 
 def skew_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 30,
     offset: int = 0,
     fillna: float | None = None,
@@ -218,5 +218,5 @@ def skew_polars(
     """
     close = df[close_col].to_numpy()
     result = skew_ind(close, length, offset, fillna)
-    out_name = output_col or f'SKEW_{length}'
+    out_name = output_col or f"SKEW_{length}"
     return pl.Series(out_name, result)

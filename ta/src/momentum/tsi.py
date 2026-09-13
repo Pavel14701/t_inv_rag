@@ -20,6 +20,7 @@ IEEE 754 notes
 - a zero denominator yields NaN (explicit rule wins over 0/0 and
   x/0 -> +/-Inf).
 """
+
 import numpy as np
 import polars as pl
 
@@ -40,10 +41,8 @@ def _ema_from_first_valid(x: np.ndarray, length: int) -> np.ndarray:
         return out  # all-NaN input stays all-NaN
     filled = x.copy()
     filled[:first_valid] = x[first_valid]
-    out = ema_ind(
-        filled, length=length, use_talib=False, nan_policy='ignore'
-    )
-    out[:first_valid + length - 1] = np.nan
+    out = ema_ind(filled, length=length, use_talib=False, nan_policy="ignore")
+    out[: first_valid + length - 1] = np.nan
     return out
 
 
@@ -77,6 +76,11 @@ def tsi_numpy(
         EMA length of the signal line (>= 1).
     offset, fillna : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     tuple of np.ndarray
@@ -89,11 +93,11 @@ def tsi_numpy(
 
     """
     if long < 1:
-        raise ValueError('long must be >= 1')
+        raise ValueError("long must be >= 1")
     if short < 1:
-        raise ValueError('short must be >= 1')
+        raise ValueError("short must be >= 1")
     if signal < 1:
-        raise ValueError('signal must be >= 1')
+        raise ValueError("signal must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if close.size == 0:
         return np.array([]), np.array([])
@@ -105,10 +109,10 @@ def tsi_numpy(
         mom[1:] = close[1:] - close[:-1]
     num = _double_ema(mom, short, long)
     den = _double_ema(np.abs(mom), short, long)
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         tsi = 100.0 * num / den
     # 0/0 and x/0 -> NaN (undefined oscillation around a flat base).
-    tsi = np.where(den == 0.0, np.nan, tsi)
+    tsi = np.where(den == 0.0, np.nan, tsi)  # noqa: RUF069 - exact IEEE zero/sign check
     # Signal line: forward-fill the warm-up NaN prefix with the first
     # valid value so the EMA recursion starts cleanly, then mask the
     # standard prefix (same approach as macd_numpy).
@@ -117,12 +121,12 @@ def tsi_numpy(
     if not np.isnan(tsi[first_valid]):
         tsi_filled[:first_valid] = tsi[first_valid]
     signalma = ema_ind(
-        tsi_filled, length=signal, use_talib=False, nan_policy='ignore'
+        tsi_filled, length=signal, use_talib=False, nan_policy="ignore"
     )
     # The EMA recursion is seeded at the first valid TSI value
     # (index ``long + short - 2``), so it is only clean from
     # ``(long + short - 2) + signal - 1``.
-    signalma[:long + short + signal - 2] = np.nan
+    signalma[: long + short + signal - 2] = np.nan
     tsi = _apply_offset_fillna(tsi, offset, fillna)
     signalma = _apply_offset_fillna(signalma, offset, fillna)
     return tsi, signalma
@@ -140,20 +144,24 @@ def tsi_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return tsi_numpy(
-        close, long=long, short=short, signal=signal,
-        offset=offset, fillna=fillna,
+        close,
+        long=long,
+        short=short,
+        signal=signal,
+        offset=offset,
+        fillna=fillna,
     )
 
 
 def tsi_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     long: int = 25,
     short: int = 13,
     signal: int = 13,
     offset: int = 0,
     fillna: float | None = None,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add TSI and signal columns to a Polars DataFrame.
 
@@ -162,12 +170,18 @@ def tsi_polars(
     """
     close = df[close_col].cast(pl.Float64).to_numpy()
     tsi, signalma = tsi_numpy(
-        close, long=long, short=short, signal=signal,
-        offset=offset, fillna=fillna,
+        close,
+        long=long,
+        short=short,
+        signal=signal,
+        offset=offset,
+        fillna=fillna,
     )
     if not suffix:
-        suffix = f'_{long}_{short}'
-    return df.with_columns([
-        pl.Series(f'TSI{suffix}', tsi),
-        pl.Series(f'TSIs{suffix}', signalma),
-    ])
+        suffix = f"_{long}_{short}"
+    return df.with_columns(
+        [
+            pl.Series(f"TSI{suffix}", tsi),
+            pl.Series(f"TSIs{suffix}", signalma),
+        ]
+    )

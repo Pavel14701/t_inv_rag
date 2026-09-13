@@ -9,24 +9,35 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_counterattack_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
     """Optimized Counterattack pattern.
 
     Returns:
-        1.0 → bullish counterattack
-       -1.0 → bearish counterattack
-        0.0 → none
+        1.0 -> bullish counterattack
+       -1.0 -> bearish counterattack
+        0.0 -> none
 
     """
     n = len(open_)
@@ -64,19 +75,21 @@ def _cdl_counterattack_nb(
 
         direction = 0.0
 
-        # Bearish counterattack: first bullish, second bearish, gap up, close near previous close
+        # Bearish counterattack: first bullish, second bearish, gap up, close
+        # near previous close
         if bull1 and bear0:
             if o0 > h1 and c0 < c1:
                 if abs(c0 - c1) <= 0.25 * (r0 + r1):
                     direction = -1.0
 
-        # Bullish counterattack: first bearish, second bullish, gap down, close near previous close
+        # Bullish counterattack: first bearish, second bullish, gap down,
+        # close near previous close
         elif bear1 and bull0:
             if o0 < l1 and c0 > c1:
                 if abs(c0 - c1) <= 0.25 * (r0 + r1):
                     direction = 1.0
 
-        if direction == 0.0:
+        if direction == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             continue
 
         if strict:
@@ -102,7 +115,10 @@ def _cdl_counterattack_nb(
 
 
 def cdl_counterattack(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -112,10 +128,14 @@ def cdl_counterattack(
     max_shadow_factor=0.5,
 ):
     """Counterattack pattern with strict and symmetric support."""
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -144,27 +164,33 @@ def cdl_counterattack(
         return _apply_offset_fillna(talib_out, offset, fillna)
 
     out = _cdl_counterattack_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_counterattack_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.3,
     max_shadow_factor=0.5,
-    output_col='CDL_COUNTERATTACK',
+    output_col="CDL_COUNTERATTACK",
 ):
+    """See module docs."""
     out = cdl_counterattack(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),
@@ -178,4 +204,3 @@ def cdl_counterattack_polars(
         max_shadow_factor=max_shadow_factor,
     )
     return df.with_columns(pl.Series(output_col, out))
-

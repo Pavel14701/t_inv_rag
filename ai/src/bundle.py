@@ -1,8 +1,8 @@
 """Model bundle and inference contract for the EntryExitTransformer.
 
-TZ-06 п.2.4 / п.2.5: a ``torch.save(state_dict)`` without the model
+TZ-06 item 2.4 / item 2.5: a ``torch.save(state_dict)`` without the model
 config, feature columns, ``atr_global`` and normalisation statistics is
-not loadable as a usable predictor — the architecture and data contract
+not loadable as a usable predictor -- the architecture and data contract
 would have to be guessed. This module bundles everything the inference
 path (Risk Engine, TZ-05 script) needs into a single artifact and
 provides the single inference entry point ``predict_p_win``.
@@ -46,7 +46,7 @@ class ModelBundle:
     @property
     def outcome_mode(self) -> str:
         """The outcome mode from the model config."""
-        return self.model_config.get('outcome_mode', 'binary')
+        return self.model_config.get("outcome_mode", "binary")
 
 
 def build_bundle(model, *, model_config: dict, **extra) -> ModelBundle:
@@ -62,17 +62,19 @@ def build_bundle(model, *, model_config: dict, **extra) -> ModelBundle:
 
     """
     config = dict(model_config)
-    if 'outcome_mode' not in config:
-        config['outcome_mode'] = getattr(model, 'outcome_mode', 'binary')
-    if 'atr_global' not in config:
-        config['atr_global'] = getattr(model, 'atr_global', 1.0)
+    if "outcome_mode" not in config:
+        config["outcome_mode"] = getattr(model, "outcome_mode", "binary")
+    if "atr_global" not in config:
+        config["atr_global"] = getattr(model, "atr_global", 1.0)
     return ModelBundle(
         state_dict=model.state_dict(),
         model_config=config,
-        seq_len=extra.get('seq_len', 128),
-        atr_global=extra.get('atr_global', config.get('atr_global', 1.0)),
-        feature_columns=extra.get('feature_columns'),
-        norm_stats=extra.get('norm_stats'),
+        seq_len=extra.get("seq_len", 128),
+        atr_global=float(
+            extra.get("atr_global") or config.get("atr_global") or 1.0
+        ),
+        feature_columns=extra.get("feature_columns"),
+        norm_stats=extra.get("norm_stats"),
     )
 
 
@@ -97,14 +99,14 @@ def load_bundle(path: str | Path) -> ModelBundle:
         The deserialized :class:`ModelBundle`.
 
     """
-    payload = torch.load(Path(path), map_location='cpu', weights_only=True)
+    payload = torch.load(Path(path), map_location="cpu", weights_only=True)
     if not isinstance(payload, dict):
         msg = (
-            f'{path}: not a ModelBundle payload '
-            f'(expected mapping, got {type(payload).__name__})'
+            f"{path}: not a ModelBundle payload "
+            f"(expected mapping, got {type(payload).__name__})"
         )
         raise TypeError(msg)
-    payload.setdefault('version', 1)
+    payload.setdefault("version", 1)
     return ModelBundle(**payload)
 
 
@@ -118,14 +120,12 @@ def rebuild_model(bundle: ModelBundle) -> EntryExitTransformer:
         An :class:`EntryExitTransformer` with the bundled architecture.
 
     """
-    cfg = {
-        k: v for k, v in bundle.model_config.items() if k != 'outcome_mode'
-    }
+    cfg = {k: v for k, v in bundle.model_config.items() if k != "outcome_mode"}
     return EntryExitTransformer(**cfg)
 
 
 class EntryExitPredictor:
-    """Single-entry-point inference wrapper (TZ-06 п.2.5).
+    """Single-entry-point inference wrapper (TZ-06 item 2.5).
 
     Encapsulates the model and its bundle so that consumers (Risk Engine,
     TZ-05 script) never touch raw tensors or transformer internals.
@@ -171,8 +171,12 @@ class EntryExitPredictor:
         b = lambda x: x.unsqueeze(0).to(device)  # noqa: E731
 
         action_logits, outcome_logits, _pattern = self.model(
-            b(prices), b(indicators), b(signals),
-            b(tp_levels), b(sl_levels), [order_blocks],
+            b(prices),
+            b(indicators),
+            b(signals),
+            b(tp_levels),
+            b(sl_levels),
+            [order_blocks],
         )
         action = torch.softmax(action_logits, dim=-1)[0, -1]
         outcome = outcome_logits[0, -1]
@@ -188,7 +192,7 @@ class EntryExitPredictor:
                 if outcome.shape[-1] >= 2
                 else torch.sigmoid(outcome[0]).item()
             )
-        return {'p_entry': p_entry, 'p_exit': p_exit, 'p_win': p_win}
+        return {"p_entry": p_entry, "p_exit": p_exit, "p_win": p_win}
 
     def predict_p_win(
         self,
@@ -215,14 +219,14 @@ class EntryExitPredictor:
         """
         return self.predict_proba(
             prices, indicators, signals, tp_levels, sl_levels, order_blocks
-        )['p_win']
+        )["p_win"]
 
 
 __all__ = [
-    'EntryExitPredictor',
-    'ModelBundle',
-    'build_bundle',
-    'load_bundle',
-    'rebuild_model',
-    'save_bundle',
+    "EntryExitPredictor",
+    "ModelBundle",
+    "build_bundle",
+    "load_bundle",
+    "rebuild_model",
+    "save_bundle",
 ]

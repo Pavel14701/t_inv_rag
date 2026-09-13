@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Indicator pre-computation for the order block pipeline."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -22,8 +23,11 @@ def precompute_indicators(
 ) -> dict[str, np.ndarray]:
     """Compute every indicator the pipeline needs, once, up front."""
     atr = atr_ind(
-        high, low, close,
-        length=cfg.atr_period, use_talib=cfg.use_talib,
+        high,
+        low,
+        close,
+        length=cfg.atr_period,
+        use_talib=cfg.use_talib,
     )
     avg_volume = sma_ind(volume, cfg.volume_window, use_talib=cfg.use_talib)
     local_highs = _rolling_max_numba(high, cfg.liquidity_window)
@@ -31,25 +35,29 @@ def precompute_indicators(
     zone_low = close - cfg.zone_atr_multiplier * atr
     zone_high = close + cfg.zone_atr_multiplier * atr
     result = {
-        'atr': atr,
-        'avg_volume': avg_volume,
-        'local_highs': local_highs,
-        'local_lows': local_lows,
-        'zone_low': zone_low,
-        'zone_high': zone_high,
+        "atr": atr,
+        "avg_volume": avg_volume,
+        "local_highs": local_highs,
+        "local_lows": local_lows,
+        "zone_low": zone_low,
+        "zone_high": zone_high,
     }
     if cfg.use_adx_filter:
-        adx, adxr, di_plus, di_minus = adx_ind(
-            high, low, close,
+        adx, _adxr, di_plus, di_minus = adx_ind(
+            high,
+            low,
+            close,
             length=cfg.adx_period,
             use_talib=cfg.use_talib,
         )
-        result['adx'] = adx
-        result['di_plus'] = di_plus
-        result['di_minus'] = di_minus
+        result["adx"] = adx
+        result["di_plus"] = di_plus
+        result["di_minus"] = di_minus
     if cfg.use_rsi_confirmation:
-        result['rsi'] = rsi_ind(
-            close, length=cfg.rsi_period, use_talib=cfg.use_talib,
+        result["rsi"] = rsi_ind(
+            close,
+            length=cfg.rsi_period,
+            use_talib=cfg.use_talib,
         )
     if cfg.use_macd_confirmation:
         macd, signal, hist = macd_ind(
@@ -59,19 +67,20 @@ def precompute_indicators(
             signal=cfg.macd_signal,
             use_talib=cfg.use_talib,
         )
-        result['macd'] = macd
-        result['macd_signal'] = signal
-        result['macd_hist'] = hist
+        result["macd"] = macd
+        result["macd_signal"] = signal
+        result["macd_hist"] = hist
     return result
 
 
 def compute_lookback(
-    indicators: dict[str, np.ndarray], cfg: OrderBlockConfig,
+    indicators: dict[str, np.ndarray],
+    cfg: OrderBlockConfig,
 ) -> int:
     """Breakout lookback derived from median ATR, clamped to bounds."""
     if not cfg.use_dynamic_lookback:
         return cfg.lookback_min
-    median_atr = np.nanmedian(indicators['atr'])
+    median_atr = np.nanmedian(indicators["atr"])
     if not np.isfinite(median_atr):
         return cfg.lookback_min
     lookback = int(

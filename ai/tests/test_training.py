@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 
 from torch import Tensor
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 from ai.src.dataset import TradingDataset
 from ai.src.datatypes import OrderBlock
@@ -184,7 +184,7 @@ def test_train_one_round(sample_parquet_files: dict[str, Any]) -> None:
         num_heads=2,
     )
     device: torch.device = torch.device("cpu")
-    loader, df = build_loader_from_parquet(
+    loader, _df = build_loader_from_parquet(
         features_path=sample_parquet_files["features_path"],
         labels_path=sample_parquet_files["labels_path"],
         order_blocks=sample_parquet_files["order_blocks"],
@@ -502,7 +502,7 @@ def test_split_train_val(
     expected_train_end = total_len - int(total_len * 0.2)
     assert train_len == expected_train_end - (seq_len - 1)
     assert train_len > 0
-    train_loader2, val_loader2 = _split_train_val(
+    _train_loader2, val_loader2 = _split_train_val(
         loader, val_split=0, batch_size=2
     )
     assert val_loader2 is None
@@ -514,8 +514,9 @@ def test_split_train_val(
     train_loader3, val_loader3 = _split_train_val(
         loader, val_split=0.2, batch_size=2
     )
-    train_ds3 = cast(TradingDataset, train_loader3.dataset)
-    val_ds3 = cast(TradingDataset, val_loader3.dataset)
+    assert val_loader3 is not None
+    train_ds3 = cast(Subset, train_loader3.dataset)
+    val_ds3 = cast(Subset, val_loader3.dataset)
     train_idx = list(train_ds3.indices)
     val_idx = list(val_ds3.indices)
     max_train_end = max(i + seq_len - 1 for i in train_idx)

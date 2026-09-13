@@ -42,9 +42,9 @@ def compute_atr(
     if period is None:
         period = risk.atr_period if risk is not None else 14
     atr_floor = risk.atr_floor if risk is not None else 1e-6
-    high = df['high'].to_numpy()
-    low = df['low'].to_numpy()
-    close = df['close'].to_numpy()
+    high = df["high"].to_numpy()
+    low = df["low"].to_numpy()
+    close = df["close"].to_numpy()
     prev_close = np.roll(close, 1)
     prev_close[0] = close[0]
     tr1 = high - low
@@ -68,7 +68,7 @@ def compute_tp_sl(
     atr: np.ndarray | None = None,
     tp_atr_multiplier: float | None = None,
     sl_atr_multiplier: float | None = None,
-    close_col: str = 'close',
+    close_col: str = "close",
     risk: RiskConfig | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute absolute TP/SL levels from the **previous bar's** ATR.
@@ -118,7 +118,7 @@ def compute_ob_distances(
     df: pl.DataFrame,
     order_blocks: list[OrderBlock],
     atr_series: np.ndarray,
-    close_col: str = 'close',
+    close_col: str = "close",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Compute ATR-normalised distances to order blocks per bar.
 
@@ -160,14 +160,12 @@ def compute_ob_distances(
     is_in_zone = np.zeros(n, dtype=np.float32)
     strongest_strength = np.full(n, -np.inf, dtype=np.float64)
     if not order_blocks:
-        return (
-            nearest_supply, nearest_demand, strongest_dist, is_in_zone
-        )
+        return (nearest_supply, nearest_demand, strongest_dist, is_in_zone)
     supply_blocks = [
-        ob for ob in order_blocks if ob.block_type.lower() == 'supply'
+        ob for ob in order_blocks if ob.block_type.lower() == "supply"
     ]
     demand_blocks = [
-        ob for ob in order_blocks if ob.block_type.lower() == 'demand'
+        ob for ob in order_blocks if ob.block_type.lower() == "demand"
     ]
 
     def _update_distances(blocks, target_array):
@@ -178,10 +176,7 @@ def compute_ob_distances(
             if start >= end:
                 continue
             zone_mid = (ob.zone_low + ob.zone_high) / 2.0
-            dist = (
-                np.abs(close[start:end] - zone_mid)
-                / atr_series[start:end]
-            )
+            dist = np.abs(close[start:end] - zone_mid) / atr_series[start:end]
             np.minimum(
                 target_array[start:end], dist, out=target_array[start:end]
             )
@@ -193,9 +188,8 @@ def compute_ob_distances(
             end = min(n, ob.end_idx + 1)
             if start >= end:
                 continue
-            inside = (
-                (close[start:end] >= ob.zone_low)
-                & (close[start:end] <= ob.zone_high)
+            inside = (close[start:end] >= ob.zone_low) & (
+                close[start:end] <= ob.zone_high
             )
             is_in_zone[start:end] = np.maximum(
                 is_in_zone[start:end], inside.astype(np.float32)
@@ -209,10 +203,7 @@ def compute_ob_distances(
             if start >= end:
                 continue
             zone_mid = (ob.zone_low + ob.zone_high) / 2.0
-            dist = (
-                np.abs(close[start:end] - zone_mid)
-                / atr_series[start:end]
-            )
+            dist = np.abs(close[start:end] - zone_mid) / atr_series[start:end]
             seg_strength = strongest_strength[start:end]
             take = ob.strength > seg_strength
             seg_strength[take] = ob.strength
@@ -223,9 +214,7 @@ def compute_ob_distances(
     _update_distances(demand_blocks, nearest_demand)
     _update_strongest(list(order_blocks))
     _update_zone_flags(list(order_blocks))
-    return (
-        nearest_supply, nearest_demand, strongest_dist, is_in_zone
-    )
+    return (nearest_supply, nearest_demand, strongest_dist, is_in_zone)
 
 
 class PositionState(NamedTuple):
@@ -277,7 +266,7 @@ def _check_exit(
         A tuple (hit_tp, hit_sl) indicating which levels were triggered.
 
     """
-    if position.direction == 'long':
+    if position.direction == "long":
         hit_tp = bar_high >= position.tp_price
         hit_sl = bar_low <= position.sl_price
         if hit_tp and hit_sl:
@@ -313,13 +302,14 @@ def _check_rr(
 
     """
     if (
-        (direction == 'long'
-        and (sl_price >= entry_price or tp_price <= entry_price))
-        or (direction != 'long'
-        and (sl_price <= entry_price or tp_price >= entry_price))
+        direction == "long"
+        and (sl_price >= entry_price or tp_price <= entry_price)
+    ) or (
+        direction != "long"
+        and (sl_price <= entry_price or tp_price >= entry_price)
     ):
         return False
-    if direction == 'long':
+    if direction == "long":
         rr = (tp_price - entry_price) / (entry_price - sl_price)
     else:
         rr = (entry_price - tp_price) / (sl_price - entry_price)
@@ -385,7 +375,7 @@ def _effective_entry_price(
         The effective (slipped) entry price.
 
     """
-    if direction == 'long':
+    if direction == "long":
         return raw_price * (1.0 + slippage_pct)
     return raw_price * (1.0 - slippage_pct)
 
@@ -414,7 +404,7 @@ def _effective_exit_price(
     """
     if hit_tp:
         return raw_exit_price  # limit order: no slippage
-    if direction == 'long':
+    if direction == "long":
         return raw_exit_price * (1.0 - slippage_pct)
     return raw_exit_price * (1.0 + slippage_pct)
 
@@ -448,7 +438,7 @@ def _realised_r_multiple(
     if risk <= 0:
         return 0.0
     gross = exit_price - entry_price
-    if direction == 'short':
+    if direction == "short":
         gross = -gross
     costs = commission_pct * (entry_price + exit_price)
     return float((gross - costs) / risk)
@@ -509,6 +499,8 @@ def _process_exit(
         raw_exit = position.sl_price
     else:
         raw_exit = close_p  # time-based exit at the bar's close
+    raw_exit = raw_exit if raw_exit is not None else close_p
+    assert position.direction is not None  # active position invariant
     exit_price = _effective_exit_price(
         position.direction, hit_tp, raw_exit, slippage_pct
     )
@@ -572,7 +564,7 @@ def _find_decision(
     )
     if ob is None:
         return None, None
-    direction = 'long' if ob.block_type.lower() == 'demand' else 'short'
+    direction = "long" if ob.block_type.lower() == "demand" else "short"
     if not _check_rr(direction, close, tp, sl, min_rr):
         return None, None
     return direction, ob
@@ -640,51 +632,65 @@ def generate_labels_from_strategy(
             2 (ignore).  In R-multiple mode: realised R-multiple or NaN.
 
     """
-    # ---------- Risk parameter resolution (TZ-06 п.10) ----------
+    # ---------- Risk parameter resolution (TZ-06 item 10) ----------
     # explicit kwarg > risk config > legacy default
-    _r = risk
+    risk_cfg = risk
     min_rr = (
-        min_rr if min_rr is not None
-        else (_r.min_rr if _r is not None else 1 / 3)
+        min_rr
+        if min_rr is not None
+        else (risk_cfg.min_rr if risk_cfg is not None else 1 / 3)
     )
     use_r_multiple = (
-        use_r_multiple if use_r_multiple is not None
-        else (_r.use_r_multiple if _r is not None else False)
+        use_r_multiple
+        if use_r_multiple is not None
+        else (risk_cfg.use_r_multiple if risk_cfg is not None else False)
     )
     use_structure_filter = (
-        use_structure_filter if use_structure_filter is not None
-        else (_r.use_structure_filter if _r is not None else False)
+        use_structure_filter
+        if use_structure_filter is not None
+        else (risk_cfg.use_structure_filter if risk_cfg is not None else False)
     )
-    if trend_filter is None and _r is not None:
-        trend_filter = _r.trend_filter
+    if trend_filter is None and risk_cfg is not None:
+        trend_filter = risk_cfg.trend_filter
     commission_pct = (
-        commission_pct if commission_pct is not None
-        else (_r.commission_pct if _r is not None else 0.001)
+        commission_pct
+        if commission_pct is not None
+        else (risk_cfg.commission_pct if risk_cfg is not None else 0.001)
     )
     slippage_pct = (
-        slippage_pct if slippage_pct is not None
-        else (_r.slippage_pct if _r is not None else 0.0005)
+        slippage_pct
+        if slippage_pct is not None
+        else (risk_cfg.slippage_pct if risk_cfg is not None else 0.0005)
     )
     max_bars_hold = (
-        max_bars_hold if max_bars_hold is not None
-        else (_r.max_bars_hold if _r is not None else 20)
+        max_bars_hold
+        if max_bars_hold is not None
+        else (risk_cfg.max_bars_hold if risk_cfg is not None else 20)
     )
 
     n = df.height
     action = np.full(n, -100, dtype=int)
     outcome = np.full(n, np.nan if use_r_multiple else 2, dtype=float)
-    open_p = df['open'].to_numpy()
-    high = df['high'].to_numpy()
-    low = df['low'].to_numpy()
-    close = df['close'].to_numpy()
-    tp = df['tp'].to_numpy()
-    sl = df['sl'].to_numpy()
+    open_p = df["open"].to_numpy()
+    high = df["high"].to_numpy()
+    low = df["low"].to_numpy()
+    close = df["close"].to_numpy()
+    tp = df["tp"].to_numpy()
+    sl = df["sl"].to_numpy()
 
     i = 0
     while i < n - 1:  # a decision on the last bar can never be filled
         direction, ob = _find_decision(
-            i, high[i], low[i], close[i], tp[i], sl[i],
-            order_blocks, use_structure_filter, trend_filter, min_rr,
+            i,
+            high[i],
+            low[i],
+            close[i],
+            tp[i],
+            sl[i],
+            order_blocks,
+            use_structure_filter,
+            trend_filter,
+            min_rr,
         )
         if direction is None or ob is None:
             i += 1

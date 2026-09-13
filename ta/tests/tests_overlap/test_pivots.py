@@ -12,6 +12,7 @@ Tests cover:
 """
 
 from datetime import datetime, timedelta
+from itertools import pairwise
 
 import numpy as np
 import polars as pl
@@ -61,9 +62,9 @@ def test_pivot_woodie_formula() -> None:
     """Woodie: TP=(2*O+H+L)/4, S1=2TP-H, R1=2TP-L, S3/R3 as documented."""
     o = np.array([10.0])
     h = np.array([12.0])
-    l = np.array([9.0])
+    lst = np.array([9.0])
     c = np.array([10.5])  # accepted but unused
-    tp, s1, s2, s3, s4, r1, r2, r3, r4 = _pivot_woodie(o, h, l, c)
+    tp, s1, s2, s3, s4, r1, r2, r3, r4 = _pivot_woodie(o, h, lst, c)
     tp_ref = (2 * 10.0 + 12.0 + 9.0) / 4
     assert tp[0] == tp_ref
     assert s1[0] == 2 * tp_ref - 12.0
@@ -83,9 +84,9 @@ def test_pivot_demark_branches() -> None:
     """
     o = np.array([10.0, 10.0, 12.0])
     h = np.array([11.0, 11.0, 13.0])
-    l = np.array([9.0, 9.0, 10.0])
+    lst = np.array([9.0, 9.0, 10.0])
     c = np.array([10.0, 10.5, 11.0])
-    tp, s1, s2, s3, s4, r1, r2, r3, r4 = _pivot_demark(o, h, l, c)
+    tp, s1, s2, s3, s4, r1, r2, r3, r4 = _pivot_demark(o, h, lst, c)
     assert tp[0] == 0.25 * (11 + 9 + 2 * 10.0)  # open == close
     assert tp[1] == 0.25 * (2 * 11 + 9 + 10.5)  # close > open
     assert tp[2] == 0.25 * (13 + 2 * 10 + 11)  # close < open
@@ -102,9 +103,9 @@ def test_pivot_fibonacci_missing_levels() -> None:
     from ta.src.overlap.pivots import _pivot_fibonacci
 
     h = np.array([12.0])
-    l = np.array([9.0])
+    lst = np.array([9.0])
     c = np.array([10.5])
-    tp, s1, s2, s3, s4, r1, r2, r3, r4 = _pivot_fibonacci(h, l, c)
+    tp, s1, s2, s3, s4, r1, r2, r3, r4 = _pivot_fibonacci(h, lst, c)
     tp_ref = (12.0 + 9.0 + 10.5) / 3
     rng = 3.0
     assert tp[0] == tp_ref
@@ -123,9 +124,9 @@ def test_pivot_camarilla_formula() -> None:
     from ta.src.overlap.pivots import _pivot_camarilla
 
     h = np.array([12.0])
-    l = np.array([9.0])
+    lst = np.array([9.0])
     c = np.array([10.5])
-    tp, s1, s2, s3, s4, r1, r2, r3, r4 = _pivot_camarilla(h, l, c)
+    _tp, s1, s2, s3, s4, r1, _r2, _r3, r4 = _pivot_camarilla(h, lst, c)
     rng = 3.0
     assert s1[0] == 10.5 - 11.0 / 120 * rng
     assert s2[0] == 10.5 - 11.0 / 60 * rng
@@ -233,7 +234,7 @@ def test_pivots_ind_support_resistance_ordering() -> None:
         win["PIVOTS_CLAS_D_R3"].to_numpy(),
         win["PIVOTS_CLAS_D_R4"].to_numpy(),
     ]
-    for lo, hi in zip(levels, levels[1:]):
+    for lo, hi in pairwise(levels):
         assert np.all(lo <= hi + 1e-9)
 
 
@@ -287,7 +288,7 @@ def test_pivots_ind_custom_column_names() -> None:
         {
             "open": "o",
             "high": "h",
-            "low": "l",
+            "low": "lst",
             "close": "c",
             "date": "ts",
         }
@@ -296,7 +297,7 @@ def test_pivots_ind_custom_column_names() -> None:
         df,
         open_col="o",
         high_col="h",
-        low_col="l",
+        low_col="lst",
         close_col="c",
         date_col="ts",
         method="traditional",

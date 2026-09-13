@@ -1,5 +1,17 @@
 # TZ-12. Бенчмарки индикаторов ta/
 
+> **Статус: 🔨 runner готов (2 smoke-теста, marker `performance`).**
+> ✅ ta/benchmarks/run.py: сценарии по группам — SMA/EMA (overlap),
+> RSI/MACD (momentum), ATR (volatility), CDL-engulfing (candle), SCRSI
+> (custom; OTT пропущен из-за известного numba-бага int8+fillna).
+> Базлайны: pandas наивный rolling (SMA/EMA/ATR), in-package *_numpy
+> (RSI/MACD/SCRSI), TA-Lib (опционально, n/a если не установлен).
+> Честность: cold JIT отдельной строкой, warm = best-of-N, фиксированный
+> seed, одинаковые входы. Runner: `uv run python -m ta.benchmarks.run
+> --n 100000 --save` → таблица + `ta/benchmarks/results/bench_<n>.md`.
+> ⬜ README-раздел с результатами; повторные прогоны ±10%; TA-Lib/pandas_ta
+> в CI (опциональный job).
+
 > Источники для выбора сценариев и эталонных значений: `dev_docs/overlap_indicators..md`,
 > `dev_docs/momentum_indicators..md`, `dev_docs/volatility_indicators.md`,
 > `dev_docs/trend_indicators..md`, `dev_docs/candle.md` (эффективность паттернов

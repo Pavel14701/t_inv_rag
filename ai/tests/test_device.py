@@ -1,4 +1,4 @@
-"""Tests for device resolution (TZ-06 п.11)."""
+"""Tests for device resolution (TZ-06 item 11)."""
 
 import pytest
 

@@ -14,10 +14,7 @@ from ..volatility import atr_ind
 # ----------------------------------------------------------------------
 @jit(nopython=True, cache=True)
 def _supertrend_numba_core(
-    close: np.ndarray,
-    lb: np.ndarray,
-    ub: np.ndarray,
-    initial_dir: int
+    close: np.ndarray, lb: np.ndarray, ub: np.ndarray, initial_dir: int
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Core Supertrend loop.
 
@@ -26,7 +23,7 @@ def _supertrend_numba_core(
     close : np.ndarray
         Close prices.
     lb, ub : np.ndarray
-        Lower and upper bands (pre‑computed).
+        Lower and upper bands (pre-computed).
     initial_dir : int
         Initial direction (1 for up, -1 for down). Usually set to 1.
 
@@ -81,9 +78,9 @@ def supertrend_numba(
     length: int = 7,
     atr_length: int | None = None,
     multiplier: float = 3.0,
-    atr_mamode: str = 'rma',
+    atr_mamode: str = "rma",
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Supertrend using Numba and our own ATR (Numba version).
 
@@ -92,11 +89,11 @@ def supertrend_numba(
     if atr_length is None:
         atr_length = length
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if atr_length < 1:
-        raise ValueError('atr_length must be >= 1')
+        raise ValueError("atr_length must be >= 1")
     if multiplier < 0:
-        raise ValueError('multiplier must be >= 0')
+        raise ValueError("multiplier must be >= 0")
 
     # Ensure contiguous
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -112,20 +109,24 @@ def supertrend_numba(
     hl2 = (high + low) * 0.5
     # ATR using Numba
     atr = atr_ind(
-        high, low, close, 
-        length=atr_length, 
-        mamode=atr_mamode, 
-        drift=1, 
-        offset=0, 
-        fillna=None, 
+        high,
+        low,
+        close,
+        length=atr_length,
+        mamode=atr_mamode,
+        drift=1,
+        offset=0,
+        fillna=None,
         percent=False,
-        use_talib=False
+        use_talib=False,
     )
     # Bands
     ub = hl2 + multiplier * atr
     lb = hl2 - multiplier * atr
     # Core logic
-    trend, direction, long, short = _supertrend_numba_core(close, lb, ub, initial_dir=1)
+    trend, direction, long, short = _supertrend_numba_core(
+        close, lb, ub, initial_dir=1
+    )
     # Apply final offset and fillna to each array
     trend = _apply_offset_fillna(trend, offset, fillna)
     direction = _apply_offset_fillna(direction, offset, fillna)
@@ -136,7 +137,7 @@ def supertrend_numba(
 
 
 # ----------------------------------------------------------------------
-# Version using TA‑Lib ATR if available and requested
+# Version using TA-Lib ATR if available and requested
 # ----------------------------------------------------------------------
 def supertrend_talib(
     high: np.ndarray,
@@ -146,11 +147,11 @@ def supertrend_talib(
     atr_length: int | None = None,
     multiplier: float = 3.0,
     offset: int = 0,
-    fillna: float | None = None
+    fillna: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Supertrend using TA‑Lib ATR (if available) and Numba core."""
+    """Supertrend using TA-Lib ATR (if available) and Numba core."""
     if not talib_available:
-        raise ImportError('TA‑Lib not available')
+        raise ImportError("TA-Lib not available")
     if atr_length is None:
         atr_length = length
     high = np.asarray(high, dtype=np.float64, copy=False)
@@ -164,16 +165,20 @@ def supertrend_talib(
         close = np.ascontiguousarray(close)
     hl2 = (high + low) * 0.5
     atr = atr_ind(
-        high, low, close,
+        high,
+        low,
+        close,
         length=atr_length,
         offset=0,
         fillna=None,
         percent=False,
-        use_talib=True
+        use_talib=True,
     )
     ub = hl2 + multiplier * atr
     lb = hl2 - multiplier * atr
-    trend, direction, long, short = _supertrend_numba_core(close, lb, ub, initial_dir=1)
+    trend, direction, long, short = _supertrend_numba_core(
+        close, lb, ub, initial_dir=1
+    )
     trend = _apply_offset_fillna(trend, offset, fillna)
     direction = _apply_offset_fillna(direction, offset, fillna)
     long = _apply_offset_fillna(long, offset, fillna)
@@ -191,10 +196,10 @@ def supertrend_ind(
     length: int = 7,
     atr_length: int | None = None,
     multiplier: float = 3.0,
-    atr_mamode: str = 'rma',
+    atr_mamode: str = "rma",
     offset: int = 0,
     fillna: float | None = None,
-    use_talib: bool = True
+    use_talib: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Universal Supertrend with backend selection.
 
@@ -215,7 +220,7 @@ def supertrend_ind(
     fillna : float, optional
         Value to fill NaNs.
     use_talib : bool
-        Use TA‑Lib for ATR if available.
+        Use TA-Lib for ATR if available.
 
     Returns
     -------
@@ -236,7 +241,15 @@ def supertrend_ind(
         )
     else:
         return supertrend_numba(
-            high, low, close, length, atr_length, multiplier, atr_mamode, offset, fillna
+            high,
+            low,
+            close,
+            length,
+            atr_length,
+            multiplier,
+            atr_mamode,
+            offset,
+            fillna,
         )
 
 
@@ -245,17 +258,17 @@ def supertrend_ind(
 # ----------------------------------------------------------------------
 def supertrend_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 7,
     atr_length: int | None = None,
     multiplier: float = 3.0,
-    atr_mamode: str = 'rma',
+    atr_mamode: str = "rma",
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    suffix: str = ''
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add Supertrend columns to Polars DataFrame.
 
@@ -265,9 +278,25 @@ def supertrend_polars(
         Input data.
     high_col, low_col, close_col : str
         Column names for prices.
-    length, atr_length, multiplier, atr_mamode, offset, fillna, use_talib : as above.
+    length, atr_length, multiplier, atr_mamode, offset, fillna, use_talib : as
+        above.
     suffix : str
         Suffix for column names (default f"_{length}_{multiplier}").
+
+    atr_length : int, optional
+        See the module guide; default mirrors the numpy path.
+    atr_mamode : see notes
+        Documented in the matching numpy implementation.
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    length : int, optional
+        See the module guide; default mirrors the numpy path.
+    multiplier : see notes
+        Documented in the matching numpy implementation.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------
@@ -280,20 +309,24 @@ def supertrend_polars(
     low = df[low_col].to_numpy()
     close = df[close_col].to_numpy()
     trend, direction, long, short = supertrend_ind(
-        high, low, close,
+        high,
+        low,
+        close,
         length=length,
         atr_length=atr_length,
         multiplier=multiplier,
         atr_mamode=atr_mamode,
         offset=offset,
         fillna=fillna,
-        use_talib=use_talib
+        use_talib=use_talib,
     )
 
-    suffix = suffix or f'_{length}_{multiplier}'
-    return df.with_columns([
-        pl.Series(f'SUPERT{suffix}', trend),
-        pl.Series(f'SUPERTd{suffix}', direction),
-        pl.Series(f'SUPERTl{suffix}', long),
-        pl.Series(f'SUPERTs{suffix}', short)
-    ])
+    suffix = suffix or f"_{length}_{multiplier}"
+    return df.with_columns(
+        [
+            pl.Series(f"SUPERT{suffix}", trend),
+            pl.Series(f"SUPERTd{suffix}", direction),
+            pl.Series(f"SUPERTl{suffix}", long),
+            pl.Series(f"SUPERTs{suffix}", short),
+        ]
+    )

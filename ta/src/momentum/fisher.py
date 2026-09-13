@@ -14,11 +14,12 @@ IEEE 754 notes
 --------------
 - strict floating-point arithmetic: ``fastmath=False`` everywhere;
 - NaN propagates through the whole recursion (a single NaN window
-  poisons every later bar — this matches pandas_ta behaviour);
+  poisons every later bar -- this matches pandas_ta behaviour);
 - a flat window (``HH == LL``) yields NaN (0/0 undefined);
 - ``|value| >= 1`` makes the log argument non-positive: log(0) -> -Inf,
   log(negative) -> NaN (documented, never raised).
 """
+
 import numpy as np
 import polars as pl
 
@@ -56,7 +57,7 @@ def _fisher_numba(
         if i < length - 1:
             continue
         denom = highest[i] - lowest[i]
-        if np.isnan(denom) or denom == 0.0:
+        if np.isnan(denom) or denom == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             if started:
                 # NaN propagates through the recursion
                 raw_prev = np.nan
@@ -93,6 +94,11 @@ def fisher_numpy(
         ``length - 1`` bars are NaN.
     offset, fillna : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     tuple of np.ndarray
@@ -105,7 +111,7 @@ def fisher_numpy(
 
     """
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
@@ -146,19 +152,24 @@ def fisher_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return fisher_numpy(
-        high, low, close, length=length, offset=offset, fillna=fillna,
+        high,
+        low,
+        close,
+        length=length,
+        offset=offset,
+        fillna=fillna,
     )
 
 
 def fisher_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 9,
     offset: int = 0,
     fillna: float | None = None,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add Fisher Transform columns to a Polars DataFrame.
 
@@ -169,11 +180,18 @@ def fisher_polars(
     low = df[low_col].cast(pl.Float64).to_numpy()
     close = df[close_col].cast(pl.Float64).to_numpy()
     fisher, signal = fisher_numpy(
-        high, low, close, length=length, offset=offset, fillna=fillna,
+        high,
+        low,
+        close,
+        length=length,
+        offset=offset,
+        fillna=fillna,
     )
     if not suffix:
-        suffix = f'_{length}'
-    return df.with_columns([
-        pl.Series(f'FISHERT{suffix}', fisher),
-        pl.Series(f'FISHERTs{suffix}', signal),
-    ])
+        suffix = f"_{length}"
+    return df.with_columns(
+        [
+            pl.Series(f"FISHERT{suffix}", fisher),
+            pl.Series(f"FISHERTs{suffix}", signal),
+        ]
+    )

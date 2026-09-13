@@ -105,7 +105,7 @@ def mad_numba(
     """  # noqa: E501
     close = np.asarray(close, dtype=np.float64)
     if length < 2:
-        raise ValueError('length must be >= 2')
+        raise ValueError("length must be >= 2")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
@@ -159,7 +159,7 @@ def mad_ind(
 
 def mad_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 30,
     offset: int = 0,
     fillna: float | None = None,
@@ -206,5 +206,5 @@ def mad_polars(
     """
     close = df[close_col].to_numpy()
     result = mad_ind(close, length, offset, fillna)
-    out_name = output_col or f'MAD_{length}'
+    out_name = output_col or f"MAD_{length}"
     return pl.Series(out_name, result)

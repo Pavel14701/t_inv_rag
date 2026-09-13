@@ -11,19 +11,16 @@ from ..external import talib, talib_available
 @njit(
     (types.float64[:], types.float64[:], types.float64[:], types.float64[:]),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_3inside_nb(
-    open_: np.ndarray, 
-    high: np.ndarray, 
-    low: np.ndarray, 
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Three Inside pattern.
+    """Numba-accelerated Three Inside pattern.
     Returns float64 array:
-        1.0  → bullish Three Inside Up
-       -1.0  → bearish Three Inside Down
-        0.0  → no pattern.
+        1.0  -> bullish Three Inside Up
+       -1.0  -> bearish Three Inside Down
+        0.0  -> no pattern.
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -38,15 +35,21 @@ def _cdl_3inside_nb(
         o0 = open_[i]
         c0 = close[i]
         # Bullish Three Inside Up
-        if c2 < o2:  # 1st bearish
-            if c1 > o1 and o1 < o2 and c1 > c2:  # 2nd bullish inside 1st
-                if c0 > o0 and c0 > c1:  # 3rd bullish above 2nd close
+        if c2 < o2:
+            # 1st bearish
+            if c1 > o1 and o1 < o2 and c1 > c2:
+                # 2nd bullish inside 1st
+                if c0 > o0 and c0 > c1:
+                    # 3rd bullish above 2nd close
                     out[i] = 1.0
                     continue
         # Bearish Three Inside Down
-        if c2 > o2:  # 1st bullish
-            if c1 < o1 and o1 > c2 and c1 < o2:  # 2nd bearish inside 1st
-                if c0 < o0 and c0 < c1:  # 3rd bearish below 2nd close
+        if c2 > o2:
+            # 1st bullish
+            if c1 < o1 and o1 > c2 and c1 < o2:
+                # 2nd bearish inside 1st
+                if c0 < o0 and c0 < c1:
+                    # 3rd bearish below 2nd close
                     out[i] = -1.0
     return out
 
@@ -93,10 +96,10 @@ def cdl_3inside(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDL3INSIDE(open_, high, low, close)
-        # TA‑Lib returns 100, -100, or 0; convert to -1,0,1
+        # TA-Lib returns 100, -100, or 0; convert to -1,0,1
         result = talib_out.astype(np.float64) / 100.0
         return _apply_offset_fillna(result, offset, fillna)
     # Numba branch
@@ -106,13 +109,13 @@ def cdl_3inside(
 
 def cdl_3inside_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_3INSIDE',
+    output_col: str = "CDL_3INSIDE",
 ) -> pl.DataFrame:
     """Add Three Inside column to Polars DataFrame."""
     out = cdl_3inside(

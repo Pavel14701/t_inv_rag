@@ -58,7 +58,7 @@ def test_supertrend_direction_semantics(df_ohlc: pl.DataFrame) -> None:
     low = df_ohlc["low"].to_numpy()
     close = df_ohlc["close"].to_numpy()
 
-    trend, direction, long_b, short_b = supertrend_numba(
+    _trend, direction, _long_b, _short_b = supertrend_numba(
         high, low, close, length=7
     )
     assert np.isnan(direction[0])
@@ -75,7 +75,7 @@ def test_supertrend_long_short_exclusive(df_ohlc: pl.DataFrame) -> None:
     low = df_ohlc["low"].to_numpy()
     close = df_ohlc["close"].to_numpy()
 
-    trend, direction, long_b, short_b = supertrend_numba(
+    trend, _direction, long_b, short_b = supertrend_numba(
         high, low, close, length=7
     )
     valid = ~np.isnan(trend)
@@ -97,7 +97,7 @@ def test_supertrend_warmup_nan(df_ohlc: pl.DataFrame) -> None:
     close = df_ohlc["close"].to_numpy()
     length = 7
 
-    trend, direction, long, short = supertrend_numba(
+    trend, _direction, _long, _short = supertrend_numba(
         high, low, close, length=length
     )
     assert np.isnan(trend[0])
@@ -118,7 +118,7 @@ def test_supertrend_uptrend_ratchet(df_ohlc: pl.DataFrame) -> None:
     low = df_ohlc["low"].to_numpy()
     close = df_ohlc["close"].to_numpy()
 
-    trend, direction, long_b, short_b = supertrend_numba(
+    trend, direction, _long_b, _short_b = supertrend_numba(
         high, low, close, length=7
     )
     for i in range(2, len(trend)):
@@ -142,7 +142,7 @@ def test_supertrend_matches_manual_recomputation(
     close = df_ohlc["close"].to_numpy()
     length, multiplier = 7, 3.0
 
-    trend, direction, long, short = supertrend_numba(
+    trend, direction, _long, _short = supertrend_numba(
         high, low, close, length=length, multiplier=multiplier
     )
 
@@ -195,8 +195,8 @@ def test_supertrend_backend_parity_tail(df_ohlc: pl.DataFrame) -> None:
     close = df_ohlc["close"].to_numpy()
     length = 7
 
-    t_n, d_n, l_n, s_n = supertrend_numba(high, low, close, length=length)
-    t_t, d_t, l_t, s_t = supertrend_talib(high, low, close, length=length)
+    t_n, d_n, _l_n, _s_n = supertrend_numba(high, low, close, length=length)
+    t_t, d_t, _l_t, _s_t = supertrend_talib(high, low, close, length=length)
 
     tail = slice(3 * length, None)
     assert_allclose(t_n[tail], t_t[tail], rtol=1e-8, atol=1e-8)
@@ -246,7 +246,7 @@ def test_supertrend_non_contiguous_and_readonly(df_ohlc: pl.DataFrame) -> None:
         np.ascontiguousarray(c2),
         length=7,
     )
-    for s, b in zip(strided, contig):
+    for s, b in zip(strided, contig, strict=False):
         assert_allclose(s, b, rtol=0, atol=0)
 
     via_pl = supertrend_ind(
@@ -257,7 +257,7 @@ def test_supertrend_non_contiguous_and_readonly(df_ohlc: pl.DataFrame) -> None:
         use_talib=False,
     )
     base = supertrend_numba(high, low, close, length=7)
-    for b, p in zip(base, via_pl):
+    for b, p in zip(base, via_pl, strict=False):
         assert_allclose(p, b, rtol=0, atol=0)
 
 
@@ -275,7 +275,7 @@ def test_supertrend_offset(df_ohlc: pl.DataFrame) -> None:
 
     base = supertrend_numba(high, low, close, length=7)
     shifted = supertrend_numba(high, low, close, length=7, offset=2)
-    for b, s in zip(base, shifted):
+    for b, s in zip(base, shifted, strict=False):
         assert np.isnan(s[:2]).all()
         assert_allclose(s[2:], b[:-2], rtol=0, atol=0)
 
@@ -292,7 +292,7 @@ def test_supertrend_fillna(df_ohlc: pl.DataFrame) -> None:
         assert not np.isnan(arr).any()
         assert arr[0] == -1.0
     # long stays NaN in downtrends -> also filled
-    trend, direction, long, short = outs
+    _trend, direction, long, _short = outs
     down = direction < 0
     assert (long[down] == -1.0).all()
 
@@ -354,7 +354,7 @@ def test_supertrend_nan_atr_prefix(df_ohlc: pl.DataFrame) -> None:
     low = df_ohlc["low"].to_numpy()
     close = df_ohlc["close"].to_numpy()
 
-    trend, direction, long_b, short_b = supertrend_numba(
+    trend, _direction, _long_b, _short_b = supertrend_numba(
         high, low, close, length=7
     )
     valid = ~np.isnan(trend)

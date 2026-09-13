@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Midpoint indicator – Numba‑accelerated with TA‑Lib fallback.
+"""Midpoint indicator - Numba-accelerated with TA-Lib fallback.
 
 All floating-point operations follow IEEE 754 rules (no fastmath
 optimisations). NaN and infinite values propagate naturally through
-min/max and arithmetic — the Numba core and TA-Lib MIDPOINT agree on
+min/max and arithmetic -- the Numba core and TA-Lib MIDPOINT agree on
 this behaviour (verified by tests).
 """
 
@@ -49,11 +49,11 @@ def midpoint_numba(
     close: np.ndarray,
     length: int = 2,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
     """Midpoint using Numba (raw numpy version)."""
     if length < 1:
-        raise ValueError('MIDPOINT length must be >= 1')
+        raise ValueError("MIDPOINT length must be >= 1")
     close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -62,19 +62,19 @@ def midpoint_numba(
 
 
 # ----------------------------------------------------------------------
-# TA‑Lib wrapper
+# TA-Lib wrapper
 # ----------------------------------------------------------------------
 def midpoint_talib(
     close: np.ndarray,
     length: int = 2,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
-    """Midpoint using TA‑Lib."""
+    """Midpoint using TA-Lib."""
     if not talib_available:
-        raise ImportError('TA‑Lib not available')
+        raise ImportError("TA-Lib not available")
     if length < 1:
-        raise ValueError('MIDPOINT length must be >= 1')
+        raise ValueError("MIDPOINT length must be >= 1")
     close = np.asarray(close, dtype=np.float64)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -90,7 +90,7 @@ def midpoint_ind(
     length: int = 2,
     offset: int = 0,
     fillna: Optional[float] = None,
-    use_talib: bool = True
+    use_talib: bool = True,
 ) -> np.ndarray:
     """Universal Midpoint with backend selection.
 
@@ -105,7 +105,7 @@ def midpoint_ind(
     fillna : float, optional
         Value to fill NaNs.
     use_talib : bool
-        Use TA‑Lib if available.
+        Use TA-Lib if available.
 
     Returns
     -------
@@ -126,12 +126,12 @@ def midpoint_ind(
 # ----------------------------------------------------------------------
 def midpoint_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 2,
     offset: int = 0,
     fillna: Optional[float] = None,
     use_talib: bool = True,
-    output_col: Optional[str] = None
+    output_col: Optional[str] = None,
 ) -> pl.DataFrame:
     """Add Midpoint column to Polars DataFrame.
 
@@ -148,7 +148,7 @@ def midpoint_polars(
     fillna : float, optional
         Value to fill NaNs.
     use_talib : bool
-        Use TA‑Lib if available.
+        Use TA-Lib if available.
     output_col : str, optional
         Output column name (default f"MIDPOINT_{length}").
 
@@ -160,5 +160,5 @@ def midpoint_polars(
     """
     close = df[close_col].to_numpy()
     result = midpoint_ind(close, length, offset, fillna, use_talib)
-    out_name = output_col or f'MIDPOINT_{length}'
+    out_name = output_col or f"MIDPOINT_{length}"
     return df.with_columns([pl.Series(out_name, result)])

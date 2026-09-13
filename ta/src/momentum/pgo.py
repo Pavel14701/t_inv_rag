@@ -14,6 +14,7 @@ IEEE 754 notes
 - a fully flat window (``HH == LL``) is undefined: the result is NaN
   (explicit rule, wins over ``x/0`` -> +/-Inf).
 """
+
 import numpy as np
 import polars as pl
 
@@ -47,6 +48,11 @@ def pgo_numpy(
     use_talib : bool
         Prefer TA-Lib for the inner EMA when available.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     np.ndarray
@@ -59,7 +65,7 @@ def pgo_numpy(
 
     """
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
@@ -75,15 +81,15 @@ def pgo_numpy(
     if not low.flags.c_contiguous:
         low = np.ascontiguousarray(low)
     ema = ema_ind(
-        close, length=length, use_talib=use_talib, nan_policy='ignore'
+        close, length=length, use_talib=use_talib, nan_policy="ignore"
     )
     highest = _rolling_max_numba(high, length)
     lowest = _rolling_min_numba(low, length)
     denom = highest - lowest
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         result = (close - ema) / denom
     # Flat window: range is zero, the ratio is undefined.
-    result = np.where(denom == 0.0, np.nan, result)
+    result = np.where(denom == 0.0, np.nan, result)  # noqa: RUF069 - exact IEEE zero/sign check
     return _apply_offset_fillna(result, offset, fillna)
 
 
@@ -104,16 +110,21 @@ def pgo_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return pgo_numpy(
-        high, low, close,
-        length=length, offset=offset, fillna=fillna, use_talib=use_talib,
+        high,
+        low,
+        close,
+        length=length,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
 
 
 def pgo_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     length: int = 14,
     offset: int = 0,
     fillna: float | None = None,
@@ -128,8 +139,13 @@ def pgo_polars(
     low = df[low_col].cast(pl.Float64).to_numpy()
     close = df[close_col].cast(pl.Float64).to_numpy()
     result = pgo_numpy(
-        high, low, close,
-        length=length, offset=offset, fillna=fillna, use_talib=use_talib,
+        high,
+        low,
+        close,
+        length=length,
+        offset=offset,
+        fillna=fillna,
+        use_talib=use_talib,
     )
-    out_name = output_col or f'PGO_{length}'
+    out_name = output_col or f"PGO_{length}"
     return df.with_columns(pl.Series(out_name, result))

@@ -121,7 +121,7 @@ def fwma_numba(
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Fibonacci Weighted Moving Average
     using Numba (fallback/primary backend).
@@ -163,11 +163,11 @@ def fwma_numba(
 
     """
     if length < 1:
-        raise ValueError('FWMA length must be >= 1')
+        raise ValueError("FWMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     weights = _get_fib_weights(length, asc)
@@ -184,7 +184,7 @@ def fwma_ind(
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal FWMA (always uses Numba, no TA-Lib equivalent).
 
@@ -225,12 +225,12 @@ def fwma_ind(
 # ----------------------------------------------------------------------
 def fwma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     asc: bool = True,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add FWMA column to a Polars DataFrame.
@@ -274,5 +274,5 @@ def fwma_polars(
         fillna=fillna,
         nan_policy=nan_policy,
     )
-    out_name = output_col or f'FWMA_{length}'
+    out_name = output_col or f"FWMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

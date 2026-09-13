@@ -42,7 +42,7 @@ def _hilo_reference(
     mamode: str,
 ) -> tuple[
     npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]
-]:  # noqa: E501
+]:
     """Pure Python reference HiLo Activator (uses ma_numba for consistency)."""
     n = len(close)
     hilo = np.full(n, np.nan, dtype=np.float64)
@@ -112,36 +112,40 @@ def test_hilo_core_against_reference(
 # Tests for _hilo_numba (full Numba version)
 # -----------------------------------------------------------------------------
 @pytest.mark.overlap
+@pytest.mark.parametrize(
+    "mamode", ["sma", "ema"], ids=["mamode-sma", "mamode-ema"]
+)
 def test_hilo_numba_against_reference(
     prices_random_walk: npt.NDArray[np.float64],
+    mamode: str,
 ) -> None:
+    """Numba implementation must match the pure-Python reference."""
     np.random.seed(42)
     n = len(prices_random_walk)
     high = prices_random_walk + np.random.randn(n) * 0.5
     low = prices_random_walk - np.random.randn(n) * 0.5
     close = prices_random_walk + np.random.randn(n) * 0.2
-    for mamode in ("sma", "ema"):
-        hilo_nb, long_nb, short_nb = _hilo_numba(
-            high,
-            low,
-            close,
-            high_length=5,
-            low_length=10,
-            mamode=mamode,
-            offset=0,
-            fillna=None,
-        )
-        hilo_ref, long_ref, short_ref = _hilo_reference(
-            high,
-            low,
-            close,
-            high_length=5,
-            low_length=10,
-            mamode=mamode,
-        )
-        assert_allclose(hilo_nb, hilo_ref, rtol=1e-6, equal_nan=True)
-        assert_allclose(long_nb, long_ref, rtol=1e-6, equal_nan=True)
-        assert_allclose(short_nb, short_ref, rtol=1e-6, equal_nan=True)
+    hilo_nb, long_nb, short_nb = _hilo_numba(
+        high,
+        low,
+        close,
+        high_length=5,
+        low_length=10,
+        mamode=mamode,
+        offset=0,
+        fillna=None,
+    )
+    hilo_ref, long_ref, short_ref = _hilo_reference(
+        high,
+        low,
+        close,
+        high_length=5,
+        low_length=10,
+        mamode=mamode,
+    )
+    assert_allclose(hilo_nb, hilo_ref, rtol=1e-6, equal_nan=True)
+    assert_allclose(long_nb, long_ref, rtol=1e-6, equal_nan=True)
+    assert_allclose(short_nb, short_ref, rtol=1e-6, equal_nan=True)
 
 
 @pytest.mark.overlap
@@ -482,7 +486,7 @@ def test_hilo_polars_ema_mode(df_random_walk: pl.DataFrame) -> None:
     high_arr = df["high"].to_numpy()
     low_arr = df["low"].to_numpy()
     close_arr = df["close"].to_numpy()
-    hilo_np, long_np, short_np = _hilo_numba(
+    hilo_np, _long_np, _short_np = _hilo_numba(
         high_arr,
         low_arr,
         close_arr,
@@ -504,7 +508,7 @@ def test_hilo_numba_with_nan(prices_with_nan):
     high = prices_with_nan + 1.0
     low = prices_with_nan - 1.0
     close = prices_with_nan
-    hilo, long_, short_ = _hilo_numba(
+    hilo, _, _ = _hilo_numba(
         high,
         low,
         close,
@@ -522,7 +526,7 @@ def test_hilo_numba_with_inf(prices_with_inf):
     high = prices_with_inf + 1.0
     low = prices_with_inf - 1.0
     close = prices_with_inf
-    hilo, long_, short_ = _hilo_numba(
+    hilo, _, _ = _hilo_numba(
         high,
         low,
         close,
@@ -575,7 +579,7 @@ def test_hilo_numba_extreme_values(prices_extreme):
     high = prices_extreme
     low = prices_extreme
     close = prices_extreme
-    hilo, long_, short_ = _hilo_numba(
+    hilo, _, _ = _hilo_numba(
         high,
         low,
         close,

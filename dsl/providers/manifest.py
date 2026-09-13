@@ -5,10 +5,10 @@ from typing import Any
 
 
 __all__ = (
-    'IndicatorSchema',
-    'Manifest',
-    'ManifestValidator',
-    'ParameterSchema'
+    "IndicatorSchema",
+    "Manifest",
+    "ManifestValidator",
+    "ParameterSchema",
 )
 
 
@@ -24,7 +24,7 @@ class ParameterSchema:
 
     """
 
-    type: str = 'any'
+    type: str = "any"
     default: Any | None = None
     min: float | None = None
     max: float | None = None
@@ -62,25 +62,27 @@ class Manifest:
             A dict with 'indicators' key containing full schemas.
 
         """
-        result: dict[str, Any] = {'indicators': {}}
+        result: dict[str, Any] = {"indicators": {}}
         for name, schema in self.indicators.items():
-            result['indicators'][name] = {
-                'parameters': {},
-                'attributes': schema.attributes,
+            result["indicators"][name] = {
+                "parameters": {},
+                "attributes": schema.attributes,
             }
             for param_name, param_schema in schema.parameters.items():
-                param_dict: dict[str, Any] = {'type': param_schema.type}
+                param_dict: dict[str, Any] = {"type": param_schema.type}
                 if param_schema.default is not None:
-                    param_dict['default'] = param_schema.default
+                    param_dict["default"] = param_schema.default
                 if param_schema.min is not None:
-                    param_dict['min'] = param_schema.min
+                    param_dict["min"] = param_schema.min
                 if param_schema.max is not None:
-                    param_dict['max'] = param_schema.max
-                result['indicators'][name]['parameters'][param_name] = param_dict  # noqa: E501
+                    param_dict["max"] = param_schema.max
+                result["indicators"][name]["parameters"][param_name] = (
+                    param_dict
+                )
         return result
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> 'Manifest':
+    def from_dict(cls, data: dict[str, Any]) -> "Manifest":
         """Reconstruct a Manifest from a dictionary.
 
         Args:
@@ -91,21 +93,21 @@ class Manifest:
 
         """
         indicators: dict[str, IndicatorSchema] = {}
-        for name, schema_data in data.get('indicators', {}).items():
+        for name, schema_data in data.get("indicators", {}).items():
             parameters: dict[str, ParameterSchema] = {
                 param_name: ParameterSchema(
-                    type=param_data.get('type', 'any'),
-                    default=param_data.get('default'),
-                    min=param_data.get('min'),
-                    max=param_data.get('max'),
+                    type=param_data.get("type", "any"),
+                    default=param_data.get("default"),
+                    min=param_data.get("min"),
+                    max=param_data.get("max"),
                 )
                 for param_name, param_data in schema_data.get(
-                    'parameters', {}
+                    "parameters", {}
                 ).items()
             }
             indicators[name] = IndicatorSchema(
                 parameters=parameters,
-                attributes=schema_data.get('attributes', []),
+                attributes=schema_data.get("attributes", []),
             )
         return cls(indicators=indicators)
 
@@ -118,9 +120,7 @@ class ManifestValidator:
     """
 
     def __init__(
-        self,
-        manifest: Manifest,
-        allow_undefined: bool = False
+        self, manifest: Manifest, allow_undefined: bool = False
     ) -> None:
         """Initialize with a manifest.
 
@@ -145,9 +145,7 @@ class ManifestValidator:
         return attribute in schema.attributes
 
     def validate_attributes(
-        self,
-        indicator: str,
-        attributes: list[str]
+        self, indicator: str, attributes: list[str]
     ) -> bool:
         """Check if all given attributes exist for the indicator.
 
@@ -168,10 +166,7 @@ class ManifestValidator:
         return all(attr in valid_attrs for attr in attributes)
 
     def validate_parameter(
-        self,
-        indicator: str,
-        param_name: str,
-        value: Any
+        self, indicator: str, param_name: str, value: Any
     ) -> bool:
         """Validate a single parameter against the manifest schema.
 
@@ -188,9 +183,9 @@ class ManifestValidator:
             # Strict by default: unknown parameters are not allowed.
             return self.allow_undefined
         # Type checks
-        if param_schema.type == 'integer' and not isinstance(value, int):
+        if param_schema.type == "integer" and not isinstance(value, int):
             return False
-        if param_schema.type == 'float' and not isinstance(
+        if param_schema.type == "float" and not isinstance(
             value, (int, float)
         ):
             return False
@@ -221,7 +216,7 @@ class ManifestValidator:
         """
         errors: list[str] = []
         if not self.validate_indicator(indicator):
-            errors.append(f'Unknown indicator: {indicator}')
+            errors.append(f"Unknown indicator: {indicator}")
             return errors
         # schema variable is kept for future extensibility
         schema = self.manifest.indicators[indicator]  # noqa: F841
@@ -232,6 +227,6 @@ class ManifestValidator:
         )
         if not self.validate_attributes(indicator, attributes):
             errors.append(
-                f'Invalid attribute path for {indicator}: {attributes}'
+                f"Invalid attribute path for {indicator}: {attributes}"
             )
         return errors

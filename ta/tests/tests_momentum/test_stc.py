@@ -67,7 +67,7 @@ def test_stc_matches_reference(prices_random_walk) -> None:
     close = np.ascontiguousarray(prices_random_walk)
     expected = _stc_reference(close)
     result = stc_numpy(close)
-    for res, exp in zip(result, expected):
+    for res, exp in zip(result, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-10, equal_nan=True)
 
 
@@ -150,7 +150,7 @@ def test_stc_offset_fillna(prices_random_walk) -> None:
     close = np.ascontiguousarray(prices_random_walk)
     base = stc_numpy(close)
     shifted = stc_numpy(close, offset=2, fillna=50.0)
-    for res, exp in zip(shifted, base):
+    for res, exp in zip(shifted, base, strict=False):
         # fillna replaces both shifted-in positions and warm-up NaNs.
         expected = np.where(np.isnan(exp), 50.0, exp)
         assert np.all(res[:2] == 50.0)
@@ -163,9 +163,9 @@ def test_stc_ind_numpy_and_series(prices_random_walk) -> None:
     expected = stc_numpy(close)
     from_arrays = stc_ind(close)
     from_series = stc_ind(pl.Series(close))
-    for res, exp in zip(from_arrays, expected):
+    for res, exp in zip(from_arrays, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
-    for res, exp in zip(from_series, expected):
+    for res, exp in zip(from_series, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 
@@ -190,5 +190,5 @@ def test_stc_readonly_input(prices_random_walk) -> None:
     arr = prices_random_walk.copy()
     arr.setflags(write=False)
     expected = stc_numpy(prices_random_walk)
-    for res, exp in zip(stc_numpy(arr), expected):
+    for res, exp in zip(stc_numpy(arr), expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)

@@ -149,7 +149,7 @@ def test_rwi_ind_with_pl_series(
 ) -> None:
     """Test rwi_ind with Polars Series input."""
     high, low, close = _ohlc_arrays(prices_random_walk)
-    rwi_high, rwi_low = rwi_ind(
+    rwi_high, _rwi_low = rwi_ind(
         pl.Series(high),
         pl.Series(low),
         pl.Series(close),

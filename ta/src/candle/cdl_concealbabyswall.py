@@ -9,23 +9,34 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_concealbabyswall_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
     """Optimized Concealing Baby Swallow pattern.
 
     Returns:
-        1.0 → bullish concealing baby swallow
-        0.0 → none
+        1.0 -> bullish concealing baby swallow
+        0.0 -> none
 
     """
     n = len(open_)
@@ -99,10 +110,12 @@ def _cdl_concealbabyswall_nb(
             lo0 = c0 if o0 > c0 else o0
             sh0 = (h0 - up0) + (lo0 - l0)
 
-            if (sh3 > max_shadow_factor * r3 or
-                sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh3 > max_shadow_factor * r3
+                or sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = 1.0
@@ -111,7 +124,10 @@ def _cdl_concealbabyswall_nb(
 
 
 def cdl_concealbabyswall(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -125,11 +141,15 @@ def cdl_concealbabyswall(
     TA-Lib has only bullish variant; symmetric flag is kept for API consistency
     but does not enable a bearish mirror.
     """
-    # Polars → NumPy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Polars -> NumPy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -160,27 +180,33 @@ def cdl_concealbabyswall(
 
     # Numba branch
     out = _cdl_concealbabyswall_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_concealbabyswall_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.5,
     max_shadow_factor=0.3,
-    output_col='CDL_CONCEALBABYSWALL',
+    output_col="CDL_CONCEALBABYSWALL",
 ):
+    """See module docs."""
     out = cdl_concealbabyswall(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

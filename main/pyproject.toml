@@ -5,6 +5,7 @@ description = "Service entry point: white API bridge, DI (dishka), queues (TZ-09
 requires-python = ">=3.12"
 dependencies = [
     "aiogram>=3.29.1",
+    "msgspec>=0.19",
     "alembic>=1.18.5",
     "dishka>=1.10.1",
     "faststream[rabbit]>=0.7.1",

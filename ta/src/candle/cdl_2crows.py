@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_2crows_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Two Crows pattern.
+    """Numba-accelerated Two Crows pattern.
     Returns boolean mask where pattern completes (True at the third candle).
     """
     n = len(open_)
@@ -96,10 +90,10 @@ def cdl_2crows(
     if not close.flags.writeable:
         close = close.copy()
 
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDL2CROWS(open_, high, low, close)
-        # Convert to binary mask (TA‑Lib returns 0 or -100)
+        # Convert to binary mask (TA-Lib returns 0 or -100)
         talib_out = (talib_out != 0).astype(np.float64)
         return _apply_offset_fillna(talib_out, offset, fillna)
 
@@ -111,13 +105,13 @@ def cdl_2crows(
 
 def cdl_2crows_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_2CROWS',
+    output_col: str = "CDL_2CROWS",
 ) -> pl.DataFrame:
     """Add Two Crows column to Polars DataFrame."""
     out = cdl_2crows(

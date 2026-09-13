@@ -57,7 +57,7 @@ class Interpreter:
         >>> ctx = Context([...])
         >>> interp = Interpreter(ctx)
         >>> ast = parse("close > 100")
-        >>> result = interp.visit(ast)          # synchronous
+        >>> result = interp.visit(ast)  # synchronous
         >>> result_async = await interp.visit_async(ast)  # asynchronous
 
     """
@@ -120,22 +120,20 @@ class Interpreter:
         """
         match node:
             case Number(value=val):
-                return val != 0.0
+                return val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Var(name=name):
                 return self._get_local_as_bool(name)
             case IndicatorAccess(indicator=ind, attributes=attrs):
                 if ind in self._locals:
                     return self._get_local_as_bool(ind)
                 val = self.context.get_value(ind, {}, attrs, 0)
-                return val != 0.0
+                return val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case IndicatorWithParams(
-                indicator=ind,
-                params=params,
-                attributes=attrs
+                indicator=ind, params=params, attributes=attrs
             ):
                 eval_params = self._eval_params_sync(params)
                 val = self.context.get_value(ind, eval_params, attrs, 0)
-                return val != 0.0
+                return val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Comparison(operator=op, left=left, right=right):
                 left_val = self._eval_arith_sync(left)
                 right_val = self._eval_arith_sync(right)
@@ -144,12 +142,12 @@ class Interpreter:
                 return self._eval_multi_comp_sync(ops, operands)
             case LogicalBinOp(operator=op, left=left, right=right):
                 left_bool = self._visit_sync(left)
-                if op == 'and':
+                if op == "and":
                     return left_bool and self._visit_sync(right)
-                elif op == 'or':
+                elif op == "or":
                     return left_bool or self._visit_sync(right)
                 else:
-                    raise EvaluationError(f'Unknown logical operator: {op}')
+                    raise EvaluationError(f"Unknown logical operator: {op}")
             case LogicalNot(operand=operand):
                 return not self._visit_sync(operand)
             case Let(var=name, value=value, body=body):
@@ -170,49 +168,49 @@ class Interpreter:
                 return result
             case HistoricalAccess(expr=expr, offset=offset):
                 val = self._visit_historical_sync(expr, offset)
-                return val != 0.0
+                return val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Rising(expr=expr, n=n):
                 return self._visit_rising_sync(expr, n)
             case Falling(expr=expr, n=n):
                 return self._visit_falling_sync(expr, n)
             case Add(left=left, right=right):
                 return (
-                    self._eval_arith_sync(left)
+                    self._eval_arith_sync(left)  # noqa: RUF069 - exact IEEE zero/sign check
                     + self._eval_arith_sync(right)
                     != 0.0
                 )
             case Sub(left=left, right=right):
                 return (
-                    self._eval_arith_sync(left)
+                    self._eval_arith_sync(left)  # noqa: RUF069 - exact IEEE zero/sign check
                     - self._eval_arith_sync(right)
                     != 0.0
                 )
             case Mul(left=left, right=right):
                 return (
-                    self._eval_arith_sync(left)
+                    self._eval_arith_sync(left)  # noqa: RUF069 - exact IEEE zero/sign check
                     * self._eval_arith_sync(right)
                     != 0.0
                 )
             case Div(left=left, right=right):
                 right_val = self._eval_arith_sync(right)
                 if right_val == 0:
-                    raise EvaluationError('Division by zero')
-                return self._eval_arith_sync(left) / right_val != 0.0
+                    raise EvaluationError("Division by zero")
+                return self._eval_arith_sync(left) / right_val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Mod(left=left, right=right):
                 right_val = self._eval_arith_sync(right)
                 if right_val == 0:
-                    raise EvaluationError('Modulo by zero')
-                return self._eval_arith_sync(left) % right_val != 0.0
+                    raise EvaluationError("Modulo by zero")
+                return self._eval_arith_sync(left) % right_val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Pow(left=left, right=right):
                 return (
-                    self._eval_arith_sync(left)
+                    self._eval_arith_sync(left)  # noqa: RUF069 - exact IEEE zero/sign check
                     ** self._eval_arith_sync(right)
                     != 0.0
                 )
             case UnaryMinus(operand=operand):
-                return -self._eval_arith_sync(operand) != 0.0
+                return -self._eval_arith_sync(operand) != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case _:
-                raise EvaluationError(f'Unknown AST node: {type(node)}')
+                raise EvaluationError(f"Unknown AST node: {type(node)}")
 
     # ---------- Asynchronous evaluation ----------
 
@@ -261,24 +259,22 @@ class Interpreter:
         """
         match node:
             case Number(value=val):
-                return val != 0.0
+                return val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Var(name=name):
                 return self._get_local_as_bool(name)
             case IndicatorAccess(indicator=ind, attributes=attrs):
                 if ind in self._locals:
                     return self._get_local_as_bool(ind)
                 val = await self.context.get_value_async(ind, {}, attrs, 0)
-                return val != 0.0
+                return val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case IndicatorWithParams(
-                indicator=ind,
-                params=params,
-                attributes=attrs
+                indicator=ind, params=params, attributes=attrs
             ):
                 eval_params = await self._eval_params_async(params)
                 val = await self.context.get_value_async(
                     ind, eval_params, attrs, 0
                 )
-                return val != 0.0
+                return val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Comparison(operator=op, left=left, right=right):
                 left_val = await self._eval_arith_async(left)
                 right_val = await self._eval_arith_async(right)
@@ -287,12 +283,12 @@ class Interpreter:
                 return await self._eval_multi_comp_async(ops, operands)
             case LogicalBinOp(operator=op, left=left, right=right):
                 left_bool = await self._visit_async(left)
-                if op == 'and':
+                if op == "and":
                     return left_bool and await self._visit_async(right)
-                elif op == 'or':
+                elif op == "or":
                     return left_bool or await self._visit_async(right)
                 else:
-                    raise EvaluationError(f'Unknown logical operator: {op}')
+                    raise EvaluationError(f"Unknown logical operator: {op}")
             case LogicalNot(operand=operand):
                 return not await self._visit_async(operand)
             case Let(var=name, value=value, body=body):
@@ -312,45 +308,45 @@ class Interpreter:
                 return result
             case HistoricalAccess(expr=expr, offset=offset):
                 val = await self._visit_historical_async(expr, offset)
-                return val != 0.0
+                return val != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Rising(expr=expr, n=n):
                 return await self._visit_rising_async(expr, n)
             case Falling(expr=expr, n=n):
                 return await self._visit_falling_async(expr, n)
             case Add(left=left, right=right):
                 return (
-                    await self._eval_arith_async(left)
+                    await self._eval_arith_async(left)  # noqa: RUF069 - exact IEEE zero/sign check
                     + await self._eval_arith_async(right)
                 ) != 0.0
             case Sub(left=left, right=right):
                 return (
-                    await self._eval_arith_async(left)
+                    await self._eval_arith_async(left)  # noqa: RUF069 - exact IEEE zero/sign check
                     - await self._eval_arith_async(right)
                 ) != 0.0
             case Mul(left=left, right=right):
                 return (
-                    await self._eval_arith_async(left)
+                    await self._eval_arith_async(left)  # noqa: RUF069 - exact IEEE zero/sign check
                     * await self._eval_arith_async(right)
                 ) != 0.0
             case Div(left=left, right=right):
                 right_val = await self._eval_arith_async(right)
                 if right_val == 0:
-                    raise EvaluationError('Division by zero')
-                return (await self._eval_arith_async(left) / right_val) != 0.0
+                    raise EvaluationError("Division by zero")
+                return (await self._eval_arith_async(left) / right_val) != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Mod(left=left, right=right):
                 right_val = await self._eval_arith_async(right)
                 if right_val == 0:
-                    raise EvaluationError('Modulo by zero')
-                return (await self._eval_arith_async(left) % right_val) != 0.0
+                    raise EvaluationError("Modulo by zero")
+                return (await self._eval_arith_async(left) % right_val) != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case Pow(left=left, right=right):
                 return (
-                    (await self._eval_arith_async(left))
+                    (await self._eval_arith_async(left))  # noqa: RUF069 - exact IEEE zero/sign check
                     ** (await self._eval_arith_async(right))
                 ) != 0.0
             case UnaryMinus(operand=operand):
-                return -(await self._eval_arith_async(operand)) != 0.0
+                return -(await self._eval_arith_async(operand)) != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
             case _:
-                raise EvaluationError(f'Unknown AST node: {type(node)}')
+                raise EvaluationError(f"Unknown AST node: {type(node)}")
 
     # ---------- Arithmetic evaluation (synchronous) ----------
 
@@ -384,49 +380,43 @@ class Interpreter:
                     return self._get_local_as_number(ind)
                 return self.context.get_value(ind, {}, attrs, 0)
             case IndicatorWithParams(
-                indicator=ind,
-                params=params,
-                attributes=attrs
+                indicator=ind, params=params, attributes=attrs
             ):
                 eval_params = self._eval_params_sync(params)
                 return self.context.get_value(ind, eval_params, attrs, 0)
             case HistoricalAccess(expr=expr, offset=offset):
                 return self._visit_historical_sync(expr, offset)
             case Add(left=left, right=right):
-                return (
-                    self._eval_arith_sync(left)
-                    + self._eval_arith_sync(right)
+                return self._eval_arith_sync(left) + self._eval_arith_sync(
+                    right
                 )
             case Sub(left=left, right=right):
-                return (
-                    self._eval_arith_sync(left)
-                    - self._eval_arith_sync(right)
+                return self._eval_arith_sync(left) - self._eval_arith_sync(
+                    right
                 )
             case Mul(left=left, right=right):
-                return (
-                    self._eval_arith_sync(left)
-                    * self._eval_arith_sync(right)
+                return self._eval_arith_sync(left) * self._eval_arith_sync(
+                    right
                 )
             case Div(left=left, right=right):
                 right_val = self._eval_arith_sync(right)
                 if right_val == 0:
-                    raise EvaluationError('Division by zero')
+                    raise EvaluationError("Division by zero")
                 return self._eval_arith_sync(left) / right_val
             case Mod(left=left, right=right):
                 right_val = self._eval_arith_sync(right)
                 if right_val == 0:
-                    raise EvaluationError('Modulo by zero')
+                    raise EvaluationError("Modulo by zero")
                 return self._eval_arith_sync(left) % right_val
             case Pow(left=left, right=right):
-                return (
-                    self._eval_arith_sync(left)
-                    ** self._eval_arith_sync(right)
+                return self._eval_arith_sync(left) ** self._eval_arith_sync(
+                    right
                 )
             case UnaryMinus(operand=operand):
                 return -self._eval_arith_sync(operand)
             case _:
                 raise EvaluationError(
-                    f'Cannot evaluate {type(node)} as number'
+                    f"Cannot evaluate {type(node)} as number"
                 )
 
     def _eval_params_sync(self, params: dict[str, ASTNode]) -> dict[str, Any]:
@@ -443,8 +433,7 @@ class Interpreter:
 
         """
         return {
-            key: self._eval_arith_sync(node)
-            for key, node in params.items()
+            key: self._eval_arith_sync(node) for key, node in params.items()
         }
 
     # ---------- Arithmetic evaluation (asynchronous) ----------
@@ -476,9 +465,7 @@ class Interpreter:
                     return self._get_local_as_number(ind)
                 return await self.context.get_value_async(ind, {}, attrs, 0)
             case IndicatorWithParams(
-                indicator=ind,
-                params=params,
-                attributes=attrs
+                indicator=ind, params=params, attributes=attrs
             ):
                 eval_params = await self._eval_params_async(params)
                 return await self.context.get_value_async(
@@ -487,37 +474,40 @@ class Interpreter:
             case HistoricalAccess(expr=expr, offset=offset):
                 return await self._visit_historical_async(expr, offset)
             case Add(left=left, right=right):
-                return (await self._eval_arith_async(left)
-                        + await self._eval_arith_async(right))
+                return await self._eval_arith_async(
+                    left
+                ) + await self._eval_arith_async(right)
             case Sub(left=left, right=right):
-                return (await self._eval_arith_async(left)
-                        - await self._eval_arith_async(right))
+                return await self._eval_arith_async(
+                    left
+                ) - await self._eval_arith_async(right)
             case Mul(left=left, right=right):
-                return (await self._eval_arith_async(left)
-                        * await self._eval_arith_async(right))
+                return await self._eval_arith_async(
+                    left
+                ) * await self._eval_arith_async(right)
             case Div(left=left, right=right):
                 right_val = await self._eval_arith_async(right)
                 if right_val == 0:
-                    raise EvaluationError('Division by zero')
+                    raise EvaluationError("Division by zero")
                 return (await self._eval_arith_async(left)) / right_val
             case Mod(left=left, right=right):
                 right_val = await self._eval_arith_async(right)
                 if right_val == 0:
-                    raise EvaluationError('Modulo by zero')
+                    raise EvaluationError("Modulo by zero")
                 return (await self._eval_arith_async(left)) % right_val
             case Pow(left=left, right=right):
-                return ((await self._eval_arith_async(left))
-                        ** (await self._eval_arith_async(right)))
+                return (await self._eval_arith_async(left)) ** (
+                    await self._eval_arith_async(right)
+                )
             case UnaryMinus(operand=operand):
                 return -(await self._eval_arith_async(operand))
             case _:
                 raise EvaluationError(
-                    f'Cannot evaluate {type(node)} as number'
+                    f"Cannot evaluate {type(node)} as number"
                 )
 
     async def _eval_params_async(
-        self,
-        params: dict[str, ASTNode]
+        self, params: dict[str, ASTNode]
     ) -> dict[str, Any]:
         """Evaluate all parameter expressions to numeric values asynchronously.
 
@@ -539,7 +529,7 @@ class Interpreter:
         """Retrieve a local variable's value as a boolean.
 
         This method handles conversion of numeric values to booleans
-        (non-zero → True, zero → False). If the variable is already boolean,
+        (non-zero -> True, zero -> False). If the variable is already boolean,
         it returns it as-is.
 
         Args:
@@ -554,14 +544,14 @@ class Interpreter:
 
         """
         if name not in self._locals:
-            raise EvaluationError(f'Undefined variable: {name}')
+            raise EvaluationError(f"Undefined variable: {name}")
         value = self._locals[name]
         if isinstance(value, bool):
             return value
         if isinstance(value, (int, float)):
-            return value != 0.0
+            return value != 0.0  # noqa: RUF069 - exact IEEE zero/sign check
         raise EvaluationError(
-            f'Variable {name} is not boolean or numeric: {type(value)}'
+            f"Variable {name} is not boolean or numeric: {type(value)}"
         )
 
     def _get_local_as_number(self, name: str) -> float:
@@ -581,13 +571,13 @@ class Interpreter:
 
         """
         if name not in self._locals:
-            raise EvaluationError(f'Undefined variable: {name}')
+            raise EvaluationError(f"Undefined variable: {name}")
         value = self._locals[name]
         if isinstance(value, (int, float)):
             return float(value)
         if isinstance(value, bool):
             return 1.0 if value else 0.0
-        raise EvaluationError(f'Variable {name} is not numeric: {type(value)}')
+        raise EvaluationError(f"Variable {name} is not numeric: {type(value)}")
 
     # ---------- Comparison utilities ----------
 
@@ -606,25 +596,23 @@ class Interpreter:
             EvaluationError: If the operator is unknown.
 
         """
-        if op == '<':
+        if op == "<":
             return left < right
-        elif op == '>':
+        elif op == ">":
             return left > right
-        elif op == '<=':
+        elif op == "<=":
             return left <= right
-        elif op == '>=':
+        elif op == ">=":
             return left >= right
-        elif op == '==':
+        elif op == "==":
             return left == right
-        elif op == '!=':
+        elif op == "!=":
             return left != right
         else:
-            raise EvaluationError(f'Unknown comparison operator: {op}')
+            raise EvaluationError(f"Unknown comparison operator: {op}")
 
     def _eval_multi_comp_sync(
-        self,
-        ops: list[str],
-        operands: list[ASTNode]
+        self, ops: list[str], operands: list[ASTNode]
     ) -> bool:
         """Evaluate a chained comparison synchronously (e.g., a < b <= c).
 
@@ -647,9 +635,7 @@ class Interpreter:
         return True
 
     async def _eval_multi_comp_async(
-        self,
-        ops: list[str],
-        operands: list[ASTNode]
+        self, ops: list[str], operands: list[ASTNode]
     ) -> bool:
         """Evaluate a chained comparison asynchronously.
 
@@ -691,28 +677,20 @@ class Interpreter:
         """
         if isinstance(expr, IndicatorAccess):
             return self.context.get_value(
-                expr.indicator,
-                {},
-                expr.attributes,
-                offset
+                expr.indicator, {}, expr.attributes, offset
             )
         elif isinstance(expr, IndicatorWithParams):
             params = self._eval_params_sync(expr.params)
             return self.context.get_value(
-                expr.indicator,
-                params,
-                expr.attributes,
-                offset
+                expr.indicator, params, expr.attributes, offset
             )
         else:
             raise EvaluationError(
-                f'HistoricalAccess expects indicator, got {type(expr)}'
+                f"HistoricalAccess expects indicator, got {type(expr)}"
             )
 
     async def _visit_historical_async(
-        self,
-        expr: ASTNode,
-        offset: int
+        self, expr: ASTNode, offset: int
     ) -> float:
         """Evaluate a historical access asynchronously.
 
@@ -729,22 +707,16 @@ class Interpreter:
         """
         if isinstance(expr, IndicatorAccess):
             return await self.context.get_value_async(
-                expr.indicator,
-                {},
-                expr.attributes,
-                offset
+                expr.indicator, {}, expr.attributes, offset
             )
         elif isinstance(expr, IndicatorWithParams):
             params = await self._eval_params_async(expr.params)
             return await self.context.get_value_async(
-                expr.indicator,
-                params,
-                expr.attributes,
-                offset
+                expr.indicator, params, expr.attributes, offset
             )
         else:
             raise EvaluationError(
-                f'HistoricalAccess expects indicator, got {type(expr)}'
+                f"HistoricalAccess expects indicator, got {type(expr)}"
             )
 
     # ---------- Rising / Falling ----------
@@ -767,7 +739,7 @@ class Interpreter:
 
         """
         if not isinstance(expr, (IndicatorAccess, IndicatorWithParams)):
-            raise EvaluationError('rising() expects an indicator expression')
+            raise EvaluationError("rising() expects an indicator expression")
         if isinstance(expr, IndicatorAccess):
             params = {}
         else:
@@ -792,7 +764,7 @@ class Interpreter:
 
         """
         if not isinstance(expr, (IndicatorAccess, IndicatorWithParams)):
-            raise EvaluationError('rising() expects an indicator expression')
+            raise EvaluationError("rising() expects an indicator expression")
         if isinstance(expr, IndicatorAccess):
             params = {}
         else:
@@ -819,7 +791,7 @@ class Interpreter:
 
         """
         if not isinstance(expr, (IndicatorAccess, IndicatorWithParams)):
-            raise EvaluationError('falling() expects an indicator expression')
+            raise EvaluationError("falling() expects an indicator expression")
         if isinstance(expr, IndicatorAccess):
             params = {}
         else:
@@ -844,7 +816,7 @@ class Interpreter:
 
         """
         if not isinstance(expr, (IndicatorAccess, IndicatorWithParams)):
-            raise EvaluationError('falling() expects an indicator expression')
+            raise EvaluationError("falling() expects an indicator expression")
         if isinstance(expr, IndicatorAccess):
             params = {}
         else:

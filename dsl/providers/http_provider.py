@@ -27,10 +27,7 @@ class HTTPProvider(IndicatorProvider):
     """
 
     def __init__(
-        self,
-        base_url: str,
-        timeout: float = 5.0,
-        http_version: str = 'h2'
+        self, base_url: str, timeout: float = 5.0, http_version: str = "h2"
     ) -> None:
         """Initialize the HTTP provider.
 
@@ -40,7 +37,7 @@ class HTTPProvider(IndicatorProvider):
             http_version: HTTP version to use: 'h2' or 'h3' (default 'h2').
 
         """
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.http_version = http_version
         self._session: niquests.Session | None = None
@@ -49,18 +46,18 @@ class HTTPProvider(IndicatorProvider):
         """Get or create a session with the configured HTTP version."""
         if self._session is None:
             # Configure HTTP version via disable flags
-            if self.http_version == 'h2':
+            if self.http_version == "h2":
                 disable_http1 = True
                 disable_http2 = False
                 disable_http3 = True
-            elif self.http_version == 'h3':
+            elif self.http_version == "h3":
                 disable_http1 = True
                 disable_http2 = True
                 disable_http3 = False
             else:
                 raise ValueError(
-                    f'Unsupported HTTP version: {self.http_version}.',
-                    "Use 'h2' or 'h3'."
+                    f"Unsupported HTTP version: {self.http_version}.",
+                    "Use 'h2' or 'h3'.",
                 )
 
             self._session = niquests.Session(
@@ -83,11 +80,11 @@ class HTTPProvider(IndicatorProvider):
         """
         try:
             session = self._get_session()
-            resp = session.get(f'{self.base_url}/manifest')
+            resp = session.get(f"{self.base_url}/manifest")
             resp.raise_for_status()
             return resp.json()
         except niquests.RequestException as e:
-            raise ProviderError(f'HTTP error fetching manifest: {e}') from e
+            raise ProviderError(f"HTTP error fetching manifest: {e}") from e
 
     def resolve(
         self,
@@ -113,21 +110,21 @@ class HTTPProvider(IndicatorProvider):
 
         """
         payload = {
-            'indicator': indicator,
-            'parameters': params,
-            'attributes': attributes,
-            'bar_offset': offset,
+            "indicator": indicator,
+            "parameters": params,
+            "attributes": attributes,
+            "bar_offset": offset,
         }
         try:
             session = self._get_session()
-            resp = session.post(f'{self.base_url}/resolve', json=payload)
+            resp = session.post(f"{self.base_url}/resolve", json=payload)
             resp.raise_for_status()
             data = resp.json()
-            if data.get('status') == 'error':
-                raise ProviderError(data.get('error', 'Unknown error'))
-            return data['value']
+            if data.get("status") == "error":
+                raise ProviderError(data.get("error", "Unknown error"))
+            return data["value"]
         except niquests.RequestException as e:
-            raise ProviderError(f'HTTP error resolving indicator: {e}') from e
+            raise ProviderError(f"HTTP error resolving indicator: {e}") from e
 
     def close(self) -> None:
         """Close the underlying session."""
@@ -152,10 +149,7 @@ class AsyncHTTPProvider(AsyncIndicatorProvider):
     """
 
     def __init__(
-        self,
-        base_url: str,
-        timeout: float = 5.0,
-        http_version: str = 'h3'
+        self, base_url: str, timeout: float = 5.0, http_version: str = "h3"
     ) -> None:
         """Initialize the asynchronous HTTP provider.
 
@@ -168,7 +162,7 @@ class AsyncHTTPProvider(AsyncIndicatorProvider):
             ValueError: If an unsupported HTTP version is provided.
 
         """
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.http_version = http_version
         self._session: niquests.AsyncSession | None = None
@@ -187,13 +181,13 @@ class AsyncHTTPProvider(AsyncIndicatorProvider):
         """
         if self._session is None:
             # Configure HTTP version via disable flags
-            if self.http_version == 'h2':
+            if self.http_version == "h2":
                 disable_http1, disable_http2, disable_http3 = True, False, True
-            elif self.http_version == 'h3':
+            elif self.http_version == "h3":
                 disable_http1, disable_http2, disable_http3 = True, True, False
             else:
                 raise ValueError(
-                    f'Unsupported HTTP version: {self.http_version}. '
+                    f"Unsupported HTTP version: {self.http_version}. "
                     "Use 'h2' or 'h3'."
                 )
 
@@ -217,11 +211,11 @@ class AsyncHTTPProvider(AsyncIndicatorProvider):
         """
         try:
             session = await self._get_session()
-            resp = await session.get(f'{self.base_url}/manifest')
+            resp = await session.get(f"{self.base_url}/manifest")
             resp.raise_for_status()
             return resp.json()
         except niquests.RequestException as e:
-            raise ProviderError(f'HTTP error fetching manifest: {e}') from e
+            raise ProviderError(f"HTTP error fetching manifest: {e}") from e
 
     async def resolve_async(
         self,
@@ -247,21 +241,21 @@ class AsyncHTTPProvider(AsyncIndicatorProvider):
 
         """
         payload = {
-            'indicator': indicator,
-            'parameters': params,
-            'attributes': attributes,
-            'bar_offset': offset,
+            "indicator": indicator,
+            "parameters": params,
+            "attributes": attributes,
+            "bar_offset": offset,
         }
         try:
             session = await self._get_session()
-            resp = await session.post(f'{self.base_url}/resolve', json=payload)
+            resp = await session.post(f"{self.base_url}/resolve", json=payload)
             resp.raise_for_status()
             data = resp.json()
-            if data.get('status') == 'error':
-                raise ProviderError(data.get('error', 'Unknown error'))
-            return data['value']
+            if data.get("status") == "error":
+                raise ProviderError(data.get("error", "Unknown error"))
+            return data["value"]
         except niquests.RequestException as e:
-            raise ProviderError(f'HTTP error resolving indicator: {e}') from e
+            raise ProviderError(f"HTTP error resolving indicator: {e}") from e
 
     async def close(self) -> None:
         """Close the underlying asynchronous session.

@@ -12,6 +12,7 @@ This module provides:
 All floating-point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
 """  # noqa: E501
+
 import numpy as np
 import polars as pl
 
@@ -29,7 +30,7 @@ def dema_numba(
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Double Exponential Moving Average using Numba (fallback backend).
 
@@ -66,11 +67,11 @@ def dema_numba(
 
     """
     if length < 1:
-        raise ValueError('DEMA length must be >= 1')
+        raise ValueError("DEMA length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -85,7 +86,7 @@ def dema_numba(
     ema2_tail = _ema_numba_opt(
         np.ascontiguousarray(ema1[valid_start:]), length
     )
-    ema2[2 * valid_start:] = ema2_tail[valid_start:]
+    ema2[2 * valid_start :] = ema2_tail[valid_start:]
     dema = 2.0 * ema1 - ema2
     return _apply_offset_fillna(dema, offset, fillna)
 
@@ -95,7 +96,7 @@ def dema_talib(
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Double Exponential Moving Average via TA-Lib.
 
@@ -135,14 +136,14 @@ def dema_talib(
 
     """
     if not talib_available:
-        raise ImportError('TA-Lib is not available')
+        raise ImportError("TA-Lib is not available")
     if length < 1:
-        raise ValueError('DEMA length must be >= 1')
+        raise ValueError("DEMA length must be >= 1")
 
     close = np.asarray(close, dtype=np.float64)
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     dema = talib.DEMA(close, timeperiod=length)
     return _apply_offset_fillna(dema, offset, fillna)
@@ -154,7 +155,7 @@ def dema_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal DEMA with automatic backend selection.
 
@@ -198,12 +199,12 @@ def dema_ind(
 
 def dema_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add DEMA column to a Polars DataFrame.
@@ -247,5 +248,5 @@ def dema_polars(
         use_talib=use_talib,
         nan_policy=nan_policy,
     )
-    output_name = output_col or f'DEMA_{length}'
+    output_name = output_col or f"DEMA_{length}"
     return df.with_columns([pl.Series(output_name, result)])

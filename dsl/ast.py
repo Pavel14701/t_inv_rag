@@ -11,6 +11,7 @@ from typing import Any
 
 # ---------- Basic nodes ----------
 
+
 @dataclass(frozen=True, slots=True)
 class Number:
     """Numeric literal.
@@ -20,7 +21,7 @@ class Number:
 
     """
 
-    type: str = 'Number'
+    type: str = "Number"
     value: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
@@ -30,7 +31,7 @@ class Number:
             A dict with keys 'type' and 'value'.
 
         """
-        return {'type': self.type, 'value': self.value}
+        return {"type": self.type, "value": self.value}
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> Number:
@@ -46,7 +47,7 @@ class Number:
             KeyError: If required keys are missing.
 
         """
-        return Number(value=data['value'])
+        return Number(value=data["value"])
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,8 +59,8 @@ class Var:
 
     """
 
-    type: str = 'Var'
-    name: str = ''
+    type: str = "Var"
+    name: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Var node to a JSON-serializable dictionary.
@@ -68,7 +69,7 @@ class Var:
             A dict with keys 'type' and 'name'.
 
         """
-        return {'type': self.type, 'name': self.name}
+        return {"type": self.type, "name": self.name}
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> Var:
@@ -84,7 +85,7 @@ class Var:
             KeyError: If 'name' is missing.
 
         """
-        return Var(name=data['name'])
+        return Var(name=data["name"])
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,8 +99,8 @@ class IndicatorAccess:
 
     """
 
-    type: str = 'IndicatorAccess'
-    indicator: str = ''
+    type: str = "IndicatorAccess"
+    indicator: str = ""
     attributes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -110,9 +111,9 @@ class IndicatorAccess:
 
         """
         return {
-            'type': self.type,
-            'indicator': self.indicator,
-            'attributes': self.attributes,
+            "type": self.type,
+            "indicator": self.indicator,
+            "attributes": self.attributes,
         }
 
     @staticmethod
@@ -131,8 +132,7 @@ class IndicatorAccess:
 
         """
         return IndicatorAccess(
-            indicator=data['indicator'],
-            attributes=data.get('attributes', [])
+            indicator=data["indicator"], attributes=data.get("attributes", [])
         )
 
 
@@ -148,8 +148,8 @@ class IndicatorWithParams:
 
     """
 
-    type: str = 'IndicatorWithParams'
-    indicator: str = ''
+    type: str = "IndicatorWithParams"
+    indicator: str = ""
     params: dict[str, ASTNode] = field(default_factory=dict)
     attributes: list[str] = field(default_factory=list)
 
@@ -163,10 +163,10 @@ class IndicatorWithParams:
 
         """
         return {
-            'type': self.type,
-            'indicator': self.indicator,
-            'params': {k: v.to_dict() for k, v in self.params.items()},
-            'attributes': self.attributes,
+            "type": self.type,
+            "indicator": self.indicator,
+            "params": {k: v.to_dict() for k, v in self.params.items()},
+            "attributes": self.attributes,
         }
 
     @staticmethod
@@ -184,17 +184,16 @@ class IndicatorWithParams:
             KeyError: If 'indicator' is missing.
 
         """
-        params = {
-            k: from_dict(v) for k, v in data.get('params', {}).items()
-        }
+        params = {k: from_dict(v) for k, v in data.get("params", {}).items()}
         return IndicatorWithParams(
-            indicator=data['indicator'],
+            indicator=data["indicator"],
             params=params,
-            attributes=data.get('attributes', [])
+            attributes=data.get("attributes", []),
         )
 
 
 # ---------- Logical nodes ----------
+
 
 @dataclass(frozen=True, slots=True)
 class LogicalBinOp:
@@ -209,8 +208,8 @@ class LogicalBinOp:
 
     left: ASTNode
     right: ASTNode
-    type: str = 'LogicalBinOp'
-    operator: str = ''
+    type: str = "LogicalBinOp"
+    operator: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the LogicalBinOp node to a JSON-serializable dictionary.
@@ -221,10 +220,10 @@ class LogicalBinOp:
 
         """
         return {
-            'type': self.type,
-            'operator': self.operator,
-            'left': self.left.to_dict(),
-            'right': self.right.to_dict(),
+            "type": self.type,
+            "operator": self.operator,
+            "left": self.left.to_dict(),
+            "right": self.right.to_dict(),
         }
 
     @staticmethod
@@ -242,9 +241,9 @@ class LogicalBinOp:
 
         """
         return LogicalBinOp(
-            operator=data['operator'],
-            left=from_dict(data['left']),
-            right=from_dict(data['right']),
+            operator=data["operator"],
+            left=from_dict(data["left"]),
+            right=from_dict(data["right"]),
         )
 
 
@@ -258,7 +257,7 @@ class LogicalNot:
     """
 
     operand: ASTNode
-    type: str = 'LogicalNot'
+    type: str = "LogicalNot"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the LogicalNot node to a JSON-serializable dictionary.
@@ -267,7 +266,7 @@ class LogicalNot:
             A dict with keys 'type' and 'operand'.
 
         """
-        return {'type': self.type, 'operand': self.operand.to_dict()}
+        return {"type": self.type, "operand": self.operand.to_dict()}
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> LogicalNot:
@@ -283,10 +282,11 @@ class LogicalNot:
             KeyError: If 'operand' is missing.
 
         """
-        return LogicalNot(operand=from_dict(data['operand']))
+        return LogicalNot(operand=from_dict(data["operand"]))
 
 
 # ---------- Comparison nodes ----------
+
 
 @dataclass(frozen=True, slots=True)
 class Comparison:
@@ -301,8 +301,8 @@ class Comparison:
 
     left: ASTNode
     right: ASTNode
-    type: str = 'Comparison'
-    operator: str = ''
+    type: str = "Comparison"
+    operator: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Comparison node to a JSON-serializable dictionary.
@@ -312,10 +312,10 @@ class Comparison:
 
         """
         return {
-            'type': self.type,
-            'operator': self.operator,
-            'left': self.left.to_dict(),
-            'right': self.right.to_dict(),
+            "type": self.type,
+            "operator": self.operator,
+            "left": self.left.to_dict(),
+            "right": self.right.to_dict(),
         }
 
     @staticmethod
@@ -333,9 +333,9 @@ class Comparison:
 
         """
         return Comparison(
-            operator=data['operator'],
-            left=from_dict(data['left']),
-            right=from_dict(data['right']),
+            operator=data["operator"],
+            left=from_dict(data["left"]),
+            right=from_dict(data["right"]),
         )
 
 
@@ -349,7 +349,7 @@ class MultiComparison:
 
     """
 
-    type: str = 'MultiComparison'
+    type: str = "MultiComparison"
     operators: list[str] = field(default_factory=list)
     operands: list[ASTNode] = field(default_factory=list)
 
@@ -362,9 +362,9 @@ class MultiComparison:
 
         """
         return {
-            'type': self.type,
-            'operators': self.operators,
-            'operands': [op.to_dict() for op in self.operands],
+            "type": self.type,
+            "operators": self.operators,
+            "operands": [op.to_dict() for op in self.operands],
         }
 
     @staticmethod
@@ -382,12 +382,13 @@ class MultiComparison:
 
         """
         return MultiComparison(
-            operators=data['operators'],
-            operands=[from_dict(op) for op in data['operands']],
+            operators=data["operators"],
+            operands=[from_dict(op) for op in data["operands"]],
         )
 
 
 # ---------- Arithmetic nodes ----------
+
 
 @dataclass(frozen=True, slots=True)
 class Add:
@@ -395,22 +396,21 @@ class Add:
 
     left: ASTNode
     right: ASTNode
-    type: str = 'Add'
+    type: str = "Add"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict with 'type', 'left', 'right'."""
         return {
-            'type': self.type,
-            'left': self.left.to_dict(),
-            'right': self.right.to_dict(),
+            "type": self.type,
+            "left": self.left.to_dict(),
+            "right": self.right.to_dict(),
         }
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> Add:
         """Reconstruct an Add node from a dict."""
         return Add(
-            left=from_dict(data['left']),
-            right=from_dict(data['right'])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -430,7 +430,7 @@ class Sub:
 
     left: ASTNode
     right: ASTNode
-    type: str = 'Sub'
+    type: str = "Sub"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Sub node to a JSON-serializable dictionary.
@@ -441,9 +441,9 @@ class Sub:
 
         """
         return {
-            'type': self.type,
-            'left': self.left.to_dict(),
-            'right': self.right.to_dict(),
+            "type": self.type,
+            "left": self.left.to_dict(),
+            "right": self.right.to_dict(),
         }
 
     @staticmethod
@@ -461,8 +461,7 @@ class Sub:
 
         """
         return Sub(
-            left=from_dict(data['left']),
-            right=from_dict(data['right'])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -482,7 +481,7 @@ class Mul:
 
     left: ASTNode
     right: ASTNode
-    type: str = 'Mul'
+    type: str = "Mul"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Mul node to a JSON-serializable dictionary.
@@ -493,9 +492,9 @@ class Mul:
 
         """
         return {
-            'type': self.type,
-            'left': self.left.to_dict(),
-            'right': self.right.to_dict(),
+            "type": self.type,
+            "left": self.left.to_dict(),
+            "right": self.right.to_dict(),
         }
 
     @staticmethod
@@ -513,8 +512,7 @@ class Mul:
 
         """
         return Mul(
-            left=from_dict(data['left']),
-            right=from_dict(data['right'])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -533,7 +531,7 @@ class Div:
 
     left: ASTNode
     right: ASTNode
-    type: str = 'Div'
+    type: str = "Div"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Div node to a JSON-serializable dictionary.
@@ -544,9 +542,9 @@ class Div:
 
         """
         return {
-            'type': self.type,
-            'left': self.left.to_dict(),
-            'right': self.right.to_dict(),
+            "type": self.type,
+            "left": self.left.to_dict(),
+            "right": self.right.to_dict(),
         }
 
     @staticmethod
@@ -564,8 +562,7 @@ class Div:
 
         """
         return Div(
-            left=from_dict(data['left']),
-            right=from_dict(data['right'])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -585,7 +582,7 @@ class Mod:
 
     left: ASTNode
     right: ASTNode
-    type: str = 'Mod'
+    type: str = "Mod"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Mod node to a JSON-serializable dictionary.
@@ -596,9 +593,9 @@ class Mod:
 
         """
         return {
-            'type': self.type,
-            'left': self.left.to_dict(),
-            'right': self.right.to_dict(),
+            "type": self.type,
+            "left": self.left.to_dict(),
+            "right": self.right.to_dict(),
         }
 
     @staticmethod
@@ -616,8 +613,7 @@ class Mod:
 
         """
         return Mod(
-            left=from_dict(data['left']),
-            right=from_dict(data['right'])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -637,7 +633,7 @@ class Pow:
 
     left: ASTNode
     right: ASTNode
-    type: str = 'Pow'
+    type: str = "Pow"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Pow node to a JSON-serializable dictionary.
@@ -648,9 +644,9 @@ class Pow:
 
         """
         return {
-            'type': self.type,
-            'left': self.left.to_dict(),
-            'right': self.right.to_dict(),
+            "type": self.type,
+            "left": self.left.to_dict(),
+            "right": self.right.to_dict(),
         }
 
     @staticmethod
@@ -668,8 +664,7 @@ class Pow:
 
         """
         return Pow(
-            left=from_dict(data['left']),
-            right=from_dict(data['right'])
+            left=from_dict(data["left"]), right=from_dict(data["right"])
         )
 
 
@@ -686,7 +681,7 @@ class UnaryMinus:
     """
 
     operand: ASTNode
-    type: str = 'UnaryMinus'
+    type: str = "UnaryMinus"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the UnaryMinus node to a JSON-serializable dictionary.
@@ -695,7 +690,7 @@ class UnaryMinus:
             A dict with keys 'type' and 'operand' (serialized recursively).
 
         """
-        return {'type': self.type, 'operand': self.operand.to_dict()}
+        return {"type": self.type, "operand": self.operand.to_dict()}
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> UnaryMinus:
@@ -711,10 +706,11 @@ class UnaryMinus:
             KeyError: If 'operand' is missing.
 
         """
-        return UnaryMinus(operand=from_dict(data['operand']))
+        return UnaryMinus(operand=from_dict(data["operand"]))
 
 
 # ---------- Variables, historical access, functions ----------
+
 
 @dataclass(frozen=True, slots=True)
 class Let:
@@ -729,8 +725,8 @@ class Let:
 
     value: ASTNode
     body: ASTNode
-    type: str = 'Let'
-    var: str = ''
+    type: str = "Let"
+    var: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Let node to a JSON-serializable dictionary.
@@ -741,10 +737,10 @@ class Let:
 
         """
         return {
-            'type': self.type,
-            'var': self.var,
-            'value': self.value.to_dict(),
-            'body': self.body.to_dict(),
+            "type": self.type,
+            "var": self.var,
+            "value": self.value.to_dict(),
+            "body": self.body.to_dict(),
         }
 
     @staticmethod
@@ -762,9 +758,9 @@ class Let:
 
         """
         return Let(
-            var=data['var'],
-            value=from_dict(data['value']),
-            body=from_dict(data['body']),
+            var=data["var"],
+            value=from_dict(data["value"]),
+            body=from_dict(data["body"]),
         )
 
 
@@ -780,7 +776,7 @@ class HistoricalAccess:
     """
 
     expr: ASTNode
-    type: str = 'HistoricalAccess'
+    type: str = "HistoricalAccess"
     offset: int = 0
 
     def to_dict(self) -> dict[str, Any]:
@@ -791,9 +787,9 @@ class HistoricalAccess:
 
         """
         return {
-            'type': self.type,
-            'expr': self.expr.to_dict(),
-            'offset': self.offset
+            "type": self.type,
+            "expr": self.expr.to_dict(),
+            "offset": self.offset,
         }
 
     @staticmethod
@@ -811,8 +807,8 @@ class HistoricalAccess:
 
         """
         return HistoricalAccess(
-            expr=from_dict(data['expr']),
-            offset=data['offset'],
+            expr=from_dict(data["expr"]),
+            offset=data["offset"],
         )
 
 
@@ -828,7 +824,7 @@ class Rising:
     """
 
     expr: ASTNode
-    type: str = 'Rising'
+    type: str = "Rising"
     n: int = 0
 
     def to_dict(self) -> dict[str, Any]:
@@ -838,7 +834,7 @@ class Rising:
             A dict with keys 'type', 'expr', and 'n'.
 
         """
-        return {'type': self.type, 'expr': self.expr.to_dict(), 'n': self.n}
+        return {"type": self.type, "expr": self.expr.to_dict(), "n": self.n}
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> Rising:
@@ -855,8 +851,8 @@ class Rising:
 
         """
         return Rising(
-            expr=from_dict(data['expr']),
-            n=data['n'],
+            expr=from_dict(data["expr"]),
+            n=data["n"],
         )
 
 
@@ -872,7 +868,7 @@ class Falling:
     """
 
     expr: ASTNode
-    type: str = 'Falling'
+    type: str = "Falling"
     n: int = 0
 
     def to_dict(self) -> dict[str, Any]:
@@ -882,7 +878,7 @@ class Falling:
             A dict with keys 'type', 'expr', and 'n'.
 
         """
-        return {'type': self.type, 'expr': self.expr.to_dict(), 'n': self.n}
+        return {"type": self.type, "expr": self.expr.to_dict(), "n": self.n}
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> Falling:
@@ -899,17 +895,32 @@ class Falling:
 
         """
         return Falling(
-            expr=from_dict(data['expr']),
-            n=data['n'],
+            expr=from_dict(data["expr"]),
+            n=data["n"],
         )
 
 
 # ---------- AST type alias ----------
 ASTNode = (
-    Number | Var | IndicatorAccess | IndicatorWithParams
-    | Comparison | MultiComparison | LogicalBinOp | LogicalNot
-    | Let | HistoricalAccess | Rising | Falling
-    | Add | Sub | Mul | Div | Mod | Pow | UnaryMinus
+    Number
+    | Var
+    | IndicatorAccess
+    | IndicatorWithParams
+    | Comparison
+    | MultiComparison
+    | LogicalBinOp
+    | LogicalNot
+    | Let
+    | HistoricalAccess
+    | Rising
+    | Falling
+    | Add
+    | Sub
+    | Mul
+    | Div
+    | Mod
+    | Pow
+    | UnaryMinus
 )
 
 
@@ -931,44 +942,44 @@ def from_dict(data: dict[str, Any]) -> ASTNode:
         dictionary is invalid.
 
     """
-    match data.get('type'):
-        case 'Number':
+    match data.get("type"):
+        case "Number":
             return Number.from_dict(data)
-        case 'IndicatorAccess':
+        case "IndicatorAccess":
             return IndicatorAccess.from_dict(data)
-        case 'Var':
+        case "Var":
             return Var.from_dict(data)
-        case 'IndicatorWithParams':
+        case "IndicatorWithParams":
             return IndicatorWithParams.from_dict(data)
-        case 'LogicalBinOp':
+        case "LogicalBinOp":
             return LogicalBinOp.from_dict(data)
-        case 'LogicalNot':
+        case "LogicalNot":
             return LogicalNot.from_dict(data)
-        case 'Comparison':
+        case "Comparison":
             return Comparison.from_dict(data)
-        case 'MultiComparison':
+        case "MultiComparison":
             return MultiComparison.from_dict(data)
-        case 'Add':
+        case "Add":
             return Add.from_dict(data)
-        case 'Sub':
+        case "Sub":
             return Sub.from_dict(data)
-        case 'Mul':
+        case "Mul":
             return Mul.from_dict(data)
-        case 'Div':
+        case "Div":
             return Div.from_dict(data)
-        case 'Mod':
+        case "Mod":
             return Mod.from_dict(data)
-        case 'Pow':
+        case "Pow":
             return Pow.from_dict(data)
-        case 'UnaryMinus':
+        case "UnaryMinus":
             return UnaryMinus.from_dict(data)
-        case 'Let':
+        case "Let":
             return Let.from_dict(data)
-        case 'HistoricalAccess':
+        case "HistoricalAccess":
             return HistoricalAccess.from_dict(data)
-        case 'Rising':
+        case "Rising":
             return Rising.from_dict(data)
-        case 'Falling':
+        case "Falling":
             return Falling.from_dict(data)
         case _:
-            raise ValueError(f'Unknown AST node type: {data.get("type")}')
+            raise ValueError(f"Unknown AST node type: {data.get('type')}")

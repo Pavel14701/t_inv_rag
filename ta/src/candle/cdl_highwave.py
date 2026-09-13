@@ -10,8 +10,14 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.float64, types.float64, types.boolean, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
@@ -29,9 +35,9 @@ def _cdl_highwave_nb(
     """Optimized High-Wave pattern.
 
     Returns:
-        1.0 → bullish high-wave (symmetric mode)
-       -1.0 → bearish high-wave (symmetric mode)
-        0.0 → none
+        1.0 -> bullish high-wave (symmetric mode)
+       -1.0 -> bearish high-wave (symmetric mode)
+        0.0 -> none
 
     """
     n = len(open_)
@@ -84,13 +90,13 @@ def cdl_highwave(
     max_shadow_factor: float = 0.3,
 ) -> np.ndarray:
     """High-Wave pattern with strict support."""
-    if isinstance(open_, pl.Series): 
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -118,27 +124,33 @@ def cdl_highwave(
         result = talib_out.astype(np.float64) / 100.0
         return _apply_offset_fillna(result, offset, fillna)
     out = _cdl_highwave_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric,
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_highwave_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.1,
     max_shadow_factor: float = 0.3,
-    output_col: str = 'CDL_HIGHWAVE',
+    output_col: str = "CDL_HIGHWAVE",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_highwave(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

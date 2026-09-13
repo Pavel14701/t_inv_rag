@@ -1,5 +1,19 @@
-> **Статус: 🔨 начат.** п.0 LLM-слой с per-request роутингом — ✅ (`rag/llm.py`, 15 тестов).
-> ingestion / retrieval / generation / repair-loop — ⬜, блокируются TZ-02 (manifest_hash).
+> **Статус: 🔨 ядро RAG готово (47 тестов зелёные).**
+> ✅ LLM-слой (per-request роутинг, 15 тестов).
+> ✅ ingestion.py: chunk_markdown (по заголовкам, max_chunk_chars), ingest_docs (white-list),
+> render_manifest_text (для промпта), strategy_to_case (для retrieval).
+> ✅ generation.py: GENERATION_PROMPT (манифест + доки + few-shot + task),
+> REPAIR_PROMPT, generate_dsl() с repair-loop ≤ 2, markdown fence stripping,
+> mocked LLM transport для тестов.
+> ✅ волна 2: vectorstore.py (VectorStore protocol, InMemoryVectorStore с cosine +
+> payload-фильтром + идемпотентным upsert, QdrantVectorStore с ленивым импортом
+> qdrant-client, query_points API); embeddings.py (EmbeddingFunction protocol,
+> MockEmbedding — детерминированный sha256-хеш, unit-norm, dim=64; OllamaEmbedding —
+> bge-m3, dim=1024); retrieval.py (Retriever, коллекции dsl_docs/strategy_cases);
+> pipeline.py (RAGPipeline: ingest_docs/ingest_strategies/generate с retrieval→
+> generate_dsl, PipelineMetrics с pass@1/pass@N/failed/avg_iterations, QueryLog).
+> ⬜ pass@1 evaluation-скрипт над query-set (нужен живой LLM).
+> ⬜ rag_integration маркер: живые Qdrant/Ollama (skip без инфраструктуры).
 
 # TZ-07. RAG-контур (инжест, retrieval, генерация DSL)
 

@@ -133,7 +133,7 @@ def kurtosis_numba(
     """
     close = np.asarray(close, dtype=np.float64)
     if length < 4:
-        raise ValueError('length must be >= 4')
+        raise ValueError("length must be >= 4")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
@@ -186,7 +186,7 @@ def kurtosis_ind(
 
 def kurtosis_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 30,
     offset: int = 0,
     fillna: float | None = None,
@@ -220,21 +220,21 @@ def kurtosis_polars(
     >>> df = pl.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
     >>> kurtosis_polars(df, length=4)
     shape: (6, 2)
-    ┌───────┬──────────┐
-    │ close ┆ KURT_4   │
-    │ ---   ┆ ---      │
-    │ f64   ┆ f64      │
-    ╞═══════╪══════════╡
-    │ 1.0   ┆ NaN      │
-    │ 2.0   ┆ NaN      │
-    │ 3.0   ┆ NaN      │
-    │ 4.0   ┆ -1.2     │
-    │ 5.0   ┆ -1.2     │
-    │ 6.0   ┆ -1.2     │
-    └───────┴──────────┘
+    +-------+----------+
+    | close | KURT_4   |
+    | ---   | ---      |
+    | f64   | f64      |
+    +=======+==========+
+    | 1.0   | NaN      |
+    | 2.0   | NaN      |
+    | 3.0   | NaN      |
+    | 4.0   | -1.2     |
+    | 5.0   | -1.2     |
+    | 6.0   | -1.2     |
+    +-------+----------+
 
     """
     close = df[close_col].to_numpy()
     result = kurtosis_ind(close, length, offset, fillna)
-    out_name = output_col or f'KURT_{length}'
+    out_name = output_col or f"KURT_{length}"
     return df.with_columns(pl.Series(out_name, result))

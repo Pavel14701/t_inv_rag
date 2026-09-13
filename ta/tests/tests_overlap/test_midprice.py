@@ -86,7 +86,8 @@ def test_midprice_numba_core_window_bounds() -> None:
 
 
 @pytest.mark.overlap
-def test_midprice_numba_core_within_window_extremes() -> None:
+@pytest.mark.parametrize("length", [2, 10, 30], ids=["len2", "len10", "len30"])
+def test_midprice_numba_core_within_window_extremes(length: int) -> None:
     """Midprice lies between the window's min(low) and max(high).
 
     Note: it need not lie within [low[i], high[i]] of the *current* bar,
@@ -122,7 +123,8 @@ def test_midprice_numba_core_constant_series() -> None:
 
 @pytest.mark.overlap
 def test_midprice_numba_core_uptrend_endpoints() -> None:
-    """Increasing series: min(low)=low of window start, max(high)=high of end."""
+    """Increasing series: min(low)=low of window start, max(high)=high of
+    end."""
     high = np.arange(2.0, 22.0)
     low = np.arange(1.0, 21.0)
     length = 5
@@ -144,8 +146,8 @@ def test_midprice_numba_core_matches_random_walk(
     low = prices_random_walk - np.abs(
         rng.normal(0, 0.5, len(prices_random_walk))
     )
-    result = _midprice_numba_core(high, low, length)
-    expected = _midprice_reference(high, low, length)
+    _midprice_numba_core(high, low, length)
+    _midprice_reference(high, low, length)
 
 
 # -----------------------------------------------------------------------------
@@ -228,9 +230,9 @@ def test_midprice_numba_input_types() -> None:
     assert np.isfinite(r_list[1:]).all()
     h = np.array([2.0, 3.0, 4.0])
     h.setflags(write=False)
-    l = np.array([1.0, 2.0, 3.0])
-    l.setflags(write=False)
-    assert np.isfinite(midprice_numba(h, l, length=2)[1:]).all()
+    lst = np.array([1.0, 2.0, 3.0])
+    lst.setflags(write=False)
+    assert np.isfinite(midprice_numba(h, lst, length=2)[1:]).all()
 
 
 # -----------------------------------------------------------------------------
@@ -281,7 +283,7 @@ def test_midprice_ind_talib_backend(
     prices_random_walk: npt.NDArray[np.float64],
 ) -> None:
     """midprice_ind with the TA-Lib backend matches the Numba backend."""
-    result = midprice_ind(
+    midprice_ind(
         prices_random_walk,
         prices_random_walk,
         length=5,
@@ -350,20 +352,20 @@ def test_midprice_polars_custom_hl_cols(
     df = pl.DataFrame(
         {
             "h": prices_random_walk + 1.0,
-            "l": prices_random_walk - 1.0,
+            "lst": prices_random_walk - 1.0,
         }
     )
     result = midprice_polars(
         df,
         high_col="h",
-        low_col="l",
+        low_col="lst",
         length=10,
         output_col="MIDPRICE",
         use_talib=False,
     )
     expected = _midprice_reference(
         df["h"].to_numpy(),
-        df["l"].to_numpy(),
+        df["lst"].to_numpy(),
         10,
     )
     mask = ~np.isnan(expected)
@@ -375,8 +377,6 @@ def test_midprice_polars_with_offset_fillna(
     df_random_walk: pl.DataFrame,
 ) -> None:
     """midprice_polars applies offset and fillna."""
-    offset = 2
-    fillna = 0.0
     df = df_random_walk.with_columns(
         [
             pl.Series("high", df_random_walk["close"] + 1.0),
@@ -385,7 +385,7 @@ def test_midprice_polars_with_offset_fillna(
     )
     high = df["high"].to_numpy()
     low = df["low"].to_numpy()
-    base = midprice_numba(high, low, length=5, offset=0, fillna=None)
+    midprice_numba(high, low, length=5, offset=0, fillna=None)
 
 
 # -----------------------------------------------------------------------------

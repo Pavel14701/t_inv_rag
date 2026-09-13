@@ -26,24 +26,24 @@ from .overlap import (
 
 
 _MA_MAP: dict[str, Callable[..., np.ndarray]] = {
-    'sma': sma_ind,
-    'ema': ema_ind,
-    'wma': wma_ind,
-    'dema': dema_ind,
-    'tema': tema_ind,
-    'trima': trima_ind,
-    'kama': kama_ind,
-    'hma': hma_ind,
-    'fwma': fwma_ind,
-    'pwma': pwma_ind,
-    'sinwma': sinwma_ind,
-    'swma': swma_ind,
-    'rma': rma_ind,
-    'vidya': vidya_ind,
-    'linreg': linreg_ind,
-    'midpoint': midpoint_ind,
-    'ssf': ssf_ind,
-    't3': t3_ind,
+    "sma": sma_ind,
+    "ema": ema_ind,
+    "wma": wma_ind,
+    "dema": dema_ind,
+    "tema": tema_ind,
+    "trima": trima_ind,
+    "kama": kama_ind,
+    "hma": hma_ind,
+    "fwma": fwma_ind,
+    "pwma": pwma_ind,
+    "sinwma": sinwma_ind,
+    "swma": swma_ind,
+    "rma": rma_ind,
+    "vidya": vidya_ind,
+    "linreg": linreg_ind,
+    "midpoint": midpoint_ind,
+    "ssf": ssf_ind,
+    "t3": t3_ind,
 }
 
 
@@ -52,10 +52,11 @@ def ma_mode(
     source: np.ndarray | pl.Series | None = None,
     **kwargs,
 ) -> list[str] | np.ndarray:
+    """Dispatch a moving average by ``ma_mode`` (numpy path)."""
     if mamode is None and source is None:
         return list(_MA_MAP.keys())
     if source is None:
-        raise ValueError('source must be provided when name is given')
+        raise ValueError("source must be provided when name is given")
     if mamode:
         mamode = mamode.lower()
         func = _MA_MAP.get(mamode)

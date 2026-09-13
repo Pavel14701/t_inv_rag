@@ -8,18 +8,12 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-# должно быть float8 для ускорения инференса и экономии памяти
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+# float8 keeps inference faster and saves memory
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_invertedhammer_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Inverted Hammer pattern.
+    """Numba-accelerated Inverted Hammer pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -29,8 +23,8 @@ def _cdl_invertedhammer_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         # Body
@@ -39,7 +33,7 @@ def _cdl_invertedhammer_nb(
             continue
         # Upper / lower shadows
         upper = h - (c if c > o else o)
-        lower = (c if c > o else o) - l
+        lower = (c if c > o else o) - low_
         # Inverted Hammer shape:
         #  - long upper shadow
         #  - small body
@@ -67,11 +61,15 @@ def cdl_invertedhammer(
     """Universal Inverted Hammer pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    # Polars → numpy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Polars -> numpy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -95,7 +93,7 @@ def cdl_invertedhammer(
     if not close.flags.writeable:
         close = close.copy()
 
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLINVERTEDHAMMER(open_, high, low, close)
         talib_out = (talib_out != 0).astype(np.float64)
@@ -109,13 +107,13 @@ def cdl_invertedhammer(
 
 def cdl_invertedhammer_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_INVERTEDHAMMER',
+    output_col: str = "CDL_INVERTEDHAMMER",
 ) -> pl.DataFrame:
     """Add Inverted Hammer column to Polars DataFrame."""
     out = cdl_invertedhammer(

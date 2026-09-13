@@ -9,16 +9,20 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_3outside_nb(
-    open_, high, low, close,
-    min_body_factor,
-    max_shadow_factor,
-    strict
+    open_, high, low, close, min_body_factor, max_shadow_factor, strict
 ):
     n = len(open_)
     out = np.zeros(n, dtype=np.float64)
@@ -48,18 +52,22 @@ def _cdl_3outside_nb(
 
         # Bullish Three Outside Up
         bull = (
-            (c2 < o2) and                      # first bearish
-            (c1 > o1) and                      # second bullish
-            (o1 <= c2) and (c1 >= o2) and      # engulfing
-            (c0 > o0) and (c0 > c1)            # third bullish continuation
+            (c2 < o2)  # first bearish
+            and (c1 > o1)  # second bullish
+            and (o1 <= c2)
+            and (c1 >= o2)  # engulfing
+            and (c0 > o0)
+            and (c0 > c1)  # third bullish continuation
         )
 
         # Bearish Three Outside Down
         bear = (
-            (c2 > o2) and                      # first bullish
-            (c1 < o1) and                      # second bearish
-            (o1 >= c2) and (c1 <= o2) and      # engulfing
-            (c0 < o0) and (c0 < c1)            # third bearish continuation
+            (c2 > o2)  # first bullish
+            and (c1 < o1)  # second bearish
+            and (o1 >= c2)
+            and (c1 <= o2)  # engulfing
+            and (c0 < o0)
+            and (c0 < c1)  # third bearish continuation
         )
 
         if not (bull or bear):
@@ -82,9 +90,11 @@ def _cdl_3outside_nb(
             b0 = abs(c0 - o0)
 
             # Min body filter
-            if (b2 < min_body_factor * r2 or
-                b1 < min_body_factor * r1 or
-                b0 < min_body_factor * r0):
+            if (
+                b2 < min_body_factor * r2
+                or b1 < min_body_factor * r1
+                or b0 < min_body_factor * r0
+            ):
                 continue
 
             # Shadows (no max/min)
@@ -101,9 +111,11 @@ def _cdl_3outside_nb(
             sh0 = (h0 - up0) + (lo0 - l0)
 
             # Max shadow filter
-            if (sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = direction
@@ -112,7 +124,10 @@ def _cdl_3outside_nb(
 
 
 def cdl_3outside(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -123,11 +138,15 @@ def cdl_3outside(
     """Universal Three Outside pattern with optional strict mode.
     Returns float64 array: 1.0, -1.0, 0.0.
     """
-    # Polars → NumPy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Polars -> NumPy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     # Ensure float64 contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -135,39 +154,48 @@ def cdl_3outside(
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
 
-    if not open_.flags.c_contiguous: open_ = np.ascontiguousarray(open_)
-    if not open_.flags.writeable: open_ = open_.copy()
-    if not high.flags.c_contiguous: high = np.ascontiguousarray(high)
-    if not high.flags.writeable: high = high.copy()
-    if not low.flags.c_contiguous: low = np.ascontiguousarray(low)
-    if not low.flags.writeable: low = low.copy()
-    if not close.flags.c_contiguous: close = np.ascontiguousarray(close)
-    if not close.flags.writeable: close = close.copy()
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
 
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDL3OUTSIDE(open_, high, low, close)
         talib_out = talib_out.astype(np.float64) / 100.0
         return _apply_offset_fillna(talib_out, offset, fillna)
 
     # Numba branch
-    out = _cdl_3outside_nb(open_, high, low, close,
-                           min_body_factor, max_shadow_factor, strict)
+    out = _cdl_3outside_nb(
+        open_, high, low, close, min_body_factor, max_shadow_factor, strict
+    )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_3outside_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col='CDL_3OUTSIDE',
+    output_col="CDL_3OUTSIDE",
 ):
     """Add Three Outside column to Polars DataFrame."""
     out = cdl_3outside(

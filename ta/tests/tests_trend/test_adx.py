@@ -145,7 +145,7 @@ def test_adx_uptrend_dmp_dominates() -> None:
     close = 100.0 + np.arange(n, dtype=np.float64) * 0.5
     high = close + 0.5
     low = close - 0.5
-    adx, adxr, dmp, dmn = adx_numpy(
+    adx, _adxr, dmp, dmn = adx_numpy(
         high,
         low,
         close,
@@ -163,7 +163,7 @@ def test_adx_downtrend_dmn_dominates() -> None:
     close = 200.0 - np.arange(n, dtype=np.float64) * 0.5
     high = close + 0.5
     low = close - 0.5
-    adx, adxr, dmp, dmn = adx_numpy(
+    adx, _adxr, dmp, dmn = adx_numpy(
         high,
         low,
         close,
@@ -202,7 +202,7 @@ def test_adxr_identity(ohlc, adxr_length: int) -> None:
 @pytest.mark.trend
 def test_adx_tvmode_valid_and_different(ohlc) -> None:
     high, low, close = ohlc
-    adx_std, _, dmp_std, dmn_std = adx_numpy(
+    adx_std, _, dmp_std, _dmn_std = adx_numpy(
         high,
         low,
         close,
@@ -210,7 +210,7 @@ def test_adx_tvmode_valid_and_different(ohlc) -> None:
         tvmode=False,
         use_talib=False,
     )
-    adx_tv, _, dmp_tv, dmn_tv = adx_numpy(
+    adx_tv, _, dmp_tv, _dmn_tv = adx_numpy(
         high,
         low,
         close,
@@ -271,7 +271,7 @@ def test_adx_talib_parity(ohlc) -> None:
 def test_adx_trim_shortens(ohlc) -> None:
     high, low, close = ohlc
     n = len(close)
-    adx, adxr, dmp, dmn = adx_numpy(
+    adx, _adxr, dmp, dmn = adx_numpy(
         high,
         low,
         close,
@@ -377,7 +377,7 @@ def test_adx_ind_accepts_polars_series(ohlc) -> None:
         length=LENGTH,
         use_talib=False,
     )
-    for a, b in zip(res_np, res_pl):
+    for a, b in zip(res_np, res_pl, strict=False):
         np.testing.assert_array_equal(a, b)
 
 

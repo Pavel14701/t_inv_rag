@@ -68,7 +68,7 @@ def _median_numba_core(close: np.ndarray, length: int) -> np.ndarray:
         # Odd window: single middle element
         kth = length // 2
         for i in range(length - 1, n):
-            window = close[i - length + 1: i + 1].copy()
+            window = close[i - length + 1 : i + 1].copy()
             if not _window_is_finite(window):
                 continue  # keep NaN (out is pre-filled with NaN)
             part = np.partition(window, kth)
@@ -78,7 +78,7 @@ def _median_numba_core(close: np.ndarray, length: int) -> np.ndarray:
         kth1 = length // 2 - 1
         kth2 = length // 2
         for i in range(length - 1, n):
-            window = close[i - length + 1: i + 1].copy()
+            window = close[i - length + 1 : i + 1].copy()
             if not _window_is_finite(window):
                 continue  # keep NaN (out is pre-filled with NaN)
             part = np.partition(window, [kth1, kth2])
@@ -122,7 +122,7 @@ def median_numba(
     """
     close = np.asarray(close, dtype=np.float64)
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
@@ -176,7 +176,7 @@ def median_ind(
 
 def median_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 30,
     offset: int = 0,
     fillna: float | None = None,
@@ -223,5 +223,5 @@ def median_polars(
     """
     close = df[close_col].to_numpy()
     result = median_ind(close, length, offset, fillna)
-    out_name = output_col or f'MEDIAN_{length}'
+    out_name = output_col or f"MEDIAN_{length}"
     return pl.Series(out_name, result)

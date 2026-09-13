@@ -22,15 +22,15 @@ Example:
     >>>
     >>> # In-process provider
     >>> def my_resolver(indicator, params, attributes, offset):
-    ...     if indicator == 'rsi':
+    ...     if indicator == "rsi":
     ...         return 25.0
     ...     return 50.0
-    >>> manifest = {'indicators': {'rsi': {'attributes': ['value']}}}
+    >>> manifest = {"indicators": {"rsi": {"attributes": ["value"]}}}
     >>> provider = InProcessProvider(manifest, my_resolver)
     >>> context = Context([provider])
     >>>
     >>> # HTTP provider
-    >>> http_provider = HTTPProvider('http://localhost:8000', http_version='h2')
+    >>> http_provider = HTTPProvider("http://localhost:8000", http_version="h2")
     >>> context2 = Context([http_provider])
 
 """  # noqa: E501
@@ -47,13 +47,13 @@ from .manifest import (
 
 
 __all__ = (
-    'AsyncHTTPProvider',
-    'AsyncIndicatorProvider',
-    'HTTPProvider',
-    'InProcessProvider',
-    'IndicatorProvider',
-    'IndicatorSchema',
-    'Manifest',
-    'ManifestValidator',
-    'ParameterSchema',
+    "AsyncHTTPProvider",
+    "AsyncIndicatorProvider",
+    "HTTPProvider",
+    "InProcessProvider",
+    "IndicatorProvider",
+    "IndicatorSchema",
+    "Manifest",
+    "ManifestValidator",
+    "ParameterSchema",
 )

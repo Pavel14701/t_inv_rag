@@ -10,8 +10,14 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.float64, types.float64, types.boolean, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
@@ -24,14 +30,14 @@ def _cdl_gapsidesidewhite_nb(
     min_body_factor: float,
     max_shadow_factor: float,
     strict: bool,
-    symmetric: bool,  # для совместимости
+    symmetric: bool,  # kept for compatibility
 ) -> np.ndarray:
     """Optimized Gap Side-by-Side White Lines pattern.
 
     Returns:
-        1.0 → bullish gap side-by-side white lines
-       -1.0 → bearish gap side-by-side white lines
-        0.0 → none
+        1.0 -> bullish gap side-by-side white lines
+       -1.0 -> bearish gap side-by-side white lines
+        0.0 -> none
 
     """
     n = len(open_)
@@ -80,35 +86,43 @@ def _cdl_gapsidesidewhite_nb(
         # Bullish gap side-by-side white lines:
         # 1) first candle bullish
         # 2) second & third bullish
-        # 3) gap up between 1 и 2
-        # 4) 2 и 3 примерно на одном уровне (close/ open близки)
+        # 3) gap up between 1 and 2
+        # 4) 2 and 3 roughly level (close/open near each other)
         if bull2 and bull1 and bull0:
-            if l1 > h2:  # gap up
-                # 2 и 3 примерно на одном уровне
-                if abs(o0 - o1) <= 0.25 * (r1 + r0) and abs(c0 - c1) <= 0.25 * (r1 + r0):
+            if l1 > h2:
+                # gap up
+                # 2 and 3 are roughly at the same level
+                if abs(o0 - o1) <= 0.25 * (r1 + r0) and abs(
+                    c0 - c1
+                ) <= 0.25 * (r1 + r0):
                     direction = 1.0
 
         # Bearish gap side-by-side white lines:
         # 1) first candle bearish
         # 2) second & third bullish
-        # 3) gap down between 1 и 2
-        # 4) 2 и 3 примерно на одном уровне
-        if direction == 0.0 and bear2 and bull1 and bull0:
-            if h1 < l2:  # gap down
-                if abs(o0 - o1) <= 0.25 * (r1 + r0) and abs(c0 - c1) <= 0.25 * (r1 + r0):
+        # 3) gap down between 1 and 2
+        # 4) 2 and 3 are roughly at the same level
+        if direction == 0.0 and bear2 and bull1 and bull0:  # noqa: RUF069 - exact IEEE zero/sign check
+            if h1 < l2:
+                # gap down
+                if abs(o0 - o1) <= 0.25 * (r1 + r0) and abs(
+                    c0 - c1
+                ) <= 0.25 * (r1 + r0):
                     direction = -1.0
 
-        if direction == 0.0:
+        if direction == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             continue
 
         if strict:
-            # Минимальный размер тел
-            if (b2 < min_body_factor * r2 or
-                b1 < min_body_factor * r1 or
-                b0 < min_body_factor * r0):
+            # Minimal body sizes
+            if (
+                b2 < min_body_factor * r2
+                or b1 < min_body_factor * r1
+                or b0 < min_body_factor * r0
+            ):
                 continue
 
-            # Тени (быстро, без max/min)
+            # Shadows (fast, without max/min)
             up2 = c2 if bull2 else o2
             lo2 = o2 if bull2 else c2
             sh2 = (h2 - up2) + (lo2 - l2)
@@ -121,9 +135,11 @@ def _cdl_gapsidesidewhite_nb(
             lo0 = o0
             sh0 = (h0 - up0) + (lo0 - l0)
 
-            if (sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = direction
@@ -145,10 +161,14 @@ def cdl_gapsidesidewhite(
     max_shadow_factor: float = 0.5,
 ) -> np.ndarray:
     """Gap Side-by-Side White Lines pattern with strict support."""
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -177,27 +197,33 @@ def cdl_gapsidesidewhite(
         return _apply_offset_fillna(talib_out, offset, fillna)
 
     out = _cdl_gapsidesidewhite_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric,
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_gapsidesidewhite_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.3,
     max_shadow_factor: float = 0.5,
-    output_col: str = 'CDL_GAPSIDESIDEWHITE',
+    output_col: str = "CDL_GAPSIDESIDEWHITE",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_gapsidesidewhite(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

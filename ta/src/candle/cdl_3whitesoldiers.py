@@ -9,25 +9,37 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_3whitesoldiers_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
-    """Numba‑accelerated Three White Soldiers pattern with optional strict filtering
+    """Numba-accelerated Three White Soldiers pattern with optional strict
+        filtering
     and optional symmetric bearish variant.
 
     Returns:
-        1.0 → bullish Three White Soldiers
-       -1.0 → bearish mirrored variant (only if symmetric=True)
-        0.0 → no pattern
+        1.0 -> bullish Three White Soldiers
+       -1.0 -> bearish mirrored variant (only if symmetric=True)
+        0.0 -> no pattern
 
     """
     n = len(open_)
@@ -47,18 +59,26 @@ def _cdl_3whitesoldiers_nb(
 
         # ---------------- Bullish Three White Soldiers ----------------
         bull = (
-            (c2 > o2) and (c1 > o1) and (c0 > o0) and     # three bullish candles
-            (c1 > c2) and (c0 > c1) and                   # rising closes
-            (o1 > o2) and (o0 > o1)                       # rising opens
+            (c2 > o2)
+            and (c1 > o1)
+            and (c0 > o0)  # three bullish candles
+            and (c1 > c2)
+            and (c0 > c1)  # rising closes
+            and (o1 > o2)
+            and (o0 > o1)  # rising opens
         )
 
         # ---------------- Mirrored bearish variant ----------------
         bear = False
         if symmetric:
             bear = (
-                (c2 < o2) and (c1 < o1) and (c0 < o0) and     # three bearish candles
-                (c1 < c2) and (c0 < c1) and                   # falling closes
-                (o1 < o2) and (o0 < o1)                       # falling opens
+                (c2 < o2)
+                and (c1 < o1)
+                and (c0 < o0)  # three bearish candles
+                and (c1 < c2)
+                and (c0 < c1)  # falling closes
+                and (o1 < o2)
+                and (o0 < o1)  # falling opens
             )
 
         if bull:
@@ -81,9 +101,11 @@ def _cdl_3whitesoldiers_nb(
             b0 = abs(c0 - o0)
 
             # Minimum body size filter
-            if (b2 < min_body_factor * r2 or
-                b1 < min_body_factor * r1 or
-                b0 < min_body_factor * r0):
+            if (
+                b2 < min_body_factor * r2
+                or b1 < min_body_factor * r1
+                or b0 < min_body_factor * r0
+            ):
                 continue
 
             # Shadows (computed without max/min for speed)
@@ -100,9 +122,11 @@ def _cdl_3whitesoldiers_nb(
             sh0 = (h0 - up0) + (lo0 - l0)
 
             # Maximum shadow filter
-            if (sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = direction
@@ -111,7 +135,10 @@ def _cdl_3whitesoldiers_nb(
 
 
 def cdl_3whitesoldiers(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -123,14 +150,18 @@ def cdl_3whitesoldiers(
     """Universal Three White Soldiers pattern with optional strict mode and
     optional symmetric bearish variant.
 
-    If symmetric=False and TA‑Lib is available, TA‑Lib is used.
-    If symmetric=True, TA‑Lib is skipped and Numba is always used.
+    If symmetric=False and TA-Lib is available, TA-Lib is used.
+    If symmetric=True, TA-Lib is skipped and Numba is always used.
     """
-    # Convert Polars Series → NumPy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Convert Polars Series -> NumPy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     # Ensure float64 and contiguous memory
     open_ = np.asarray(open_, dtype=np.float64)
@@ -138,16 +169,24 @@ def cdl_3whitesoldiers(
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
 
-    if not open_.flags.c_contiguous: open_ = np.ascontiguousarray(open_)
-    if not open_.flags.writeable: open_ = open_.copy()
-    if not high.flags.c_contiguous: high = np.ascontiguousarray(high)
-    if not high.flags.writeable: high = high.copy()
-    if not low.flags.c_contiguous: low = np.ascontiguousarray(low)
-    if not low.flags.writeable: low = low.copy()
-    if not close.flags.c_contiguous: close = np.ascontiguousarray(close)
-    if not close.flags.writeable: close = close.copy()
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
 
-    # TA‑Lib branch (only if symmetric=False)
+    # TA-Lib branch (only if symmetric=False)
     if use_talib and talib_available and not symmetric:
         talib_out = talib.CDL3WHITESOLDIERS(open_, high, low, close)
         talib_out = talib_out.astype(np.float64) / 100.0
@@ -155,26 +194,31 @@ def cdl_3whitesoldiers(
 
     # Numba branch
     out = _cdl_3whitesoldiers_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_3whitesoldiers_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col='CDL_3WHITESOLDIERS',
+    output_col="CDL_3WHITESOLDIERS",
 ):
     """Add Three White Soldiers column to a Polars DataFrame."""
     out = cdl_3whitesoldiers(

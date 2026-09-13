@@ -112,7 +112,7 @@ def test_macd_numpy_single():
 def test_macd_numpy_nan_inf():
     """IEEE 754: NaN and Inf propagate; Inf is converted to NaN."""
     data = np.array([1.0, 2.0, np.nan, 4.0, np.inf, 6.0])
-    macd, sig, hist = macd_numpy(data, use_talib=False)
+    macd, _sig, _hist = macd_numpy(data, use_talib=False)
     assert macd.shape == data.shape
     # NaN in input -> NaN in output
     assert np.isnan(macd[2])
@@ -125,7 +125,7 @@ def test_macd_numpy_ieee754_extreme():
     extreme = np.array(
         [1e300, 1e-300, 1.0] * 10, dtype=np.float64
     )  # 30 elements
-    macd, sig, hist = macd_numpy(extreme, use_talib=False)
+    macd, _sig, _hist = macd_numpy(extreme, use_talib=False)
     # Should not crash; may contain inf or nan, but that's allowed
     assert macd is not None
 

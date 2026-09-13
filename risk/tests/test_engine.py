@@ -5,13 +5,13 @@ from __future__ import annotations
 
 import pytest
 
-from risk.config import load_config
+from risk.config import RiskConfig, load_config
 from risk.engine import PortfolioState, Signal, check
 
 from .helpers import build
 
 
-def _cfg(**kw) -> object:
+def _cfg(**kw: dict | None) -> RiskConfig:
     return load_config(data=build(kw or None))
 
 

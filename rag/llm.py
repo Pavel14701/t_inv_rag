@@ -34,13 +34,13 @@ class CompletionOptions:
     def payload_for(self, prompt: str, default_model: str) -> dict[str, Any]:
         """Build a provider-agnostic request body."""
         body: dict[str, Any] = {
-            'prompt': prompt,
-            'model': self.model or default_model,
+            "prompt": prompt,
+            "model": self.model or default_model,
         }
         if self.temperature is not None:
-            body['temperature'] = self.temperature
+            body["temperature"] = self.temperature
         if self.num_predict is not None:
-            body['num_predict'] = self.num_predict
+            body["num_predict"] = self.num_predict
         body.update(self.extra)
         return body
 
@@ -67,53 +67,54 @@ class OllamaProvider:
     """Ollama ``/api/chat`` backend.
 
     The model is a per-request field of the Ollama API, so a single running
-    worker serves any number of models — this is what enables per-request
+    worker serves any number of models -- this is what enables per-request
     model routing for multitenant callers.
     """
 
     def __init__(
         self,
-        base_url: str = 'http://localhost:11434',
-        default_model: str = 'deepseek-r1:8b',
+        base_url: str = "http://localhost:11434",
+        default_model: str = "deepseek-r1:8b",
         timeout: float = 120.0,
         transport: Transport | None = None,
         async_transport: AsyncTransport | None = None,
     ) -> None:
-        self.name = 'ollama'
-        self.base_url = base_url.rstrip('/')
+        self.name = "ollama"
+        self.base_url = base_url.rstrip("/")
         self.default_model = default_model
         self.timeout = timeout
         self._transport = transport
         self._async_transport = async_transport
 
     def _url(self) -> str:
-        return f'{self.base_url}/api/chat'
+        return f"{self.base_url}/api/chat"
 
     def _body(self, prompt: str, options: CompletionOptions) -> dict[str, Any]:
         body = options.payload_for(prompt, self.default_model)
-        body.pop('prompt', None)
+        body.pop("prompt", None)
         messages: list[dict[str, str]] = []
         if options.system:
-            messages.append({'role': 'system', 'content': options.system})
-        messages.append({'role': 'user', 'content': prompt})
+            messages.append({"role": "system", "content": options.system})
+        messages.append({"role": "user", "content": prompt})
         opts = {
-            k: v for k, v in body.items()
-            if k in ('temperature', 'num_predict')
+            k: v
+            for k, v in body.items()
+            if k in ("temperature", "num_predict")
         }
         return {
-            'model': body['model'],
-            'messages': messages,
-            'stream': False,
-            'options': opts,
+            "model": body["model"],
+            "messages": messages,
+            "stream": False,
+            "options": opts,
         }
 
     @staticmethod
     def _extract(response: dict[str, Any]) -> str:
-        content = (response.get('message') or {}).get('content')
+        content = (response.get("message") or {}).get("content")
         if content is None:
-            content = response.get('response')
+            content = response.get("response")
         if not isinstance(content, str):
-            raise LLMError(f'Ollama returned no content: {response!r:.200}')
+            raise LLMError(f"Ollama returned no content: {response!r:.200}")
         return content
 
     def complete(self, prompt: str, options: CompletionOptions) -> str:
@@ -124,12 +125,14 @@ class OllamaProvider:
                 response = self._transport(self._url(), body)
             else:
                 response = niquests.post(
-                    self._url(), json=body, timeout=self.timeout,
+                    self._url(),
+                    json=body,
+                    timeout=self.timeout,
                 ).json()
         except LLMError:
             raise
         except Exception as exc:
-            msg = f'Ollama request failed: {exc}'
+            msg = f"Ollama request failed: {exc}"
             raise LLMError(msg) from exc
         return self._extract(response)
 
@@ -142,13 +145,15 @@ class OllamaProvider:
             else:
                 async with niquests.AsyncSession() as session:
                     resp = await session.post(
-                        self._url(), json=body, timeout=self.timeout,
+                        self._url(),
+                        json=body,
+                        timeout=self.timeout,
                     )
                     response = resp.json()
         except LLMError:
             raise
         except Exception as exc:
-            msg = f'Ollama async request failed: {exc}'
+            msg = f"Ollama async request failed: {exc}"
             raise LLMError(msg) from exc
         return self._extract(response)
 
@@ -168,8 +173,8 @@ class OpenAICompatProvider:
         transport: Transport | None = None,
         async_transport: AsyncTransport | None = None,
     ) -> None:
-        self.name = 'openai'
-        self.base_url = base_url.rstrip('/')
+        self.name = "openai"
+        self.base_url = base_url.rstrip("/")
         self.default_model = default_model
         self.api_key = api_key
         self.timeout = timeout
@@ -177,30 +182,30 @@ class OpenAICompatProvider:
         self._async_transport = async_transport
 
     def _url(self) -> str:
-        return f'{self.base_url}/chat/completions'
+        return f"{self.base_url}/chat/completions"
 
     def _body(self, prompt: str, options: CompletionOptions) -> dict[str, Any]:
         body = options.payload_for(prompt, self.default_model)
-        body.pop('prompt', None)
-        body.pop('num_predict', None)
+        body.pop("prompt", None)
+        body.pop("num_predict", None)
         messages: list[dict[str, str]] = []
         if options.system:
-            messages.append({'role': 'system', 'content': options.system})
-        messages.append({'role': 'user', 'content': prompt})
-        body['messages'] = messages
+            messages.append({"role": "system", "content": options.system})
+        messages.append({"role": "user", "content": prompt})
+        body["messages"] = messages
         return body
 
     @staticmethod
     def _extract(response: dict[str, Any]) -> str:
         try:
-            return response['choices'][0]['message']['content'] or ''
+            return response["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as exc:
-            msg = f'OpenAI-compatible response malformed: {response!r:.200}'
+            msg = f"OpenAI-compatible response malformed: {response!r:.200}"
             raise LLMError(msg) from exc
 
     def _headers(self) -> dict[str, str]:
         if self.api_key:
-            return {'Authorization': f'Bearer {self.api_key}'}
+            return {"Authorization": f"Bearer {self.api_key}"}
         return {}
 
     def complete(self, prompt: str, options: CompletionOptions) -> str:
@@ -211,13 +216,15 @@ class OpenAICompatProvider:
                 response = self._transport(self._url(), body)
             else:
                 response = niquests.post(
-                    self._url(), json=body, headers=self._headers(),
+                    self._url(),
+                    json=body,
+                    headers=self._headers(),
                     timeout=self.timeout,
                 ).json()
         except LLMError:
             raise
         except Exception as exc:
-            msg = f'OpenAI-compatible request failed: {exc}'
+            msg = f"OpenAI-compatible request failed: {exc}"
             raise LLMError(msg) from exc
         return self._extract(response)
 
@@ -230,14 +237,16 @@ class OpenAICompatProvider:
             else:
                 async with niquests.AsyncSession() as session:
                     resp = await session.post(
-                        self._url(), json=body, headers=self._headers(),
+                        self._url(),
+                        json=body,
+                        headers=self._headers(),
                         timeout=self.timeout,
                     )
                     response = resp.json()
         except LLMError:
             raise
         except Exception as exc:
-            msg = f'OpenAI-compatible async request failed: {exc}'
+            msg = f"OpenAI-compatible async request failed: {exc}"
             raise LLMError(msg) from exc
         return self._extract(response)
 
@@ -255,19 +264,25 @@ def build_router_from_env(
         LLM_API_KEY     - bearer token for the 'openai' provider.
     """
     env = dict(os.environ if env is None else env)
-    default_provider = env.get('LLM_PROVIDER', 'ollama')
-    default_model = env.get('LLM_MODEL', 'deepseek-r1:8b')
+    default_provider = env.get("LLM_PROVIDER", "ollama")
+    default_model = env.get("LLM_MODEL", "deepseek-r1:8b")
     router = LLMRouter(default_provider=default_provider)
-    router.register('ollama', OllamaProvider(
-        base_url=env.get('OLLAMA_BASE_URL', 'http://localhost:11434'),
-        default_model=default_model,
-    ))
-    if env.get('LLM_BASE_URL'):
-        router.register('openai', OpenAICompatProvider(
-            base_url=env['LLM_BASE_URL'],
+    router.register(
+        "ollama",
+        OllamaProvider(
+            base_url=env.get("OLLAMA_BASE_URL", "http://localhost:11434"),
             default_model=default_model,
-            api_key=env.get('LLM_API_KEY'),
-        ))
+        ),
+    )
+    if env.get("LLM_BASE_URL"):
+        router.register(
+            "openai",
+            OpenAICompatProvider(
+                base_url=env["LLM_BASE_URL"],
+                default_model=default_model,
+                api_key=env.get("LLM_API_KEY"),
+            ),
+        )
     return router
 
 
@@ -278,7 +293,7 @@ class LLMRouter:
     every call may point at any registered provider and any model.
     """
 
-    def __init__(self, default_provider: str = 'ollama') -> None:
+    def __init__(self, default_provider: str = "ollama") -> None:
         self.default_provider = default_provider
         self._providers: dict[str, LLMProvider] = {}
 
@@ -291,8 +306,8 @@ class LLMRouter:
         key = name or self.default_provider
         provider = self._providers.get(key)
         if provider is None:
-            registered = ', '.join(sorted(self._providers)) or '<none>'
-            msg = f'Unknown LLM provider {key!r}. Registered: {registered}'
+            registered = ", ".join(sorted(self._providers)) or "<none>"
+            msg = f"Unknown LLM provider {key!r}. Registered: {registered}"
             raise LLMError(msg)
         return provider
 
@@ -305,7 +320,8 @@ class LLMRouter:
     ) -> str:
         """Complete a prompt, routing to the requested provider."""
         return self.get(provider).complete(
-            prompt, options or CompletionOptions(),
+            prompt,
+            options or CompletionOptions(),
         )
 
     async def acomplete(
@@ -317,5 +333,6 @@ class LLMRouter:
     ) -> str:
         """Async counterpart of :meth:`complete`."""
         return await self.get(provider).acomplete(
-            prompt, options or CompletionOptions(),
+            prompt,
+            options or CompletionOptions(),
         )

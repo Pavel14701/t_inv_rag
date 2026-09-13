@@ -9,25 +9,36 @@ from ..external import talib, talib_available
 
 
 @njit(
-    (types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-     types.float64, types.float64, types.boolean, types.boolean),
+    (
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
+    ),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_breakaway_nb(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     min_body_factor,
     max_shadow_factor,
     strict,
-    symmetric
+    symmetric,
 ):
     """Numba-accelerated Breakaway pattern with optional strict filtering
     and optional symmetric mode.
 
     Returns:
-        1.0 → bullish breakaway
-       -1.0 → bearish breakaway
-        0.0 → none
+        1.0 -> bullish breakaway
+       -1.0 -> bearish breakaway
+        0.0 -> none
 
     """
     n = len(open_)
@@ -56,22 +67,30 @@ def _cdl_breakaway_nb(
 
         direction = 0.0
 
-        # ---------------- Bearish Breakaway (TA-Lib canonical) ----------------
+        # ---------------- Bearish Breakaway (TA-Lib canonical)
+        # ----------------
         bear = (
-            (c4 > o4) and (c3 > o3) and (c2 > o2) and (c1 > o1) and   # uptrend
-            (o3 > h4) and                                             # gap up
-            (c0 < o0) and                                             # bearish final candle
-            (c0 < c1) and                                             # closes below previous close
-            (c0 < c4)                                                 # closes into the gap
+            (c4 > o4)
+            and (c3 > o3)
+            and (c2 > o2)
+            and (c1 > o1)  # uptrend
+            and (o3 > h4)  # gap up
+            and (c0 < o0)  # bearish final candle
+            and (c0 < c1)  # closes below previous close
+            and (c0 < c4)  # closes into the gap
         )
 
-        # ---------------- Bullish Breakaway (TA-Lib canonical) ----------------
+        # ---------------- Bullish Breakaway (TA-Lib canonical)
+        # ----------------
         bull = (
-            (c4 < o4) and (c3 < o3) and (c2 < o2) and (c1 < o1) and   # downtrend
-            (o3 < l4) and                                             # gap down
-            (c0 > o0) and                                             # bullish final candle
-            (c0 > c1) and                                             # closes above previous close
-            (c0 > c4)                                                 # closes into the gap
+            (c4 < o4)
+            and (c3 < o3)
+            and (c2 < o2)
+            and (c1 < o1)  # downtrend
+            and (o3 < l4)  # gap down
+            and (c0 > o0)  # bullish final candle
+            and (c0 > c1)  # closes above previous close
+            and (c0 > c4)  # closes into the gap
         )
 
         # ---------------- Mirrored symmetric mode ----------------
@@ -104,18 +123,20 @@ def _cdl_breakaway_nb(
             b0 = abs(c0 - o0)
 
             # minimum body size
-            if (b4 < min_body_factor * r4 or
-                b3 < min_body_factor * r3 or
-                b2 < min_body_factor * r2 or
-                b1 < min_body_factor * r1 or
-                b0 < min_body_factor * r0):
+            if (
+                b4 < min_body_factor * r4
+                or b3 < min_body_factor * r3
+                or b2 < min_body_factor * r2
+                or b1 < min_body_factor * r1
+                or b0 < min_body_factor * r0
+            ):
                 continue
 
             # shadows (fast)
-            def shadow(o, c, h, l):
+            def shadow(o, c, h, low_):
                 up = o if o > c else c
                 lo = c if o > c else o
-                return (h - up) + (lo - l)
+                return (h - up) + (lo - low_)
 
             sh4 = shadow(o4, c4, h4, l4)
             sh3 = shadow(o3, c3, h3, l3)
@@ -123,11 +144,13 @@ def _cdl_breakaway_nb(
             sh1 = shadow(o1, c1, h1, l1)
             sh0 = shadow(o0, c0, h0, l0)
 
-            if (sh4 > max_shadow_factor * r4 or
-                sh3 > max_shadow_factor * r3 or
-                sh2 > max_shadow_factor * r2 or
-                sh1 > max_shadow_factor * r1 or
-                sh0 > max_shadow_factor * r0):
+            if (
+                sh4 > max_shadow_factor * r4
+                or sh3 > max_shadow_factor * r3
+                or sh2 > max_shadow_factor * r2
+                or sh1 > max_shadow_factor * r1
+                or sh0 > max_shadow_factor * r0
+            ):
                 continue
 
         out[i] = direction
@@ -136,7 +159,10 @@ def _cdl_breakaway_nb(
 
 
 def cdl_breakaway(
-    open_, high, low, close,
+    open_,
+    high,
+    low,
+    close,
     offset=0,
     fillna=None,
     use_talib=True,
@@ -145,16 +171,21 @@ def cdl_breakaway(
     min_body_factor=0.0,
     max_shadow_factor=1.0,
 ):
-    """Universal Breakaway pattern with strict mode and optional symmetric mode.
+    """Universal Breakaway pattern with strict mode and optional symmetric
+        mode.
 
-    If symmetric=False and TA-Lib is available → TA-Lib is used.
-    If symmetric=True → TA-Lib is skipped and Numba is always used.
+    If symmetric=False and TA-Lib is available -> TA-Lib is used.
+    If symmetric=True -> TA-Lib is skipped and Numba is always used.
     """
-    # Polars → NumPy
-    if isinstance(open_, pl.Series): open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): high = high.to_numpy()
-    if isinstance(low, pl.Series): low = low.to_numpy()
-    if isinstance(close, pl.Series): close = close.to_numpy()
+    # Polars -> NumPy
+    if isinstance(open_, pl.Series):
+        open_ = open_.to_numpy()
+    if isinstance(high, pl.Series):
+        high = high.to_numpy()
+    if isinstance(low, pl.Series):
+        low = low.to_numpy()
+    if isinstance(close, pl.Series):
+        close = close.to_numpy()
 
     # float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -162,14 +193,22 @@ def cdl_breakaway(
     low = np.asarray(low, dtype=np.float64)
     close = np.asarray(close, dtype=np.float64)
 
-    if not open_.flags.c_contiguous: open_ = np.ascontiguousarray(open_)
-    if not open_.flags.writeable: open_ = open_.copy()
-    if not high.flags.c_contiguous: high = np.ascontiguousarray(high)
-    if not high.flags.writeable: high = high.copy()
-    if not low.flags.c_contiguous: low = np.ascontiguousarray(low)
-    if not low.flags.writeable: low = low.copy()
-    if not close.flags.c_contiguous: close = np.ascontiguousarray(close)
-    if not close.flags.writeable: close = close.copy()
+    if not open_.flags.c_contiguous:
+        open_ = np.ascontiguousarray(open_)
+    if not open_.flags.writeable:
+        open_ = open_.copy()
+    if not high.flags.c_contiguous:
+        high = np.ascontiguousarray(high)
+    if not high.flags.writeable:
+        high = high.copy()
+    if not low.flags.c_contiguous:
+        low = np.ascontiguousarray(low)
+    if not low.flags.writeable:
+        low = low.copy()
+    if not close.flags.c_contiguous:
+        close = np.ascontiguousarray(close)
+    if not close.flags.writeable:
+        close = close.copy()
 
     # TA-Lib branch (only if symmetric=False)
     if use_talib and talib_available and not symmetric:
@@ -179,27 +218,33 @@ def cdl_breakaway(
 
     # Numba branch
     out = _cdl_breakaway_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_breakaway_polars(
     df: pl.DataFrame,
-    open_col='open',
-    high_col='high',
-    low_col='low',
-    close_col='close',
+    open_col="open",
+    high_col="high",
+    low_col="low",
+    close_col="close",
     offset=0,
     fillna=None,
     strict=False,
     symmetric=False,
     min_body_factor=0.0,
     max_shadow_factor=1.0,
-    output_col='CDL_BREAKAWAY',
+    output_col="CDL_BREAKAWAY",
 ):
+    """See module docs."""
     out = cdl_breakaway(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

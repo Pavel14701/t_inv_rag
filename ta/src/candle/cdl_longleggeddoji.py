@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_longleggeddoji_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Long-Legged Doji pattern.
+    """Numba-accelerated Long-Legged Doji pattern.
     Returns boolean mask where pattern completes (True at the candle).
     """
     n = len(open_)
@@ -27,19 +21,19 @@ def _cdl_longleggeddoji_nb(
         o = open_[i]
         c = close[i]
         h = high[i]
-        l = low[i]
-        rng = h - l
+        low_ = low[i]
+        rng = h - low_
         if rng <= 0.0:
             continue
         # Body
         body = c - o if c > o else o - c
-        # Doji: очень маленькое тело
+        # Doji: a very small body
         if body > 0.1 * rng:
             continue
         # Shadows
         upper = h - (c if c > o else o)
-        lower = (c if c > o else o) - l
-        # Long-legged: обе тени длинные
+        lower = (c if c > o else o) - low_
+        # Long-legged: both shadows are long
         if upper < 0.4 * rng:
             continue
         if lower < 0.4 * rng:
@@ -99,13 +93,13 @@ def cdl_longleggeddoji(
 
 def cdl_longleggeddoji_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_LONGLEGGEDDOJI',
+    output_col: str = "CDL_LONGLEGGEDDOJI",
 ) -> pl.DataFrame:
     """Add Long-Legged Doji column to Polars DataFrame."""
     out = cdl_longleggeddoji(

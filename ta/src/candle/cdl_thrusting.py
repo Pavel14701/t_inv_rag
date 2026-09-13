@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_thrusting_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Thrusting pattern.
+    """Numba-accelerated Thrusting pattern.
     Returns boolean mask where pattern completes (True at the 2nd candle).
     """
     n = len(open_)
@@ -45,9 +39,11 @@ def _cdl_thrusting_nb(
             continue
         # close2 enters body of candle1 but stays below midpoint
         midpoint1 = 0.5 * (o1 + c1)
-        if not (c2 > c1):      # must rise into body
+        if not (c2 > c1):
+            # must rise into body
             continue
-        if not (c2 < midpoint1):  # but not reach midpoint
+        if not (c2 < midpoint1):
+            # but not reach midpoint
             continue
         out[i] = True
     return out
@@ -65,13 +61,13 @@ def cdl_thrusting(
     """Universal Thrusting pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    if isinstance(open_, pl.Series): 
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     open_ = np.asarray(open_, dtype=np.float64)
     high = np.asarray(high, dtype=np.float64)
@@ -104,13 +100,13 @@ def cdl_thrusting(
 
 def cdl_thrusting_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_THRUSTING',
+    output_col: str = "CDL_THRUSTING",
 ) -> pl.DataFrame:
     """Add Thrusting pattern column to Polars DataFrame."""
     out = cdl_thrusting(

@@ -10,8 +10,14 @@ from ..external import talib, talib_available
 
 @njit(
     (
-        types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-        types.float64, types.float64, types.boolean, types.boolean
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64[:],
+        types.float64,
+        types.float64,
+        types.boolean,
+        types.boolean,
     ),
     cache=True,
     fastmath=False,
@@ -29,8 +35,8 @@ def _cdl_darkcloudcover_nb(
     """Optimized Dark Cloud Cover pattern.
 
     Returns:
-        -1.0 → bearish dark cloud cover
-         0.0 → none
+        -1.0 -> bearish dark cloud cover
+         0.0 -> none
 
     """
     n = len(open_)
@@ -112,8 +118,9 @@ def cdl_darkcloudcover(
 ) -> np.ndarray:
     """Dark Cloud Cover pattern with strict support.
 
-    If symmetric=False and TA-Lib is available → TA-Lib CDLDARKCLOUDCOVER is used.
-    If symmetric=True → TA-Lib is skipped and Numba is always used.
+    If symmetric=False and TA-Lib is available -> TA-Lib CDLDARKCLOUDCOVER is
+        used.
+    If symmetric=True -> TA-Lib is skipped and Numba is always used.
     """
     if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
@@ -151,27 +158,33 @@ def cdl_darkcloudcover(
         return _apply_offset_fillna(result, offset, fillna)
 
     out = _cdl_darkcloudcover_nb(
-        open_, high, low, close,
-        min_body_factor, max_shadow_factor,
-        strict, symmetric,
+        open_,
+        high,
+        low,
+        close,
+        min_body_factor,
+        max_shadow_factor,
+        strict,
+        symmetric,
     )
     return _apply_offset_fillna(out, offset, fillna)
 
 
 def cdl_darkcloudcover_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
     strict: bool = False,
     symmetric: bool = False,
     min_body_factor: float = 0.5,
     max_shadow_factor: float = 0.5,
-    output_col: str = 'CDL_DARKCLOUDCOVER',
+    output_col: str = "CDL_DARKCLOUDCOVER",
 ) -> pl.DataFrame:
+    """See module docs."""
     out = cdl_darkcloudcover(
         df[open_col].to_numpy(),
         df[high_col].to_numpy(),

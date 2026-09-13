@@ -33,7 +33,7 @@ def _price_v_rolling(
     len_v : np.ndarray, shape (n,), dtype=np.int32
         Dynamic window length per index (computed by _compute_len_v).
     vpc_c : np.ndarray, shape (n,), dtype=np.float64
-        Clamped VPC to avoid division by zero (values in [-1,0) and [1,+∞)).
+        Clamped VPC to avoid division by zero (values in [-1,0) and [1,+inf)).
 
     Returns
     -------
@@ -52,13 +52,13 @@ def _price_v_rolling(
         L = len_v[i]  # noqa: N806
         if L > 0:
             start = max(0, i - L + 1)
-            denom = vpc_c[i] * vpr[start:i + 1]
-            valid = (vpc_c[i] != 0) & (vpr[start:i + 1] != 0)
+            denom = vpc_c[i] * vpr[start : i + 1]
+            valid = (vpc_c[i] != 0) & (vpr[start : i + 1] != 0)
             values = np.divide(
-                price[start:i + 1],
+                price[start : i + 1],
                 denom,
-                out=np.zeros_like(price[start:i + 1]),
-                where=valid
+                out=np.zeros_like(price[start : i + 1]),
+                where=valid,
             )
             out[i] = np.sum(values) / L / 100.0
         else:
@@ -89,7 +89,7 @@ def _compute_len_v(vpc: np.ndarray, vpci: np.ndarray) -> np.ndarray:
 
     Notes
     -----
-    Uses Python's round() (bankers' rounding) – standard Python behaviour.
+    Uses Python's round() (bankers' rounding) - standard Python behaviour.
 
     """
     n = len(vpc)
@@ -98,9 +98,9 @@ def _compute_len_v(vpc: np.ndarray, vpci: np.ndarray) -> np.ndarray:
         if np.isnan(vpci[i]):
             out[i] = 1
         elif vpc[i] < 0:
-            out[i] = int(round(abs(vpci[i] - 3)))
+            out[i] = round(abs(vpci[i] - 3))
         else:
-            out[i] = int(round(vpci[i] + 3))
+            out[i] = round(vpci[i] + 3)
     return out
 
 
@@ -109,8 +109,8 @@ def _compute_vpcc(vpc: np.ndarray) -> np.ndarray:
     """Clamp VPC to avoid division by zero and extremely small values.
 
     Transformations:
-    - if -1.0 < val < 0.0 → -1.0
-    - if 0.0 <= val < 1.0 → 1.0
+    - if -1.0 < val < 0.0 -> -1.0
+    - if 0.0 <= val < 1.0 -> 1.0
     - otherwise val remains unchanged.
 
     Parameters
@@ -200,7 +200,7 @@ def _avs_base(
     All computations are performed in float64.
 
     """
-    # Volume‑weighted and simple moving averages
+    # Volume-weighted and simple moving averages
     vwma_fast = vwma_ind(close, volume, fast, use_talib=use_talib)
     vwma_slow = vwma_ind(close, volume, slow, use_talib=use_talib)
     sma_fast = sma_ind(close, fast, use_talib=use_talib)

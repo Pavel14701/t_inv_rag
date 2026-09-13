@@ -129,7 +129,7 @@ def test_aberration_numpy_non_contiguous_input(
         atr_length=15,
         use_talib=False,
     )
-    for res, exp in zip(result, expected):
+    for res, exp in zip(result, expected, strict=False):
         assert_allclose(res, exp, rtol=1e-12, equal_nan=True)
 
 
@@ -180,7 +180,7 @@ def test_aberration_ind_with_pl_series(
 ) -> None:
     """Test aberration_ind with Polars Series input."""
     high, low, close = _ohlc_arrays(prices_random_walk)
-    zg, sg, xg, atr = aberration_ind(
+    zg, _sg, _xg, _atr = aberration_ind(
         pl.Series(high),
         pl.Series(low),
         pl.Series(close),

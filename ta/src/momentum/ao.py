@@ -15,7 +15,7 @@ def ao_numpy(
     fillna: float | None = None,
     use_talib: bool = True,
 ) -> np.ndarray:
-    """Numpy‑based Awesome Oscillator calculation.
+    """Numpy-based Awesome Oscillator calculation.
 
     Parameters
     ----------
@@ -26,6 +26,13 @@ def ao_numpy(
     slow : int
         Slow SMA period.
     offset, fillna, use_talib : as usual.
+
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+    use_talib : bool, optional
+        See the module guide; default mirrors the numpy path.
 
     Returns
     -------
@@ -39,9 +46,9 @@ def ao_numpy(
 
     """
     if fast < 1:
-        raise ValueError('fast must be >= 1')
+        raise ValueError("fast must be >= 1")
     if slow < 1:
-        raise ValueError('slow must be >= 1')
+        raise ValueError("slow must be >= 1")
     # Ensure arrays are contiguous
     high = np.asarray(high, dtype=np.float64, copy=False)
     low = np.asarray(low, dtype=np.float64, copy=False)
@@ -55,8 +62,12 @@ def ao_numpy(
     if slow < fast:
         fast, slow = slow, fast
     median = (high + low) * 0.5
-    fast_sma = sma_ind(median, length=fast, offset=0, fillna=None, use_talib=use_talib)
-    slow_sma = sma_ind(median, length=slow, offset=0, fillna=None, use_talib=use_talib)
+    fast_sma = sma_ind(
+        median, length=fast, offset=0, fillna=None, use_talib=use_talib
+    )
+    slow_sma = sma_ind(
+        median, length=slow, offset=0, fillna=None, use_talib=use_talib
+    )
     ao = fast_sma - slow_sma
     return _apply_offset_fillna(ao, offset, fillna)
 
@@ -80,9 +91,9 @@ def ao_ind(
 
 def ao_polars(
     df: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    date_col: str = 'date',
+    high_col: str = "high",
+    low_col: str = "low",
+    date_col: str = "date",
     fast: int = 5,
     slow: int = 34,
     offset: int = 0,
@@ -108,8 +119,5 @@ def ao_polars(
     high = df[high_col].to_numpy()
     low = df[low_col].to_numpy()
     result = ao_numpy(high, low, fast, slow, offset, fillna, use_talib)
-    out_name = output_col or f'AO_{fast}_{slow}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        out_name: result
-    })
+    out_name = output_col or f"AO_{fast}_{slow}"
+    return pl.DataFrame({date_col: df[date_col], out_name: result})

@@ -4,7 +4,7 @@
 This module provides:
 - Numba-accelerated core (`_mcgd_numba_core`)
 - Numba implementation (`mcgd_numba`) with NaN policy support
-- Universal wrapper (`mcgd_ind`) – TA-Lib has no MCGD, so the Numba
+- Universal wrapper (`mcgd_ind`) - TA-Lib has no MCGD, so the Numba
   backend is always used
 - Polars integration (`mcgd_polars`)
 
@@ -13,6 +13,7 @@ optimisations). Infinite values are replaced with NaN before calculation.
 A NaN in the input poisons the recursive filter from that point onward
 (consistent with other recursive moving averages such as EMA).
 """
+
 import numpy as np
 import polars as pl
 
@@ -29,7 +30,7 @@ from .._array_ops import (
 # Core MCGD calculation in Numba (single pass)
 # ----------------------------------------------------------------------
 @jit(
-    'float64[:](float64[:], int64, float64)',
+    "float64[:](float64[:], int64, float64)",
     nopython=True,
     cache=True,
     fastmath=False,
@@ -74,13 +75,13 @@ def _mcgd_numba_core(close: np.ndarray, length: int, c: float) -> np.ndarray:
         prev = mcgd[i - 1]
         # Re-seed if the recursion degenerated to zero (denominator would
         # be infinite and the filter would be stuck at zero forever).
-        if prev == 0.0:
+        if prev == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             mcgd[i] = close[i]
             continue
         ratio = close[i] / prev
-        denom = c * length * (ratio ** 4)
+        denom = c * length * (ratio**4)
         # Guard against division by zero (close[i] == 0 -> ratio == 0).
-        if denom == 0.0:
+        if denom == 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             mcgd[i] = prev
         else:
             mcgd[i] = prev + (close[i] - prev) / denom
@@ -96,7 +97,7 @@ def mcgd_numba(
     c: float = 1.0,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """McGinley Dynamic using Numba.
 
@@ -134,20 +135,20 @@ def mcgd_numba(
 
     """
     if length < 1:
-        raise ValueError(f'MCGD length must be >= 1, got {length}.')
+        raise ValueError(f"MCGD length must be >= 1, got {length}.")
     if c <= 0:
-        raise ValueError(f'MCGD c must be > 0, got {c}.')
+        raise ValueError(f"MCGD c must be > 0, got {c}.")
     close = np.asarray(close, dtype=np.float64)
     if len(close) < 1:
         raise ValueError(
-            f'Input series too short: need at least 1 element, '
-            f'got {len(close)}.'
+            f"Input series too short: need at least 1 element, "
+            f"got {len(close)}."
         )
 
     # Replace infinities with NaN
     close = close.copy()
     replace_inf_with_nan(close)
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -165,7 +166,7 @@ def mcgd_ind(
     c: float = 1.0,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal McGinley Dynamic.
 
@@ -208,13 +209,13 @@ def mcgd_ind(
 # ----------------------------------------------------------------------
 def mcgd_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 10,
     c: float = 1.0,
     offset: int = 0,
     fillna: float | None = None,
-    nan_policy: str = 'raise',
-    output_col: str | None = None
+    nan_policy: str = "raise",
+    output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add MCGD column to Polars DataFrame.
 
@@ -256,5 +257,5 @@ def mcgd_polars(
         fillna=fillna,
         nan_policy=nan_policy,
     )
-    out_name = output_col or f'MCGD_{length}'
+    out_name = output_col or f"MCGD_{length}"
     return df.with_columns([pl.Series(out_name, result)])

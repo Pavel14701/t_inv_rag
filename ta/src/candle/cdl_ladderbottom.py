@@ -8,17 +8,11 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_ladderbottom_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Ladder Bottom pattern.
+    """Numba-accelerated Ladder Bottom pattern.
     Returns boolean mask where pattern completes (True at the 5th candle).
     """
     n = len(open_)
@@ -37,7 +31,8 @@ def _cdl_ladderbottom_nb(
         c4 = close[i - 1]
         h4 = high[i - 1]
         l4 = low[i - 1]
-        if not (c4 < o4):  # black
+        if not (c4 < o4):
+            # black
             continue
         rng4 = h4 - l4
         if rng4 <= 0.0:
@@ -52,7 +47,8 @@ def _cdl_ladderbottom_nb(
         c5 = close[i]
         high[i]
         low[i]
-        if not (c5 > o5):  # must be bullish
+        if not (c5 > o5):
+            # must be bullish
             continue
         # must close above body of candle 4
         if not (c5 > o4):
@@ -73,14 +69,14 @@ def cdl_ladderbottom(
     """Universal Ladder Bottom pattern.
     Returns numpy array of float64: 1.0 where pattern occurs, else 0.0.
     """
-    # Polars → numpy
-    if isinstance(open_, pl.Series): 
+    # Polars -> numpy
+    if isinstance(open_, pl.Series):
         open_ = open_.to_numpy()
-    if isinstance(high, pl.Series): 
+    if isinstance(high, pl.Series):
         high = high.to_numpy()
-    if isinstance(low, pl.Series): 
+    if isinstance(low, pl.Series):
         low = low.to_numpy()
-    if isinstance(close, pl.Series): 
+    if isinstance(close, pl.Series):
         close = close.to_numpy()
     # Ensure float64 + contiguous
     open_ = np.asarray(open_, dtype=np.float64)
@@ -103,7 +99,7 @@ def cdl_ladderbottom(
         close = np.ascontiguousarray(close)
     if not close.flags.writeable:
         close = close.copy()
-    # TA‑Lib branch
+    # TA-Lib branch
     if use_talib and talib_available:
         talib_out = talib.CDLLADDERBOTTOM(open_, high, low, close)
         result = (talib_out != 0).astype(np.float64)
@@ -116,13 +112,13 @@ def cdl_ladderbottom(
 
 def cdl_ladderbottom_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_LADDERBOTTOM',
+    output_col: str = "CDL_LADDERBOTTOM",
 ) -> pl.DataFrame:
     """Add Ladder Bottom column to Polars DataFrame."""
     out = cdl_ladderbottom(

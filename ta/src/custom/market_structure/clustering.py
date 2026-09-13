@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Order block clustering."""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -28,7 +29,8 @@ def cluster_order_blocks(
             price_dist = abs(mid_b - mid_c)
             time_gap = (
                 (b.start - current.start).total_seconds()
-                if max_time_gap else 0
+                if max_time_gap
+                else 0
             )
             if price_dist <= price_tolerance * max(mid_c, 1e-9) and (
                 max_time_gap is None

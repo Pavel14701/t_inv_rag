@@ -132,7 +132,7 @@ def quick_train(
         Trained :class:`EntryExitTransformer` model.
 
     """
-    # ---------- Config (TZ-06 п.10): all defaults from YAML ----------
+    # ---------- Config (TZ-06 item 10): all defaults from YAML ----------
     cfg = config or load_config()
     set_seed(cfg.seed)
     m, t = cfg.model, cfg.training
@@ -148,9 +148,7 @@ def quick_train(
     num_layers = num_layers if num_layers is not None else m.num_layers
     num_heads = num_heads if num_heads is not None else m.num_heads
     val_split = val_split if val_split is not None else t.val_split
-    class_weight = (
-        class_weight if class_weight is not None else t.class_weight
-    )
+    class_weight = class_weight if class_weight is not None else t.class_weight
     early_stopping_patience = (
         early_stopping_patience
         if early_stopping_patience is not None
@@ -158,23 +156,28 @@ def quick_train(
     )
     n_patterns = n_patterns if n_patterns is not None else m.n_patterns
 
-    # ---------- Device (TZ-06 п.11) ----------
-    if device is not None:
-        torch_device = torch.device(device)
-    else:
-        torch_device = resolve_train_device(cfg.compute).torch_device
-        assert torch_device is not None
+    # ---------- Device (TZ-06 item 11) ----------
+    resolved: torch.device | None = (
+        torch.device(device)
+        if device is not None
+        else resolve_train_device(cfg.compute).torch_device
+    )
+    assert resolved is not None
+    torch_device = resolved
     # ---------- Load order blocks ----------
     obs: list[OrderBlock] = load_order_blocks_parquet(order_blocks)
     # ---------- Build model ----------
     # Architecture fields not covered by explicit arguments come from the
-    # config; ``**model_kwargs`` still wins over both (TZ-06 п.10).
+    # config; ``**model_kwargs`` still wins over both (TZ-06 item 10).
     config_model_kwargs = dataclasses.asdict(m)
     for key in (
-        'seq_len',  # explicit, computed above
-        'hidden_size', 'num_layers', 'num_heads',  # explicit arguments
-        'outcome_mode', 'n_patterns',  # explicit arguments
-        'close_idx',  # training-only, not a constructor kwarg
+        "seq_len",  # explicit, computed above
+        "hidden_size",
+        "num_layers",
+        "num_heads",  # explicit arguments
+        "outcome_mode",
+        "n_patterns",  # explicit arguments
+        "close_idx",  # training-only, not a constructor kwarg
     ):
         config_model_kwargs.pop(key, None)
     config_model_kwargs.update(model_kwargs)
@@ -211,8 +214,8 @@ def quick_train(
         # validation features.
         if not val_labels_path:
             raise ValueError(
-                'val_labels_path is required when val_path is provided: '
-                'validation features need their own per-bar labels.'
+                "val_labels_path is required when val_path is provided: "
+                "validation features need their own per-bar labels."
             )
         val_loader, _ = build_loader_from_parquet(
             features_path=val_path,
@@ -235,8 +238,9 @@ def quick_train(
         )
     # ---------- Class weights (optional) ----------
     cw = (
-        _compute_class_weights(df['action'].to_numpy())
-        if class_weight else None
+        _compute_class_weights(df["action"].to_numpy())
+        if class_weight
+        else None
     )
     # ---------- Train ----------
     model = train_one_round(
@@ -258,7 +262,7 @@ def quick_train(
     )
     # Ensure the returned module is indeed an EntryExitTransformer
     assert isinstance(model, EntryExitTransformer), (
-        'train_one_round returned an unexpected type'
+        "train_one_round returned an unexpected type"
     )
-    print('Training finished.')
+    print("Training finished.")
     return model

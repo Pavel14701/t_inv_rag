@@ -17,6 +17,7 @@ IEEE 754 notes
 - NaN propagates: a window touching a NaN bar yields NaN main;
 - the first ``length + drift - 1`` bars are NaN (warm-up).
 """
+
 import numpy as np
 import polars as pl
 
@@ -83,6 +84,11 @@ def tmo_numpy(
         If True, both lines are scaled by ``100 / length``.
     offset, fillna : as usual.
 
+    fillna : float, optional
+        See the module guide; default mirrors the numpy path.
+    offset : int, optional
+        See the module guide; default mirrors the numpy path.
+
     Returns
     -------
     tuple of np.ndarray
@@ -95,11 +101,11 @@ def tmo_numpy(
 
     """
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     if drift < 1:
-        raise ValueError('drift must be >= 1')
+        raise ValueError("drift must be >= 1")
     if smooth < 1:
-        raise ValueError('smooth must be >= 1')
+        raise ValueError("smooth must be >= 1")
     open_ = np.asarray(open_, dtype=np.float64, copy=False)
     close = np.asarray(close, dtype=np.float64, copy=False)
     if open_.size == 0:
@@ -121,9 +127,9 @@ def tmo_numpy(
     if not np.isnan(main[first_valid]):
         main_filled[:first_valid] = main[first_valid]
     signalma = ema_ind(
-        main_filled, length=smooth, use_talib=False, nan_policy='ignore'
+        main_filled, length=smooth, use_talib=False, nan_policy="ignore"
     )
-    signalma[:length + drift + smooth - 2] = np.nan
+    signalma[: length + drift + smooth - 2] = np.nan
     if normalize:
         main = main * 100.0 / length
         signalma = signalma * 100.0 / length
@@ -148,22 +154,28 @@ def tmo_ind(
     if isinstance(close, pl.Series):
         close = close.to_numpy()
     return tmo_numpy(
-        open_, close, length=length, drift=drift, smooth=smooth,
-        normalize=normalize, offset=offset, fillna=fillna,
+        open_,
+        close,
+        length=length,
+        drift=drift,
+        smooth=smooth,
+        normalize=normalize,
+        offset=offset,
+        fillna=fillna,
     )
 
 
 def tmo_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    close_col: str = 'close',
+    open_col: str = "open",
+    close_col: str = "close",
     length: int = 14,
     drift: int = 1,
     smooth: int = 4,
     normalize: bool = True,
     offset: int = 0,
     fillna: float | None = None,
-    suffix: str = '',
+    suffix: str = "",
 ) -> pl.DataFrame:
     """Add TMO columns to a Polars DataFrame.
 
@@ -173,12 +185,20 @@ def tmo_polars(
     open_ = df[open_col].cast(pl.Float64).to_numpy()
     close = df[close_col].cast(pl.Float64).to_numpy()
     main, signalma = tmo_numpy(
-        open_, close, length=length, drift=drift, smooth=smooth,
-        normalize=normalize, offset=offset, fillna=fillna,
+        open_,
+        close,
+        length=length,
+        drift=drift,
+        smooth=smooth,
+        normalize=normalize,
+        offset=offset,
+        fillna=fillna,
     )
     if not suffix:
-        suffix = f'_{length}'
-    return df.with_columns([
-        pl.Series(f'TMO{suffix}', main),
-        pl.Series(f'TMOS{suffix}', signalma),
-    ])
+        suffix = f"_{length}"
+    return df.with_columns(
+        [
+            pl.Series(f"TMO{suffix}", main),
+            pl.Series(f"TMOS{suffix}", signalma),
+        ]
+    )

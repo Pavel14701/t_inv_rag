@@ -99,15 +99,17 @@ def build_loader_from_parquet(
     df_lbl = load_labels_parquet(labels_path)
     df = merge_features_labels(df_feat, df_lbl)
 
-    data = np.column_stack([
-        df[price_cols].to_numpy(),
-        df[ind_cols].to_numpy() if ind_cols else np.zeros((df.height, 0)),
-        df[sig_cols].to_numpy() if sig_cols else np.zeros((df.height, 0)),
-        df[tp_sl_cols].to_numpy(),
-    ])
+    data = np.column_stack(
+        [
+            df[price_cols].to_numpy(),
+            df[ind_cols].to_numpy() if ind_cols else np.zeros((df.height, 0)),
+            df[sig_cols].to_numpy() if sig_cols else np.zeros((df.height, 0)),
+            df[tp_sl_cols].to_numpy(),
+        ]
+    )
 
-    action = df['action'].to_numpy()
-    outcome = df['outcome'].to_numpy()
+    action = df["action"].to_numpy()
+    outcome = df["outcome"].to_numpy()
 
     if pattern_cols:
         pattern_targets = df[pattern_cols].to_numpy().astype(np.float32)
@@ -145,8 +147,8 @@ def build_unlabeled_loader_from_parquet(
     sig_cols: list[str],
     tp_sl_cols: list[str],
     batch_size: int,
-    outcome_mode: str = 'binary',
-    bar_index_col: str | None = 'bar_index',
+    outcome_mode: str = "binary",
+    bar_index_col: str | None = "bar_index",
 ) -> DataLoader:
     """Create a DataLoader for **unlabeled** data.
 
@@ -185,17 +187,19 @@ def build_unlabeled_loader_from_parquet(
     n = df.height
 
     action = np.full(n, -100, dtype=int)
-    if outcome_mode == 'regression':
+    if outcome_mode == "regression":
         outcome = np.full(n, np.nan, dtype=float)
     else:
         outcome = np.full(n, 2, dtype=float)
 
-    data = np.column_stack([
-        df[price_cols].to_numpy(),
-        df[ind_cols].to_numpy() if ind_cols else np.zeros((n, 0)),
-        df[sig_cols].to_numpy() if sig_cols else np.zeros((n, 0)),
-        df[tp_sl_cols].to_numpy(),
-    ])
+    data = np.column_stack(
+        [
+            df[price_cols].to_numpy(),
+            df[ind_cols].to_numpy() if ind_cols else np.zeros((n, 0)),
+            df[sig_cols].to_numpy() if sig_cols else np.zeros((n, 0)),
+            df[tp_sl_cols].to_numpy(),
+        ]
+    )
 
     if bar_index_col and bar_index_col in df.columns:
         bar_index = df[bar_index_col].to_numpy().astype(np.int64)
@@ -242,7 +246,7 @@ def _compute_class_weights(action_targets: np.ndarray) -> torch.Tensor:
         action_targets[action_targets != -100], return_counts=True
     )
     weights = np.ones(3, dtype=np.float32)
-    for cls, cnt in zip(unique, counts):
+    for cls, cnt in zip(unique, counts, strict=False):
         if cls in (0, 1, 2):
             weights[int(cls)] = 1.0 / cnt
     weights = weights / weights.sum() * len(weights)
@@ -265,22 +269,30 @@ def _prepare_batch(batch, device: torch.device):
 
     """
     (
-        prices, indicators, signals, tp, sl,
-        order_blocks, action_tgt, outcome_tgt,
-        pattern_tgt, start_indices, bar_indices,
+        prices,
+        indicators,
+        signals,
+        tp,
+        sl,
+        order_blocks,
+        action_tgt,
+        outcome_tgt,
+        pattern_tgt,
+        start_indices,
+        bar_indices,
     ) = batch
     return {
-        'prices': prices.to(device),
-        'indicators': indicators.to(device),
-        'signals': signals.to(device),
-        'tp': tp.to(device),
-        'sl': sl.to(device),
-        'order_blocks': order_blocks,
-        'action_tgt': action_tgt.to(device),
-        'outcome_tgt': outcome_tgt.to(device),
-        'pattern_tgt': pattern_tgt.to(device),
-        'start_indices': start_indices,
-        'bar_indices': bar_indices,
+        "prices": prices.to(device),
+        "indicators": indicators.to(device),
+        "signals": signals.to(device),
+        "tp": tp.to(device),
+        "sl": sl.to(device),
+        "order_blocks": order_blocks,
+        "action_tgt": action_tgt.to(device),
+        "outcome_tgt": outcome_tgt.to(device),
+        "pattern_tgt": pattern_tgt.to(device),
+        "start_indices": start_indices,
+        "bar_indices": bar_indices,
     }
 
 
@@ -307,22 +319,22 @@ def _model_forward_loss(
 
     """
     action_logits, outcome_logits, pattern_logits = model(
-        batch_data['prices'],
-        batch_data['indicators'],
-        batch_data['signals'],
-        batch_data['tp'],
-        batch_data['sl'],
-        batch_data['order_blocks'],
+        batch_data["prices"],
+        batch_data["indicators"],
+        batch_data["signals"],
+        batch_data["tp"],
+        batch_data["sl"],
+        batch_data["order_blocks"],
     )
     loss, _, _, _ = dual_loss(
         action_logits,
         outcome_logits,
-        batch_data['action_tgt'],
-        batch_data['outcome_tgt'],
+        batch_data["action_tgt"],
+        batch_data["outcome_tgt"],
         outcome_mode,
         lambda_outcome,
         pattern_logits=pattern_logits,
-        pattern_targets=batch_data['pattern_tgt'],
+        pattern_targets=batch_data["pattern_tgt"],
         lambda_pattern=lambda_pattern,
         class_weight=class_weight,
     )
@@ -384,8 +396,12 @@ def _run_train_epoch(
     for batch in loader:
         data = _prepare_batch(batch, device)
         loss, _, _ = _model_forward_loss(
-            model, data, outcome_mode, lambda_outcome,
-            lambda_pattern, class_weight
+            model,
+            data,
+            outcome_mode,
+            lambda_outcome,
+            lambda_pattern,
+            class_weight,
         )
         optimizer.zero_grad()
         loss.backward()
@@ -420,16 +436,15 @@ def _run_val_epoch(
     with torch.no_grad():
         for batch in loader:
             data = _prepare_batch(batch, device)
-            loss, action_logits, outcome_logits = _model_forward_loss(
-                model, data, outcome_mode, lambda_outcome,
-                lambda_pattern, None
+            loss, action_logits, _outcome_logits = _model_forward_loss(
+                model, data, outcome_mode, lambda_outcome, lambda_pattern, None
             )
             total_loss += loss.item()
             num_batches += 1
 
             a_logits.append(action_logits.reshape(-1, 3))
-            a_targets.append(data['action_tgt'].reshape(-1))
-            o_targets.append(data['outcome_tgt'].reshape(-1))
+            a_targets.append(data["action_tgt"].reshape(-1))
+            o_targets.append(data["outcome_tgt"].reshape(-1))
 
     avg_loss = total_loss / max(num_batches, 1)
     action_acc, trade_metrics = _compute_val_metrics(
@@ -456,23 +471,21 @@ def _log_epoch(
         - ``Trades/win_rate``, ``Trades/profit_factor``
     """
     msg = (
-        f'Epoch {epoch + 1}/{total_epochs} | '
-        f'Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | '
-        f'Acc: {action_acc["overall"]:.3f} (entry: {action_acc["entry"]:.3f}) | '  # noqa: E501
-        f'WR: {trade_metrics["win_rate"]:.3f} PF: {trade_metrics["profit_factor"]:.2f}'  # noqa: E501
+        f"Epoch {epoch + 1}/{total_epochs} | "
+        f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | "
+        f"Acc: {action_acc['overall']:.3f} (entry: {action_acc['entry']:.3f}) | "  # noqa: E501
+        f"WR: {trade_metrics['win_rate']:.3f} PF: {trade_metrics['profit_factor']:.2f}"  # noqa: E501
     )
     logger.info(msg)
 
     if writer is not None:
-        writer.add_scalar('Loss/train', train_loss, epoch)
-        writer.add_scalar('Loss/val', val_loss, epoch)
-        writer.add_scalar('Acc/overall', action_acc['overall'], epoch)
-        writer.add_scalar('Acc/entry', action_acc['entry'], epoch)
-        writer.add_scalar('Trades/win_rate', trade_metrics['win_rate'], epoch)
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Loss/val", val_loss, epoch)
+        writer.add_scalar("Acc/overall", action_acc["overall"], epoch)
+        writer.add_scalar("Acc/entry", action_acc["entry"], epoch)
+        writer.add_scalar("Trades/win_rate", trade_metrics["win_rate"], epoch)
         writer.add_scalar(
-            'Trades/profit_factor',
-            trade_metrics['profit_factor'],
-            epoch
+            "Trades/profit_factor", trade_metrics["profit_factor"], epoch
         )
 
 
@@ -496,7 +509,7 @@ def _checkpoint_and_stop(
         no_improve_count = 0
         if best_model_path is not None:
             torch.save(model.state_dict(), best_model_path)
-            logger.info('  -> Best model saved (val_loss=%.4f)', best_val_loss)
+            logger.info("  -> Best model saved (val_loss=%.4f)", best_val_loss)
     else:
         no_improve_count += 1
 
@@ -505,7 +518,7 @@ def _checkpoint_and_stop(
         and no_improve_count >= early_stopping_patience
     )
     if should_stop:
-        print('  Early stopping.')
+        print("  Early stopping.")
     return best_val_loss, no_improve_count, should_stop
 
 
@@ -515,7 +528,7 @@ def train_one_round(
     val_loader: DataLoader | None,
     epochs: int,
     device: torch.device,
-    outcome_mode: str = 'binary',
+    outcome_mode: str = "binary",
     lambda_outcome: float = 0.3,
     lr: float = 1e-4,
     lambda_pattern: float = 0.1,
@@ -565,43 +578,63 @@ def train_one_round(
     writer = SummaryWriter(log_dir) if log_dir else None
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', patience=2, factor=0.5
+        optimizer, mode="min", patience=2, factor=0.5
     )
     best_val_loss = math.inf
     no_improve_count = 0
 
     for epoch in range(epochs):
         train_loss = _run_train_epoch(
-            model, train_loader, device, optimizer,
-            outcome_mode, lambda_outcome, lambda_pattern, class_weight
+            model,
+            train_loader,
+            device,
+            optimizer,
+            outcome_mode,
+            lambda_outcome,
+            lambda_pattern,
+            class_weight,
         )
 
         if val_loader is not None:
             val_loss, action_acc, trade_metrics = _run_val_epoch(
-                model, val_loader, device,
-                outcome_mode, lambda_outcome, lambda_pattern
+                model,
+                val_loader,
+                device,
+                outcome_mode,
+                lambda_outcome,
+                lambda_pattern,
             )
             _log_epoch(
-                writer, epoch, epochs, train_loss, val_loss,
-                action_acc, trade_metrics
+                writer,
+                epoch,
+                epochs,
+                train_loss,
+                val_loss,
+                action_acc,
+                trade_metrics,
             )
             scheduler.step(val_loss)
 
             best_val_loss, no_improve_count, stop = _checkpoint_and_stop(
-                val_loss, best_val_loss, no_improve_count, model,
-                save_best, best_model_path, early_stopping_patience
+                val_loss,
+                best_val_loss,
+                no_improve_count,
+                model,
+                save_best,
+                best_model_path,
+                early_stopping_patience,
             )
             if stop:
                 break
         else:
             logger.info(
-                'Epoch %d/%d | Train Loss: %.4f',
+                "Epoch %d/%d | Train Loss: %.4f",
                 epoch + 1,
                 epochs,
                 train_loss,
             )
             if writer:
-                writer.add_scalar('Loss/train', train_loss, epoch)
+                writer.add_scalar("Loss/train", train_loss, epoch)
 
     if writer:
         writer.close()
@@ -638,7 +671,7 @@ def _determine_pseudo_outcome(
     """Convert a raw outcome logit into a pseudo-outcome if confident.
 
     The confidence threshold is applied symmetrically for binary mode
-    (probability > threshold → win, < 1-threshold → loss).  For
+    (probability > threshold -> win, < 1-threshold -> loss).  For
     multiclass and regression modes the logic is mode-specific.
 
     Returns:
@@ -646,16 +679,16 @@ def _determine_pseudo_outcome(
         confident enough.
 
     """
-    if outcome_mode == 'binary':
+    if outcome_mode == "binary":
         prob = torch.sigmoid(outcome_logit)
         if prob > outcome_threshold:
             return 1.0
         return 0.0 if prob < (1 - outcome_threshold) else None
-    elif outcome_mode == 'multiclass':
+    elif outcome_mode == "multiclass":
         probs = functional.softmax(outcome_logit, dim=-1)
         max_prob, cls = probs.max(dim=-1)
         return float(cls.item()) if max_prob >= outcome_threshold else None
-    elif outcome_mode == 'regression':
+    elif outcome_mode == "regression":
         pred = outcome_logit.item()
         return float(pred) if abs(pred) >= outcome_threshold else None
     return None
@@ -707,9 +740,17 @@ def _generate_pseudo_labels_batch(
 
     """
     (
-        prices, indicators, signals, tp, sl,
-        order_blocks_batch, action_tgt, outcome_tgt,
-        _pattern_tgt, start_indices, bar_indices,
+        prices,
+        indicators,
+        signals,
+        tp,
+        sl,
+        order_blocks_batch,
+        action_tgt,
+        _outcome_tgt,
+        _pattern_tgt,
+        _start_indices,
+        bar_indices,
     ) = batch
     prices = prices.to(device)
     indicators = indicators.to(device)
@@ -729,10 +770,9 @@ def _generate_pseudo_labels_batch(
     for bi, ti in itertools.product(range(b), range(t)):
         if action_tgt[bi, ti] != -100:
             continue
-        if (
-            max_action_probs[bi, ti] <= action_threshold
-            or pred_action[bi, ti] not in (1, 2)
-        ):
+        if max_action_probs[bi, ti] <= action_threshold or pred_action[
+            bi, ti
+        ] not in (1, 2):
             continue
 
         if pred_action[bi, ti] == 1:
@@ -758,10 +798,10 @@ def _generate_pseudo_labels_batch(
 def _update_labels_parquet(
     labels_path: str,
     new_pseudo: list[tuple[int, int, float]],
-    outcome_mode: str = 'binary',
+    outcome_mode: str = "binary",
     round_idx: int = 0,
 ) -> int:
-    """Persist pseudo-labels without destructive mutation (TZ-06 п.2.3).
+    """Persist pseudo-labels without destructive mutation (TZ-06 item 2.3).
 
     Before any modification the current ``labels.parquet`` is backed up
     to ``<path>.bak_round<round_idx>`` so a failed or corrupted round can
@@ -790,23 +830,25 @@ def _update_labels_parquet(
     df_lbl = load_labels_parquet(labels_path)
 
     # Per-round backup for rollback.
-    backup_path = f'{labels_path}.bak_round{round_idx}.parquet'
+    backup_path = f"{labels_path}.bak_round{round_idx}.parquet"
     if not Path(backup_path).exists():
         shutil.copyfile(labels_path, backup_path)
 
-    if 'action' not in df_lbl.columns:
-        df_lbl = df_lbl.with_columns([
-            pl.lit(-100).alias('action'),
-            pl.lit(
-                float('nan') if outcome_mode == 'regression' else 2.0
-            ).alias('outcome'),
-        ])
-    if 'is_pseudo' not in df_lbl.columns:
-        df_lbl = df_lbl.with_columns([pl.lit(False).alias('is_pseudo')])
+    if "action" not in df_lbl.columns:
+        df_lbl = df_lbl.with_columns(
+            [
+                pl.lit(-100).alias("action"),
+                pl.lit(
+                    float("nan") if outcome_mode == "regression" else 2.0
+                ).alias("outcome"),
+            ]
+        )
+    if "is_pseudo" not in df_lbl.columns:
+        df_lbl = df_lbl.with_columns([pl.lit(False).alias("is_pseudo")])
 
-    action_arr = df_lbl['action'].to_numpy().copy()
-    outcome_arr = df_lbl['outcome'].to_numpy().copy()
-    is_pseudo_arr = df_lbl['is_pseudo'].to_numpy().copy()
+    action_arr = df_lbl["action"].to_numpy().copy()
+    outcome_arr = df_lbl["outcome"].to_numpy().copy()
+    is_pseudo_arr = df_lbl["is_pseudo"].to_numpy().copy()
     n_rows = len(action_arr)
 
     applied = 0
@@ -823,17 +865,19 @@ def _update_labels_parquet(
         is_pseudo_arr[global_bar] = True
         applied += 1
 
-    df_lbl = df_lbl.with_columns([
-        pl.Series('action', action_arr),
-        pl.Series('outcome', outcome_arr),
-        pl.Series('is_pseudo', is_pseudo_arr),
-    ])
+    df_lbl = df_lbl.with_columns(
+        [
+            pl.Series("action", action_arr),
+            pl.Series("outcome", outcome_arr),
+            pl.Series("is_pseudo", is_pseudo_arr),
+        ]
+    )
     save_labels_parquet(df_lbl, labels_path)
     return applied
 
 
 def _rollback_labels(labels_path: str, round_idx: int) -> None:
-    """Restore ``labels.parquet`` from a per-round backup (TZ-06 п.2.3).
+    """Restore ``labels.parquet`` from a per-round backup (TZ-06 item 2.3).
 
     If the backup for ``round_idx`` exists it is copied back over
     ``labels_path``.  Useful for undoing a bad self-training round whose
@@ -849,10 +893,10 @@ def _rollback_labels(labels_path: str, round_idx: int) -> None:
     """
     import shutil
 
-    backup_path = f'{labels_path}.bak_round{round_idx}.parquet'
+    backup_path = f"{labels_path}.bak_round{round_idx}.parquet"
     if not Path(backup_path).exists():
         raise FileNotFoundError(
-            f'No backup for round {round_idx}: {backup_path}'
+            f"No backup for round {round_idx}: {backup_path}"
         )
     shutil.copyfile(backup_path, labels_path)
 
@@ -884,7 +928,7 @@ def _split_train_val(
     """
     dataset = loader.dataset
     assert isinstance(dataset, TradingDataset), (
-        'loader.dataset must be a TradingDataset'
+        "loader.dataset must be a TradingDataset"
     )
     if val_split <= 0:
         return loader, None
@@ -892,7 +936,7 @@ def _split_train_val(
     n_windows = len(dataset)
     n_val = int(n_windows * val_split)
     if n_val == 0:
-        raise ValueError('val_split too small, validation set is empty')
+        raise ValueError("val_split too small, validation set is empty")
 
     # Validation: the most recent windows
     val_start = n_windows - n_val
@@ -903,9 +947,9 @@ def _split_train_val(
     train_end = max(0, val_start - (dataset.seq_len - 1))
     if train_end == 0:
         raise ValueError(
-            'val_split/seq_len leave no training windows: need '
-            f'at least {dataset.seq_len} windows before the validation '
-            'boundary. Use more data, a smaller seq_len or val_split.'
+            "val_split/seq_len leave no training windows: need "
+            f"at least {dataset.seq_len} windows before the validation "
+            "boundary. Use more data, a smaller seq_len or val_split."
         )
     train_indices = list(range(train_end))
 
@@ -958,9 +1002,7 @@ def _self_training_round(
         List of pseudo-labels, or ``None``.
 
     """
-    logger.info(
-        '=== Self-training round %d/%d ===', round_idx + 1, num_rounds
-    )
+    logger.info("=== Self-training round %d/%d ===", round_idx + 1, num_rounds)
     model = train_one_round(
         model,
         train_loader,
@@ -997,10 +1039,10 @@ def _self_training_round(
             all_new_pseudo.extend(batch_pseudo)
 
     if not all_new_pseudo:
-        logger.info('No new pseudo-labels, stopping self-training.')
+        logger.info("No new pseudo-labels, stopping self-training.")
         return None
     logger.info(
-        'Generated %d pseudo-labels. Updating labels...',
+        "Generated %d pseudo-labels. Updating labels...",
         len(all_new_pseudo),
     )
     return all_new_pseudo
@@ -1019,7 +1061,7 @@ def self_training_loop(
     seq_len: int,
     batch_size: int,
     device: torch.device,
-    outcome_mode: str = 'binary',
+    outcome_mode: str = "binary",
     lambda_outcome: float = 0.3,
     lr: float = 1e-4,
     epochs_per_round: int = 3,
@@ -1083,33 +1125,57 @@ def self_training_loop(
     """
     # ---------- Initial labeled loader ----------
     loader, df = build_loader_from_parquet(
-        features_path, labels_path, order_blocks,
-        seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
-        batch_size=batch_size, shuffle=True,
+        features_path,
+        labels_path,
+        order_blocks,
+        seq_len,
+        price_cols,
+        ind_cols,
+        sig_cols,
+        tp_sl_cols,
+        batch_size=batch_size,
+        shuffle=True,
     )
     train_loader, val_loader = _split_train_val(loader, val_split, batch_size)
-    class_weight = _compute_class_weights(df['action'].to_numpy())
+    class_weight = _compute_class_weights(df["action"].to_numpy())
 
     # ---------- Unlabeled loader ----------
     unlabeled_loader = build_unlabeled_loader_from_parquet(
-        features_path_unlabeled, order_blocks,
-        seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
-        batch_size=batch_size, outcome_mode=outcome_mode,
+        features_path_unlabeled,
+        order_blocks,
+        seq_len,
+        price_cols,
+        ind_cols,
+        sig_cols,
+        tp_sl_cols,
+        batch_size=batch_size,
+        outcome_mode=outcome_mode,
     )
 
     # ---------- Self-training rounds ----------
     for round_idx in range(num_rounds):
         pseudo_labels = _self_training_round(
-            model, round_idx, num_rounds,
-            train_loader, val_loader, unlabeled_loader,
-            device, outcome_mode, lambda_outcome, lr,
-            epochs_per_round, action_threshold, outcome_threshold,
-            min_rr, close_idx, seq_len, class_weight, log_dir,
+            model,
+            round_idx,
+            num_rounds,
+            train_loader,
+            val_loader,
+            unlabeled_loader,
+            device,
+            outcome_mode,
+            lambda_outcome,
+            lr,
+            epochs_per_round,
+            action_threshold,
+            outcome_threshold,
+            min_rr,
+            close_idx,
+            seq_len,
+            class_weight,
+            log_dir,
             save_best=True,
             best_model_path=(
-                f'{save_model_path}_best.pt'
-                if save_model_path
-                else None
+                f"{save_model_path}_best.pt" if save_model_path else None
             ),
             early_stopping_patience=early_stopping_patience,
         )
@@ -1120,9 +1186,16 @@ def self_training_loop(
             labels_path, pseudo_labels, outcome_mode, round_idx=round_idx
         )
         loader, df = build_loader_from_parquet(
-            features_path, labels_path, order_blocks,
-            seq_len, price_cols, ind_cols, sig_cols, tp_sl_cols,
-            batch_size=batch_size, shuffle=True,
+            features_path,
+            labels_path,
+            order_blocks,
+            seq_len,
+            price_cols,
+            ind_cols,
+            sig_cols,
+            tp_sl_cols,
+            batch_size=batch_size,
+            shuffle=True,
         )
         train_loader, val_loader = _split_train_val(
             loader, val_split, batch_size
@@ -1131,7 +1204,7 @@ def self_training_loop(
         if save_model_path:
             torch.save(
                 model.state_dict(),
-                f'{save_model_path}_round{round_idx + 1}.pt',
+                f"{save_model_path}_round{round_idx + 1}.pt",
             )
 
     return model

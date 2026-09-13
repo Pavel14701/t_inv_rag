@@ -82,7 +82,7 @@ def test_bbands_numpy_constant_close() -> None:
     close = np.full(30, 5.0)
     with warnings.catch_warnings():
         warnings.simplefilter("error", RuntimeWarning)
-        lower, mid, upper, bandwidth, percent_b = bbands_numpy(
+        lower, _mid, upper, bandwidth, percent_b = bbands_numpy(
             close,
             length=5,
             use_talib=False,

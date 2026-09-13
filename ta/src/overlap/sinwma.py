@@ -14,6 +14,7 @@ This module provides:
 All floating-point operations follow IEEE 754 rules. Infinite values are
 replaced with NaN before calculation.
 """
+
 from functools import lru_cache
 from typing import Optional
 
@@ -56,7 +57,7 @@ def _sine_weights(length: int) -> np.ndarray:
 
     """
     if length < 1:
-        raise ValueError(f'SINWMA length must be >= 1, got {length}')
+        raise ValueError(f"SINWMA length must be >= 1, got {length}")
     i = np.arange(1, length + 1, dtype=np.float64)
     w = np.sin(i * np.pi / (length + 1))
     w /= w.sum()
@@ -106,7 +107,7 @@ def sinwma_numba(
     length: int = 14,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Sine Weighted Moving Average using Numba.
 
@@ -142,7 +143,7 @@ def sinwma_numba(
 
     """
     if length < 1:
-        raise ValueError(f'SINWMA length must be >= 1, got {length}')
+        raise ValueError(f"SINWMA length must be >= 1, got {length}")
     close = np.asarray(close, dtype=np.float64, copy=False)
 
     # Replace infinities with NaN (IEEE 754 compliance)
@@ -150,15 +151,15 @@ def sinwma_numba(
     replace_inf_with_nan(close)
 
     # Apply NaN policy
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
 
     if len(close) < length:
         raise ValueError(
-            f'Input series too short: need at least {length} elements, '
-            f'got {len(close)}.'
+            f"Input series too short: need at least {length} elements, "
+            f"got {len(close)}."
         )
 
     weights = _sine_weights(length)
@@ -175,7 +176,7 @@ def sinwma_ind(
     length: int = 14,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
 ) -> np.ndarray:
     """Universal SINWMA (always uses Numba).
 
@@ -213,12 +214,12 @@ def sinwma_ind(
 # ----------------------------------------------------------------------
 def sinwma_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 14,
     offset: int = 0,
     fillna: Optional[float] = None,
-    nan_policy: str = 'raise',
-    output_col: Optional[str] = None
+    nan_policy: str = "raise",
+    output_col: Optional[str] = None,
 ) -> pl.DataFrame:
     """Add SINWMA column to Polars DataFrame.
 
@@ -251,8 +252,6 @@ def sinwma_polars(
 
     """
     close = df[close_col].to_numpy()
-    result = sinwma_ind(
-        close, length, offset, fillna, nan_policy
-    )
-    out_name = output_col or f'SINWMA_{length}'
+    result = sinwma_ind(close, length, offset, fillna, nan_policy)
+    out_name = output_col or f"SINWMA_{length}"
     return df.with_columns([pl.Series(out_name, result)])

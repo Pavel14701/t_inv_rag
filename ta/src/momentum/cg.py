@@ -8,10 +8,7 @@ from .._array_ops import _apply_offset_fillna
 
 
 @jit(nopython=True, fastmath=False, cache=True)
-def _cg_numba_core(
-    close: np.ndarray,
-    length: int
-) -> np.ndarray:
+def _cg_numba_core(close: np.ndarray, length: int) -> np.ndarray:
     """Center of Gravity core with O(1) sliding window update.
 
     fastmath is disabled: the ``denominator != 0.0`` guard is a
@@ -41,7 +38,7 @@ def _cg_numba_core(
         val = close[k - 1]
         numerator += k * val
         denominator += val
-    if denominator != 0.0:
+    if denominator != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
         out[length - 1] = -numerator / denominator
     else:
         out[length - 1] = np.nan
@@ -51,11 +48,11 @@ def _cg_numba_core(
     #   num_new = num_old - den_old + length * newest
     #   den_new = den_old - oldest + newest
     for i in range(length, n):
-        oldest = close[i - length]      # price leaving the window
-        newest = close[i]               # price entering the window
+        oldest = close[i - length]  # price leaving the window
+        newest = close[i]  # price entering the window
         numerator = numerator - denominator + length * newest
         denominator = denominator - oldest + newest
-        if denominator != 0.0:
+        if denominator != 0.0:  # noqa: RUF069 - exact IEEE zero/sign check
             out[i] = -numerator / denominator
         else:
             out[i] = np.nan
@@ -75,7 +72,7 @@ def cg_numba(
     if not close.flags.writeable:
         close = close.copy()
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     result = _cg_numba_core(close, length)
     return _apply_offset_fillna(result, offset, fillna)
 
@@ -112,8 +109,8 @@ def cg_ind(
 
 def cg_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
-    date_col: str = 'date', 
+    close_col: str = "close",
+    date_col: str = "date",
     length: int = 10,
     offset: int = 0,
     fillna: float | None = None,
@@ -136,6 +133,9 @@ def cg_polars(
     output_col : str, optional
         Output column name (default f"CG_{length}").
 
+    date_col : see notes
+        Documented in the matching numpy implementation.
+
     Returns
     -------
     pl.DataFrame
@@ -144,8 +144,5 @@ def cg_polars(
     """
     close = df[close_col].to_numpy()
     result = cg_ind(close, length, offset, fillna)
-    out_name = output_col or f'CG_{length}'
-    return pl.DataFrame({
-        date_col: df[date_col],
-        out_name: result
-    })
+    out_name = output_col or f"CG_{length}"
+    return pl.DataFrame({date_col: df[date_col], out_name: result})

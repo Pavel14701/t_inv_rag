@@ -1,5 +1,26 @@
 # TZ-11. Risk Engine — детерминированный риск-контур (config-driven)
 
+> **Статус: ✅ реализован (22 теста + 12 интеграционных в backtest).**
+> ✅ risk/config.py: типизированный конфиг (frozen dataclass), строгая валидация —
+> неизвестный ключ / неверный тип / запрещённый severity: warn → ошибка при
+> validate_config(); иерархия defaults (configs/risk.yaml) → user --config
+> (глубокий мерж) → RISK_* env (только объявленные, незнакомые — ошибка).
+> ✅ risk/rules/: реестр «contract» — name → реализация, params — только данные;
+> v1: require_stop_loss, position_limit, max_positions, daily_loss_limit,
+> drawdown_stop (с pause_bars). Схемы params (PARAM_SCHEMAS) валидируются:
+> неизвестный/нетипизированный/отсутствующий обязательный блок → ошибка.
+> ✅ risk/engine.py: check(signal, state, cfg) -> Decision{approve, reason, size,
+> rule} — чистая функция; reject всегда несёт имя правила.
+> ✅ Интеграция (TZ-04 п.4.5): run_backtest(risk_config=...) прогоняет каждый
+> вход через check(); reject'ы хранятся в metrics.risk_rejects
+> (bar_idx, rule, reason, params-снапшот; len = счётчик).
+> ✅ Приёмка TZ-11: e2e config-driven (строгий конфиг → 0 сделок и 9 reject'ов,
+> пермиссивный → идентичен бейслайну без gate); инвариант «нет approve без всех
+> активных правил»; size=0 при пустом капитале; «изменить лимиты» отсутствует
+> в схеме очередей TZ-09 (тест).
+> Осталось: live-контур TZ-10 вызывает тот же check() (склейка после
+> FastStream↔PG); Numba-каузальность ATR — со стороны TZ-04 (уже каузален).
+
 ## 1. Контекст
 
 Тезис проекта — «решения принимает только детерминированный код» — неполный без Risk

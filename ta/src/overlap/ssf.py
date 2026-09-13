@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Ehlers Super Smoother Filter (SSF) – aggressively optimized Numba version."""
+"""Ehlers Super Smoother Filter (SSF) - aggressively optimized Numba
+version.
+"""
 
 from typing import Optional
 
@@ -12,7 +14,7 @@ from .._array_ops import _apply_offset_fillna
 
 
 # ----------------------------------------------------------------------
-# Original Ehlers SSF (2‑pole) with fastmath
+# Original Ehlers SSF (2-pole) with fastmath
 # ----------------------------------------------------------------------
 @njit(cache=True)
 def _ssf_ehlers(x: np.ndarray, n: int, pi: float, sqrt2: float) -> np.ndarray:
@@ -30,9 +32,9 @@ def _ssf_ehlers(x: np.ndarray, n: int, pi: float, sqrt2: float) -> np.ndarray:
     if m > 1:
         out[1] = x[1]
     for i in range(2, m):
-        out[i] = 0.5 * c * (
-            x[i] + x[i - 1]
-        ) + b * out[i - 1] - a * a * out[i - 2]
+        out[i] = (
+            0.5 * c * (x[i] + x[i - 1]) + b * out[i - 1] - a * a * out[i - 2]
+        )
     return out
 
 
@@ -53,9 +55,11 @@ def _ssf_everget(x: np.ndarray, n: int, pi: float, sqrt2: float) -> np.ndarray:
     if m > 1:
         out[1] = x[1]
     for i in range(2, m):
-        out[i] = 0.5 * (
-            a * a - b + 1.0
-        ) * (x[i] + x[i - 1]) + b * out[i - 1] - a * a * out[i - 2]
+        out[i] = (
+            0.5 * (a * a - b + 1.0) * (x[i] + x[i - 1])
+            + b * out[i - 1]
+            - a * a * out[i - 2]
+        )
     return out
 
 
@@ -69,11 +73,11 @@ def ssf_numba(
     pi: float = 3.14159,
     sqrt2: float = 1.414,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
     """Super Smoother Filter using Numba."""
     if length < 1:
-        raise ValueError('length must be >= 1')
+        raise ValueError("length must be >= 1")
     close = np.asarray(close, dtype=np.float64, copy=False)
     if not close.flags.c_contiguous:
         close = np.ascontiguousarray(close)
@@ -94,7 +98,7 @@ def ssf_ind(
     pi: float = 3.14159,
     sqrt2: float = 1.414,
     offset: int = 0,
-    fillna: Optional[float] = None
+    fillna: Optional[float] = None,
 ) -> np.ndarray:
     """Universal SSF."""
     if isinstance(close, pl.Series):
@@ -107,14 +111,14 @@ def ssf_ind(
 # ----------------------------------------------------------------------
 def ssf_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 20,
     everget: bool = False,
     pi: float = 3.14159,
     sqrt2: float = 1.414,
     offset: int = 0,
     fillna: Optional[float] = None,
-    output_col: Optional[str] = None
+    output_col: Optional[str] = None,
 ) -> pl.DataFrame:
     """Add SSF column to Polars DataFrame."""
     close = df[close_col].to_numpy()

@@ -11,15 +11,12 @@ from ..external import talib, talib_available
 @njit(
     (types.float64[:], types.float64[:], types.float64[:], types.float64[:]),
     cache=True,
-    fastmath=False
+    fastmath=False,
 )
 def _cdl_3blackcrows_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Three Black Crows pattern.
+    """Numba-accelerated Three Black Crows pattern.
     Returns float64 mask: 1.0 where pattern completes, else 0.0.
     """
     n = len(open_)
@@ -110,13 +107,13 @@ def cdl_3blackcrows(
 
 def cdl_3blackcrows_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_3BLACKCROWS',
+    output_col: str = "CDL_3BLACKCROWS",
 ) -> pl.DataFrame:
     """Add Three Black Crows column to Polars DataFrame."""
     out = cdl_3blackcrows(

@@ -11,6 +11,7 @@ Tuning rationale
   structure filters, RSI confirmation, age penalty for freshness.
 All presets use the repaint-free online ZigZag.
 """
+
 from __future__ import annotations
 
 from .config import OrderBlockConfig
@@ -20,7 +21,7 @@ from .config import OrderBlockConfig
 #: :func:`get_order_block_config`).
 TIMEFRAME_CONFIGS: dict[str, OrderBlockConfig] = {
     # --- scalping: noise dominates, keep it fast and tight -------------
-    '1m': OrderBlockConfig(
+    "1m": OrderBlockConfig(
         use_online_extremes=True,
         online_reversal_pct=0.0015,
         zigzag_distance=3,
@@ -32,7 +33,7 @@ TIMEFRAME_CONFIGS: dict[str, OrderBlockConfig] = {
         cluster_blocks=True,
         max_cluster_time_gap=None,
     ),
-    '5m': OrderBlockConfig(
+    "5m": OrderBlockConfig(
         use_online_extremes=True,
         online_reversal_pct=0.003,
         zigzag_distance=4,
@@ -44,7 +45,7 @@ TIMEFRAME_CONFIGS: dict[str, OrderBlockConfig] = {
         cluster_blocks=True,
     ),
     # --- intraday: balanced defaults + trend filter --------------------
-    '15m': OrderBlockConfig(
+    "15m": OrderBlockConfig(
         use_online_extremes=True,
         online_reversal_pct=0.005,
         zigzag_distance=5,
@@ -53,7 +54,7 @@ TIMEFRAME_CONFIGS: dict[str, OrderBlockConfig] = {
         adx_period=14,
         adx_threshold=20.0,
     ),
-    '1h': OrderBlockConfig(
+    "1h": OrderBlockConfig(
         use_online_extremes=True,
         online_reversal_pct=0.008,
         zigzag_distance=6,
@@ -63,7 +64,7 @@ TIMEFRAME_CONFIGS: dict[str, OrderBlockConfig] = {
         strength_age_penalty=True,
     ),
     # --- swing: trends dominate, favour freshness and structure --------
-    '4h': OrderBlockConfig(
+    "4h": OrderBlockConfig(
         use_online_extremes=True,
         online_reversal_pct=0.012,
         zigzag_distance=8,
@@ -76,7 +77,7 @@ TIMEFRAME_CONFIGS: dict[str, OrderBlockConfig] = {
         strength_age_penalty=True,
         require_complete_window=True,
     ),
-    '1d': OrderBlockConfig(
+    "1d": OrderBlockConfig(
         use_online_extremes=True,
         online_reversal_pct=0.02,
         zigzag_distance=10,
@@ -97,14 +98,33 @@ _ALIASES: dict[str, str] = {}
 for _key in TIMEFRAME_CONFIGS:
     _ALIASES[_key] = _key
     _ALIASES[_key.upper()] = _key
-    _ALIASES[_key + 's'] = _key
+    _ALIASES[_key + "s"] = _key
 for _alt, _key in {
-    'm1': '1m', 'm5': '5m', 'm15': '15m', 'h1': '1h', 'h4': '4h',
-    'd1': '1d', '1min': '1m', '5min': '5m', '15min': '15m',
-    '60min': '1h', '60m': '1h', '240m': '4h', '1day': '1d', 'D': '1d',
-    '1D': '1d', '4H': '4h', '1H': '1h', '15M': '15m', '5M': '5m',
-    '1M': '1m', 'M1': '1m', 'M5': '5m', 'M15': '15m', 'H1': '1h',
-    'H4': '4h',
+    "m1": "1m",
+    "m5": "5m",
+    "m15": "15m",
+    "h1": "1h",
+    "h4": "4h",
+    "d1": "1d",
+    "1min": "1m",
+    "5min": "5m",
+    "15min": "15m",
+    "60min": "1h",
+    "60m": "1h",
+    "240m": "4h",
+    "1day": "1d",
+    "D": "1d",
+    "1D": "1d",
+    "4H": "4h",
+    "1H": "1h",
+    "15M": "15m",
+    "5M": "5m",
+    "1M": "1m",
+    "M1": "1m",
+    "M5": "5m",
+    "M15": "15m",
+    "H1": "1h",
+    "H4": "4h",
 }.items():
     _ALIASES[_alt] = _key
 
@@ -120,15 +140,14 @@ def get_order_block_config(timeframe: str) -> OrderBlockConfig:
     """
     key = _ALIASES.get(timeframe)
     if key is None:
-        supported = ', '.join(sorted(TIMEFRAME_CONFIGS))
+        supported = ", ".join(sorted(TIMEFRAME_CONFIGS))
         raise ValueError(
-            f'Unsupported timeframe {timeframe!r}; '
-            f'supported: {supported}'
+            f"Unsupported timeframe {timeframe!r}; supported: {supported}"
         )
     return OrderBlockConfig(**vars(TIMEFRAME_CONFIGS[key]))
 
 
 __all__ = [
-    'TIMEFRAME_CONFIGS',
-    'get_order_block_config',
+    "TIMEFRAME_CONFIGS",
+    "get_order_block_config",
 ]

@@ -8,19 +8,14 @@ from .._array_ops import _apply_offset_fillna
 from ..external import talib, talib_available
 
 
-@njit(
-    (float64[:], float64[:], float64[:], float64[:]),
-    cache=True
-)
+@njit((float64[:], float64[:], float64[:], float64[:]), cache=True)
 def _cdl_risefall3methods_nb(
-    open_: np.ndarray,
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
+    open_: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
 ) -> np.ndarray:
-    """Numba‑accelerated Rise/Fall 3 Methods pattern.
+    """Numba-accelerated Rise/Fall 3 Methods pattern.
     Returns boolean mask where pattern completes (True at the 5th candle).
-    Detects both Rising Three Methods (bullish) and Falling Three Methods (bearish).
+    Detects both Rising Three Methods (bullish) and Falling Three Methods
+        (bearish).
     """
     n = len(open_)
     out = np.zeros(n, dtype=np.bool_)
@@ -34,15 +29,15 @@ def _cdl_risefall3methods_nb(
         body1 = abs(c1 - o1)
         if rng1 <= 0.0 or body1 < 0.6 * rng1:
             continue  # must be long candle
-        # Candles 2–4
+        # Candles 2-4
         small_ok_bull = True
         small_ok_bear = True
         for k in range(3, 0, -1):  # i-3, i-2, i-1
             o = open_[i - k]
             c = close[i - k]
             h = high[i - k]
-            l = low[i - k]
-            rng = h - l
+            low_ = low[i - k]
+            rng = h - low_
             body = abs(c - o)
             if rng <= 0.0:
                 small_ok_bull = False
@@ -54,7 +49,7 @@ def _cdl_risefall3methods_nb(
                 small_ok_bear = False
                 break
             # must stay within range of candle 1
-            if h > h1 or l < l1:
+            if h > h1 or low_ < l1:
                 small_ok_bull = False
                 small_ok_bear = False
                 break
@@ -137,13 +132,13 @@ def cdl_risefall3methods(
 
 def cdl_risefall3methods_polars(
     df: pl.DataFrame,
-    open_col: str = 'open',
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
+    open_col: str = "open",
+    high_col: str = "high",
+    low_col: str = "low",
+    close_col: str = "close",
     offset: int = 0,
     fillna: float | None = None,
-    output_col: str = 'CDL_RISEFALL3METHODS',
+    output_col: str = "CDL_RISEFALL3METHODS",
 ) -> pl.DataFrame:
     """Add Rise/Fall 3 Methods column to Polars DataFrame."""
     out = cdl_risefall3methods(

@@ -16,6 +16,7 @@ IEEE 754 notes
   scalar == 100, length >= 2, all-finite input); otherwise the native
   path runs silently.
 """
+
 import numpy as np
 import polars as pl
 
@@ -70,7 +71,7 @@ def rsi_numpy(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Numpy-based RSI calculation with NaN handling and trim option.
@@ -109,25 +110,25 @@ def rsi_numpy(
     """
     # ---- Input validation ----
     if length < 1:
-        raise ValueError('RSI length must be >= 1')
+        raise ValueError("RSI length must be >= 1")
     if drift < 1:
-        raise ValueError('drift must be >= 1')
+        raise ValueError("drift must be >= 1")
 
     close = np.asarray(close, dtype=np.float64)
     if close.ndim != 1:
-        raise ValueError('close must be a 1-dimensional array')
+        raise ValueError("close must be a 1-dimensional array")
     # Numba kernels require WRITABLE C-contiguous arrays. Polars'
     # zero-copy to_numpy() may return a read-only view, and
     # np.ascontiguousarray does NOT restore writeability on an
-    # already-contiguous buffer — force a real copy when needed.
+    # already-contiguous buffer -- force a real copy when needed.
     if not (close.flags.c_contiguous and close.flags.writeable):
-        close = np.array(close, dtype=np.float64, order='C', copy=True)
+        close = np.array(close, dtype=np.float64, order="C", copy=True)
 
     n = close.shape[0]
     if n < length + drift:
         raise ValueError(
-            f'Input series too short: got {n} values, '
-            f'need at least length + drift = {length + drift}.'
+            f"Input series too short: got {n} values, "
+            f"need at least length + drift = {length + drift}."
         )
 
     # ---- IEEE 754: +/-Inf -> NaN (on a copy; the input is never mutated).
@@ -135,7 +136,7 @@ def rsi_numpy(
     if np.isinf(close).any():
         close = replace_inf_with_nan(close.copy())
 
-    close = _handle_nan_policy(close, nan_policy, 'close')
+    close = _handle_nan_policy(close, nan_policy, "close")
 
     # ---- Choose the code path ----
     # TA-Lib is used only when its semantics match exactly: drift == 1,
@@ -144,7 +145,7 @@ def rsi_numpy(
     # native path where the NaN contract is enforced).
     use_native = use_talib and talib_available
     if use_native and (
-        drift != 1 or scalar != 100.0 or length < 2 or np.isnan(close).any()
+        drift != 1 or scalar != 100.0 or length < 2 or np.isnan(close).any()  # noqa: RUF069 - exact IEEE zero/sign check
     ):
         use_native = False
 
@@ -152,20 +153,24 @@ def rsi_numpy(
         rsi = talib.RSI(close, timeperiod=length)
     else:
         gain, loss = _compute_gain_loss_numba(close, drift)
-        avg_gain = rma_ind(gain, length, offset=0, fillna=None, nan_policy=nan_policy)
-        avg_loss = rma_ind(loss, length, offset=0, fillna=None, nan_policy=nan_policy)
+        avg_gain = rma_ind(
+            gain, length, offset=0, fillna=None, nan_policy=nan_policy
+        )
+        avg_loss = rma_ind(
+            loss, length, offset=0, fillna=None, nan_policy=nan_policy
+        )
 
-        with np.errstate(divide='ignore', invalid='ignore'):
-            rs = avg_gain / avg_loss               # x/0 -> +inf, 0/0 -> NaN
-            rsi = scalar - scalar / (1.0 + rs)     # +inf -> scalar, NaN -> NaN
+        with np.errstate(divide="ignore", invalid="ignore"):
+            rs = avg_gain / avg_loss  # x/0 -> +inf, 0/0 -> NaN
+            rsi = scalar - scalar / (1.0 + rs)  # +inf -> scalar, NaN -> NaN
 
         # Edge rules. ORDER MATTERS: for a flat market all three conditions
         # are true at once, and in a np.where chain the LAST rule wins.
         # The 0/0 rule must therefore come last:
         #   only gains -> scalar, only losses -> 0, both zero -> NaN.
-        rsi = np.where(avg_loss == 0.0, scalar, rsi)
-        rsi = np.where(avg_gain == 0.0, 0.0, rsi)
-        rsi = np.where((avg_gain == 0.0) & (avg_loss == 0.0), np.nan, rsi)
+        rsi = np.where(avg_loss == 0.0, scalar, rsi)  # noqa: RUF069 - exact IEEE zero/sign check
+        rsi = np.where(avg_gain == 0.0, 0.0, rsi)  # noqa: RUF069 - exact IEEE zero/sign check
+        rsi = np.where((avg_gain == 0.0) & (avg_loss == 0.0), np.nan, rsi)  # noqa: RUF069 - exact IEEE zero/sign check
 
         # Strict NaN propagation: diffs touching a NaN close are undefined
         # and can never produce a value.
@@ -174,7 +179,7 @@ def rsi_numpy(
     # ---- Trim (drops the first length-1 warm-up values) ----
     if trim:
         if len(rsi) >= length:
-            rsi = rsi[length - 1:]
+            rsi = rsi[length - 1 :]
         else:
             rsi = np.array([], dtype=np.float64)
 
@@ -192,7 +197,7 @@ def rsi_ind(
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     trim: bool = False,
 ) -> np.ndarray:
     """Universal RSI (accepts numpy array or Polars Series)."""
@@ -216,14 +221,14 @@ def rsi_ind(
 # ----------------------------------------------------------------------
 def rsi_polars(
     df: pl.DataFrame,
-    close_col: str = 'close',
+    close_col: str = "close",
     length: int = 14,
     scalar: float = 100.0,
     drift: int = 1,
     offset: int = 0,
     fillna: float | None = None,
     use_talib: bool = True,
-    nan_policy: str = 'raise',
+    nan_policy: str = "raise",
     output_col: str | None = None,
 ) -> pl.DataFrame:
     """Add RSI column to Polars
@@ -242,5 +247,5 @@ def rsi_polars(
         nan_policy=nan_policy,
         trim=False,  # Polars always returns full length
     )
-    out_name = output_col or f'RSI_{length}'
+    out_name = output_col or f"RSI_{length}"
     return df.with_columns(pl.Series(out_name, result))

@@ -1,3 +1,16 @@
+> **Статус: 🔨 DI полностью собрана (16 тестов зелёные).**
+> Реализовано: AppConfig (frozen, from_env: database/rabbitmq/ollama/qdrant/
+> model_bundle/llm_model), ContourConfig + CONTOURS registry, dishka providers,
+> build_container() для 4 контуров (backtest/inference/rag/api).
+> ✅ волна 2: rag-провайдеры — LLMProviderDishka (OllamaProvider), EmbeddingProvider
+> (OllamaEmbedding bge-m3), VectorStoreProvider (QdrantVectorStore, ленивый клиент);
+> ModelBundleProvider (MODEL_BUNDLE_PATH, без пути → bundle=None, без импорта torch);
+> типизированные DI-ключи LLMPort/EmbeddingsPort/VectorStorePort (Protocol) +
+> ModelBundlePort. api-контур не тянет GPU/rag-зависимости (тест).
+> ✅ DatabaseProvider (волна 2.1): DatabasePort c sessionmaker из DATABASE_URL
+> (psycopg), без URL → None → in-memory fallback. PostgreSQL provider закрыт.
+> Осталось: Alembic-склейка с сервисом (TZ-10, миграции готовы).
+
 # TZ-08. Общие контракты и DI (contracts/ + dishka)
 
 ## 1. Контекст

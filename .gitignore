@@ -15,3 +15,4 @@ wheels/
 to_do.txt
 .pytest_cache
 *.log
+_nonascii_scan.py
